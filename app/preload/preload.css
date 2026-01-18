@@ -36,21 +36,20 @@ body {
     0% {
         transform: rotate(360deg);
     }
+
     25% {
         transform: rotate(2160deg);
     }
+
     50% {
         transform: rotate(4320deg);
     }
+
     75% {
         transform: rotate(2160deg);
     }
+
     100% {
         transform: rotate(4320deg);
     }
 }
-/*
-.isOfflineErr {
-    color: #fff;
-}
-*/

@@ -1,50 +1,25 @@
 {
-  "name": "next-music",
-  "version": "1.6.5",
+  "name": "next-music-client",
+  "version": "2.0.0",
+  "description": "",
   "main": "src/index.js",
-  "author": "Diramix",
-  "description": "Web client for Yandex Music",
   "scripts": {
     "start": "electron .",
     "make": "electron-builder -w"
   },
-  "build": {
-    "appId": "com.next.music",
-    "asar": true,
-    "files": [
-      "./src",
-      "package.json",
-      "version.json"
-    ],
-    "win": {
-      "icon": "./src/app/icons/icon-256.ico"
-    }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
+  },
+  "homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
   "devDependencies": {
-    "@electron-forge/cli": "^7.6.1",
-    "@electron-forge/maker-deb": "^7.6.1",
-    "@electron-forge/maker-rpm": "^7.6.1",
-    "@electron-forge/maker-zip": "^7.6.1",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.6.1",
-    "@electron-forge/plugin-fuses": "^7.6.1",
-    "electron": "^34.2.0",
-    "electron-builder": "^24.0.0"
-  },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
-  },
-  "makers": [
-    {
-      "name": "@electron-forge/maker-squirrel",
-      "config": {
-        "name": "next_music"
-      }
-    },
-    {
-      "name": "@electron-forge/maker-zip",
-      "config": {
-        "platform": "win32"
-      }
-    }
-  ]
+    "electron": "^40.0.0"
+  }
 }
