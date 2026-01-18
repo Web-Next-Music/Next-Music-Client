@@ -1,11 +1,14 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
 
+// Трей
+const { createTray } = require('./app/tray/tray.js');
+
 //Иконка
 const appIcon = path.join(__dirname, "app/icons/icon-256.png");
 
 // Пути Модулей
-const preloadPath = path.join(__dirname, "../app/preload/preload.html");
+const preloadPath = path.join(__dirname, "app/preload/preload.html");
 
 // Получаем папку для хранения данных приложения
 const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
@@ -28,7 +31,9 @@ let config = {
 };
 
 app.whenReady().then(() => {
+  createTray(appIcon, nextMusicDirectory);
   createWindow();
+
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -116,4 +121,9 @@ function createWindow() {
   } else if (!config.preloadWindow) {
     mainWindow.show();
   }
+
+  mainWindow.on('close', (event) => {
+    event.preventDefault();
+    mainWindow.hide();
+  });
 }
