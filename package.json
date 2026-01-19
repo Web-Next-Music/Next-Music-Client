@@ -5,7 +5,40 @@
   "main": "src/index.js",
   "scripts": {
     "start": "electron .",
-    "make": "electron-builder -w"
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.webnext.nextmusic",
+    "productName": "Next Music",
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "src/app/icons",
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/app/icons/icon-256.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "src/app/icons/icon-256.png"
+    }
   },
   "repository": {
     "type": "git",
@@ -20,6 +53,7 @@
   },
   "homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
   "devDependencies": {
-    "electron": "^40.0.0"
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
   }
 }
