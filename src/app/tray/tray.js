@@ -36,17 +36,20 @@ function createInfoWindow(icon) {
     });
 }
 
-function createTray(iconPath, mainWindow, nextMusicDirectory, createSettingsWindow) {
+function createTray(iconPath, mainWindow, nextMusicDirectory) {
     const tray = new Tray(iconPath);
 
     const contextMenu = Menu.buildFromTemplate([
         {
             label: 'Open Next Music folder',
-            click: () => shell.openPath(nextMusicDirectory).catch(console.error)
-        },
-        {
-            label: 'Settings',
-            click: () => createSettingsWindow()
+            click: () => {
+                if (!nextMusicDirectory) {
+                    console.error("nextMusicDirectory is undefined");
+                    return;
+                }
+
+                shell.openPath(nextMusicDirectory); // кроссплатформенное открытие папки
+            }
         },
         { type: 'separator' },
         {
@@ -72,7 +75,7 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, createSettingsWind
     tray.setContextMenu(contextMenu);
 
     tray.on('click', () => {
-        if (mainWindow) mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+        mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
     });
 }
 
