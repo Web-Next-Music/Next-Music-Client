@@ -2,6 +2,7 @@
   "name": "next-music-client",
   "version": "2.0.0",
   "description": "",
+  "author": "Diramix <39developer@diram1x.ru>",
   "main": "src/index.js",
   "scripts": {
     "start": "electron .",
@@ -10,7 +11,7 @@
     "build:linux": "electron-builder --linux"
   },
   "build": {
-    "appId": "com.webnext.nextmusic",
+    "appId": "com.nextmusic.client",
     "productName": "Next Music",
     "files": [
       "src/**/*",
@@ -37,6 +38,8 @@
         "AppImage",
         "deb"
       ],
+      "category": "Audio",
+      "maintainer": "Diramix <39developer@diram1x.ru>",
       "icon": "src/app/icons/icon-256.png"
     }
   },
