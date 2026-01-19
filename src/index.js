@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require('fs');
 
@@ -29,9 +29,9 @@ let config = {
 };
 
 app.whenReady().then(() => {
-  initAppData(nextMusicDirectory, config);
+  config = loadConfig(nextMusicDirectory, config);
   mainWindow = createWindow();
-  createTray(appIcon, mainWindow, nextMusicDirectory);
+  createTray(appIcon, mainWindow, nextMusicDirectory, configFilePath, config);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -75,16 +75,14 @@ function createWindow() {
     autoHideMenuBar: true,
     minWidth: config.freeWindowResize ? 0 : 800,
     minHeight: config.freeWindowResize ? 0 : 650,
-    opacity: config.opacity03 ? 0.3 : 1,
     alwaysOnTop: config.alwaysOnTop,
     backgroundColor: '#0D0D0D',
     icon: appIcon,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'), // JS preload
       nodeIntegration: false,
       contextIsolation: true,
     },
-    show: false, // окно будет показано после загрузки контента
+    show: false,
   });
 
   // Загружаем основной URL приложения
@@ -124,7 +122,14 @@ function createWindow() {
   return mainWindow;
 }
 
-function initAppData(nextMusicDirectory, defaultConfig) {
+/**
+ * Загружает конфиг приложения. Если файла нет — создаёт с дефолтными значениями.
+ * Добавляет недостающие опции в существующий конфиг и сразу сохраняет их.
+ * @param {string} nextMusicDirectory - путь к папке приложения
+ * @param {object} defaultConfig - объект конфигурации по умолчанию
+ * @returns {object} config - актуальный объект конфигурации
+ */
+function loadConfig(nextMusicDirectory, defaultConfig) {
   // 1. Создаём основную папку
   if (!fs.existsSync(nextMusicDirectory)) {
     fs.mkdirSync(nextMusicDirectory, { recursive: true });
@@ -137,29 +142,40 @@ function initAppData(nextMusicDirectory, defaultConfig) {
     console.log("📁 Folder created:", addonsDirectory);
   }
 
-  // 3. Работа с конфигом
   let config;
+  let needSave = false; // флаг, если нужно переписать файл
 
   if (!fs.existsSync(configFilePath)) {
     // Конфига нет → создаём
-    fs.writeFileSync(
-      configFilePath,
-      JSON.stringify(defaultConfig, null, 2),
-      "utf-8"
-    );
-    console.log("⚙️ config.json created");
-
     config = { ...defaultConfig };
+    fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+    console.log("⚙️ config.json created");
   } else {
-    // Конфиг есть → читаем
     try {
       const raw = fs.readFileSync(configFilePath, "utf-8");
-      config = JSON.parse(raw);
-      console.log("⚙️ Config loaded");
-    } catch (err) {
-      console.error("❌ Error read config.json", err);
+      const savedConfig = JSON.parse(raw);
 
+      // Берём дефолтный конфиг, дополняем его значениями из файла
+      config = { ...defaultConfig, ...savedConfig };
+
+      // Проверяем, есть ли недостающие опции
+      for (const key of Object.keys(defaultConfig)) {
+        if (!(key in savedConfig)) {
+          needSave = true; // что-то добавилось
+          console.log(`⚙️ Added missing config option: ${key}`);
+        }
+      }
+
+      if (needSave) {
+        fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+        console.log("⚙️ config.json updated with missing options");
+      }
+
+      console.log("⚙️ Config loaded from file");
+    } catch (err) {
+      console.error("❌ Error reading config.json, using default", err);
       config = { ...defaultConfig };
+      fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
     }
   }
 
