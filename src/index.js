@@ -88,6 +88,13 @@ function createWindow() {
   // Загружаем основной URL приложения
   mainWindow.loadURL("https://music.yandex.ru/");
 
+  // 2. Перехватываем Alt, чтобы меню не всплывало
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Alt') {
+      event.preventDefault(); // блокируем стандартное поведение
+    }
+  });
+
   // Когда страница основного окна загрузилась
   mainWindow.webContents.on('did-finish-load', () => {
     // Закрываем preload окно (если оно есть)
