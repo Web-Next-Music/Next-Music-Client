@@ -67,7 +67,11 @@ function createTray(iconPath, mainWindow, nextMusicDirectory) {
         },
         {
             label: 'Exit',
-            click: () => app.quit()
+            click: () => {
+                // Снимаем все обработчики close, чтобы можно было выйти
+                mainWindow.removeAllListeners('close');
+                app.quit();
+            }
         }
     ]);
 

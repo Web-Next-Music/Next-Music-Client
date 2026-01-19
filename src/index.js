@@ -109,12 +109,6 @@ function createWindow() {
     }
   });
 
-  // При закрытии окна скрываем его вместо выхода
-  mainWindow.on('close', (event) => {
-    event.preventDefault();
-    mainWindow.hide();
-  });
-
   // Если стартуем свернутым
   if (config.startMinimized) {
     mainWindow.hide();
