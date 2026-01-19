@@ -1,105 +1,78 @@
-const { Tray, Menu, shell, BrowserWindow, ipcMain } = require('electron');
+const { Tray, Menu, shell, BrowserWindow, app, ipcRenderer } = require('electron');
 const path = require('path');
 
-let tray = null;
-let settingsWindow = null;
 let infoWindow = null;
-const appIcon = path.join(__dirname, 'app/icons/icon.ico');
-const nextMusicDirectory = path.join(process.env.LOCALAPPDATA, 'Next Music');
+const infoPath = path.join(__dirname, "../info/info.html");
+let appIcon = null;
 
-function createTray() {
-    tray = new Tray(appIcon);
+function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
+    const tray = new Tray(iconPath);
+
     const contextMenu = Menu.buildFromTemplate([
         {
             label: 'Open Next Music folder',
             click: () => {
-                shell.openPath(nextMusicDirectory).catch(err => {
-                    console.error('Error opening folder:', err);
-                });
+                if (!nextMusicDirectory) {
+                    console.error("nextMusicDirectory is undefined");
+                    return;
+                }
+
+                shell.openPath(nextMusicDirectory);
             }
         },
         {
-            label: 'Settings',
-            click: createSettingsWindow
+            label: 'Open config',
+            click: () => {
+                if (!configFilePath) {
+                    console.error("configFilePath is undefined");
+                    return;
+                }
+
+                shell.openPath(configFilePath);
+            }
         },
-        {
-            type: 'separator'
-        },
+        { type: 'separator' },
         {
             label: 'Download extensions',
-            click: () => {
-                shell.openExternal('https://github.com/Web-Next-Music/Next-Music-Extensions');
-            }
+            click: () => shell.openExternal('https://github.com/Web-Next-Music/Next-Music-Extensions')
         },
         {
             label: 'Donate',
+            click: () => shell.openExternal('https://boosty.to/diramix')
+        },
+        { type: 'separator' },
+        {
+            label: 'Info',
+            click: () => createInfoWindow(iconPath)
+        },
+        {
+            label: 'Restart',
             click: () => {
-                shell.openExternal('https://boosty.to/diramix');
+                app.relaunch();
+                app.exit(0);
             }
         },
         {
-            type: 'separator'
-        },
-        {
-            label: 'Info',
-            click: createInfoWindow
-        },
-        {
-            label: 'Exit',
+            label: 'Quit',
             click: () => {
-                app.exit();
+                // Снимаем все обработчики close, чтобы можно было выйти
+                mainWindow.removeAllListeners('close');
+                app.quit();
             }
         }
     ]);
+
     tray.setToolTip('Next Music');
     tray.setContextMenu(contextMenu);
+
     tray.on('click', () => {
-        if (mainWindow) {
-            mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-        }
+        mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
     });
 }
 
-function createSettingsWindow() {
-    if (settingsWindow) {
-        settingsWindow.focus();
-        return;
-    }
+function createInfoWindow(icon) {
+    appIcon = icon;
 
-    settingsWindow = new BrowserWindow({
-        width: 756,
-        height: 452,
-        resizable: false,
-        autoHideMenuBar: true,
-        alwaysOnTop: true,
-        backgroundColor: '#16181E',
-        icon: appIcon,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-        }
-    });
-
-    settingsWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.key === 'F11') {
-        event.preventDefault();
-        }
-    });
-
-    settingsWindow.loadURL(`file://${path.join(__dirname, 'app/settings/settings.html')}`);
-
-    settingsWindow.setMenu(null)
-
-    settingsWindow.webContents.on('did-finish-load', () => {
-        settingsWindow.webContents.send('load-config', config);
-    });
-
-    settingsWindow.on('closed', () => {
-        settingsWindow = null;
-    });
-}
-
-function createInfoWindow() {
     if (infoWindow) {
         infoWindow.focus();
         return;
@@ -119,19 +92,9 @@ function createInfoWindow() {
         }
     });
 
-    infoWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.key === 'F11') {
-        event.preventDefault();
-        }
-    });
+    infoWindow.loadFile(infoPath);
 
-    infoWindow.loadURL(`file://${path.join(__dirname, 'app/info/info.html')}`);
-
-    infoWindow.setMenu(null)
-
-    infoWindow.webContents.on('did-finish-load', () => {
-        infoWindow.webContents.send('load-config', config);
-    });
+    infoWindow.setMenu(null);
 
     infoWindow.on('closed', () => {
         infoWindow = null;

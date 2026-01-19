@@ -1,50 +1,59 @@
 {
-  "name": "next-music",
-  "version": "1.6.5",
+  "name": "next-music-client",
+  "version": "2.0.0",
+  "description": "",
   "main": "src/index.js",
-  "author": "Diramix",
-  "description": "Web client for Yandex Music",
   "scripts": {
     "start": "electron .",
-    "make": "electron-builder -w"
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
   },
   "build": {
-    "appId": "com.next.music",
-    "asar": true,
+    "appId": "com.webnext.nextmusic",
+    "productName": "Next Music",
     "files": [
-      "./src",
-      "package.json",
-      "version.json"
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json"
     ],
-    "win": {
-      "icon": "./src/app/icons/icon-256.ico"
-    }
-  },
-  "devDependencies": {
-    "@electron-forge/cli": "^7.6.1",
-    "@electron-forge/maker-deb": "^7.6.1",
-    "@electron-forge/maker-rpm": "^7.6.1",
-    "@electron-forge/maker-zip": "^7.6.1",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.6.1",
-    "@electron-forge/plugin-fuses": "^7.6.1",
-    "electron": "^34.2.0",
-    "electron-builder": "^24.0.0"
-  },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
-  },
-  "makers": [
-    {
-      "name": "@electron-forge/maker-squirrel",
-      "config": {
-        "name": "next_music"
-      }
+    "directories": {
+      "buildResources": "src/app/icons",
+      "output": "dist"
     },
-    {
-      "name": "@electron-forge/maker-zip",
-      "config": {
-        "platform": "win32"
-      }
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/app/icons/icon-256.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "src/app/icons/icon-256.png"
     }
-  ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
+  },
+  "homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
+  }
 }

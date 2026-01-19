@@ -1,296 +1,244 @@
-const { app, BrowserWindow, ipcMain, shell, Notification } = require('electron');
-const path = require('path');
+const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("path");
 const fs = require('fs');
-const appIcon = path.join(__dirname, 'app/icons/icon.ico');
 
-eval(require('fs').readFileSync(require('path').join(__dirname, 'app', 'tray', 'tray.js'), 'utf8'));
+//Иконка
+const appIcon = path.join(__dirname, "app/icons/icon-256.png");
 
-const nextMusicDirectory = path.join(process.env.LOCALAPPDATA, 'Next Music');
-const addonsDirectory = path.join(nextMusicDirectory, 'Addons');
-const configFilePath = path.join(nextMusicDirectory, 'config.json');
+// Пути Модулей
+const preloadPath = path.join(__dirname, "app/preload/preload.html");
 
-let mainWindow = null;
+// Получаем папку для хранения данных приложения
+const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
+const addonsDirectory = path.join(nextMusicDirectory, "Addons");
+const configFilePath = path.join(nextMusicDirectory, "config.json");
+
+// Трей
+const { createTray } = require('./app/tray/tray.js');
+let mainWindow;
+
 let config = {
-    // Window Settings
-    alwaysOnTop: false,
-    freeWindowResize: false,
-    opacity03: false,
-    // Program Settings
-    newDesign: true, 
-    addonsEnabled: false,
-    autoUpdate: true,
-    // Launch Settings
-    preloadWindow: true,
-    autoLaunch: false, 
-    startMinimized: false 
+  // Window Settings
+  alwaysOnTop: false,
+  freeWindowResize: false,
+  // Program Settings
+  addonsEnabled: true,
+  // Launch Settings
+  preloadWindow: true,
+  startMinimized: false,
 };
 
-const gotTheLock = app.requestSingleInstanceLock();
+app.whenReady().then(() => {
+  config = loadConfig(nextMusicDirectory, config);
+  mainWindow = createWindow();
+  createTray(appIcon, mainWindow, nextMusicDirectory, configFilePath, config);
 
-if (!gotTheLock) {
-    app.quit();
-} else {
-    app.on('second-instance', () => {
-        if (mainWindow) {
-            if (mainWindow.isMinimized()) mainWindow.restore();
-            mainWindow.show();
-            mainWindow.focus();
-        }
-    });
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
 
-    app.whenReady().then(() => {
-        ensureDirectories();
-        loadConfig();
-        updateAutoLaunch(config.autoLaunch);
-        createWindow();
-        createTray();
-        cfgUpdater();
-    });
-
-    // Settings renderer
-    ipcMain.on('update-config', (event, newConfig) => {
-        config = { ...config, ...newConfig };
-        saveConfig();
-    });
-
-    ipcMain.on('set-always-on-top', () => {
-        if (mainWindow) {
-            mainWindow.setAlwaysOnTop(config.alwaysOnTop);
-        }
-    });
-
-    ipcMain.on('free-window-resize', () => {
-        if (mainWindow) {
-            const minWidth = config.freeWindowResize ? 0 : 800;
-            const minHeight = config.freeWindowResize ? 0 : 650;
-            mainWindow.setMinimumSize(minWidth, minHeight);
-        }
-    });
-
-    ipcMain.on('opacity-03', () => {
-        if (mainWindow) {
-            mainWindow.setOpacity(config.opacity03 ? 0.3 : 1);
-        }
-    });     
-
-    ipcMain.on('restart-app', () => {
-        const execPath = process.argv[0];
-        app.relaunch();
-        app.exit();
-    });
-
-    ipcMain.on('small-restart', () => {
-        if (mainWindow) {
-            mainWindow.reload();
-            loadMainUrl();
-        }
-    });
-
-    app.on('window-all-closed', () => {
-        if (process.platform !== 'darwin') {
-            app.quit();
-        }
-    });
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
-}
-
-function isOnline() {
-    return new Promise((resolve) => {
-        require('dns').resolve('google.com', (err) => {
-            resolve(!err);
-        });
-    });
-}
-
-function cfgUpdater() {
-    if (config.autoUpdate) {
-        eval(require('fs').readFileSync(require('path').join(__dirname, 'app', 'updater', 'updater.js'), 'utf8'))
-    }
-}
-
-function ensureDirectories() {
-    if (!fs.existsSync(nextMusicDirectory)) {
-        fs.mkdirSync(nextMusicDirectory, { recursive: true });
-        showNotification();
-    }
-    if (!fs.existsSync(configFilePath)) {
-        saveConfig();
-    } else {
-        loadConfig();
-    }
-    if (!fs.existsSync(addonsDirectory)) {
-        fs.mkdirSync(addonsDirectory, { recursive: true });
-    }
-}
-
-function showNotification() {
-    const notification = new Notification({
-        title: 'Next Music',
-        body: 'Directory Next Music has been created.',
-        silent: false,
-        icon: appIcon,
-    });
-    
-    notification.show();
-}
-
-function loadConfig() {
-    try {
-        const data = fs.readFileSync(configFilePath, 'utf8');
-        config = JSON.parse(data);
-    } catch (err) {
-        console.error('Error loading config:', err);
-    }
-}
-
-function saveConfig() {
-    try {
-        fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), 'utf8');
-    } catch (err) {
-        console.error('Error saving config:', err);
-    }
-}
-
-function updateAutoLaunch(enable) {
-    app.setLoginItemSettings({ openAtLogin: enable });
-}
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
 
 function createPreloadWindow() {
-    preloadWindow = new BrowserWindow({
-        width: 240,
-        height: 280,
-        backgroundColor: '#000',
-        show: true,
-        resizable: false,
-        fullscreenable: false,
-        movable: true,
-        frame: false,
-        transparent: false,
-        roundedCorners: true,
-        icon: appIcon,
-    });
+  preloadWindow = new BrowserWindow({
+    width: 240,
+    height: 280,
+    backgroundColor: "#000",
+    show: true,
+    resizable: false,
+    fullscreenable: false,
+    movable: true,
+    frame: false,
+    transparent: false,
+    roundedCorners: true,
+    icon: appIcon,
+  });
 
-    preloadWindow.loadURL('file://' + __dirname + '/app/preload/preload.html');
+  preloadWindow.loadURL(`file://${preloadPath}`)
 }
 
 function createWindow() {
-    const showWindow = !config.startMinimized;
+  const showWindow = !config.startMinimized;
 
+  // Если включен preload, создаём его перед основным окном
+  if (config.preloadWindow && !config.startMinimized) {
+    createPreloadWindow();
+  }
+
+  // Основное окно приложения
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    autoHideMenuBar: true,
+    minWidth: config.freeWindowResize ? 0 : 800,
+    minHeight: config.freeWindowResize ? 0 : 650,
+    alwaysOnTop: config.alwaysOnTop,
+    backgroundColor: '#0D0D0D',
+    icon: appIcon,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+    show: false,
+  });
+
+  // Загружаем основной URL приложения
+  mainWindow.loadURL("https://music.yandex.ru/");
+
+  // 2. Перехватываем Alt, чтобы меню не всплывало
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Alt') {
+      event.preventDefault(); // блокируем стандартное поведение
+    }
+  });
+
+  // Когда страница основного окна загрузилась
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Закрываем preload окно (если оно есть)
     if (config.preloadWindow && !config.startMinimized) {
-        createPreloadWindow();
+      try {
+        preloadWindow.close();
+      } catch (err) {
+        console.log('Preload window is missing');
+      }
     }
 
-    mainWindow = new BrowserWindow({
-        width: 1280,
-        height: 800,
-        autoHideMenuBar: true,
-        minWidth: config.freeWindowResize ? 0 : 800,
-        minHeight: config.freeWindowResize ? 0 : 650,
-        opacity: config.opacity03 ? 0.3 : 1,
-        alwaysOnTop: config.alwaysOnTop,
-        backgroundColor: '#0D0D0D',
-        icon: appIcon,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false,
-            contextIsolation: true,
-        },
-        show: false,
-    });
+    applyAddons();
 
-    loadMainUrl();
-    
-    mainWindow.webContents.on('did-finish-load', async () => {
-        if (await isOnline()) {
-            if (config.preloadWindow && !config.startMinimized) {
-                try {
-                    preloadWindow.close();
-                } catch (err) {
-                    console.log('Preload window is missing');
-                }
-            }
-            applyAddons();
-            if (!config.startMinimized) {
-                mainWindow.show();
-            }
-        } else {
-            console.log('No internet connection.');
-            app.exit();
-        }
-    });
-
-    mainWindow.on('close', (event) => {
-        event.preventDefault();
-        mainWindow.hide();
-    });
-
-    if (config.startMinimized) {
-        mainWindow.hide();
-    } else if (!config.preloadWindow) {
-        mainWindow.show();
+    // Показываем основное окно
+    if (!config.startMinimized) {
+      mainWindow.show();
     }
+  });
+
+  // Если стартуем свернутым
+  if (config.startMinimized) {
+    mainWindow.hide();
+  } else if (!config.preloadWindow) {
+    mainWindow.show();
+  }
+
+  mainWindow.on('close', (event) => {
+    event.preventDefault();
+    mainWindow.hide();
+  });
+
+  return mainWindow;
 }
 
-function loadMainUrl() {
-    const url = config.newDesign ? 'https://next.music.yandex.ru/' : 'https://music.yandex.ru/';
-    mainWindow.loadURL(url).catch(err => { console.error('Error loading URL:', err); });
+/**
+ * Загружает конфиг приложения. Если файла нет — создаёт с дефолтными значениями.
+ * Добавляет недостающие опции в существующий конфиг и сразу сохраняет их.
+ * @param {string} nextMusicDirectory - путь к папке приложения
+ * @param {object} defaultConfig - объект конфигурации по умолчанию
+ * @returns {object} config - актуальный объект конфигурации
+ */
+function loadConfig(nextMusicDirectory, defaultConfig) {
+  // 1. Создаём основную папку
+  if (!fs.existsSync(nextMusicDirectory)) {
+    fs.mkdirSync(nextMusicDirectory, { recursive: true });
+    console.log("📁 Folder created:", nextMusicDirectory);
+  }
+
+  // 2. Создаём папку Addons
+  if (!fs.existsSync(addonsDirectory)) {
+    fs.mkdirSync(addonsDirectory, { recursive: true });
+    console.log("📁 Folder created:", addonsDirectory);
+  }
+
+  let config;
+  let needSave = false; // флаг, если нужно переписать файл
+
+  if (!fs.existsSync(configFilePath)) {
+    // Конфига нет → создаём
+    config = { ...defaultConfig };
+    fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+    console.log("⚙️ config.json created");
+  } else {
+    try {
+      const raw = fs.readFileSync(configFilePath, "utf-8");
+      const savedConfig = JSON.parse(raw);
+
+      // Берём дефолтный конфиг, дополняем его значениями из файла
+      config = { ...defaultConfig, ...savedConfig };
+
+      // Проверяем, есть ли недостающие опции
+      for (const key of Object.keys(defaultConfig)) {
+        if (!(key in savedConfig)) {
+          needSave = true; // что-то добавилось
+          console.log(`⚙️ Added missing config option: ${key}`);
+        }
+      }
+
+      if (needSave) {
+        fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+        console.log("⚙️ config.json updated with missing options");
+      }
+
+      console.log("⚙️ Config loaded from file");
+    } catch (err) {
+      console.error("❌ Error reading config.json, using default", err);
+      config = { ...defaultConfig };
+      fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+    }
+  }
+
+  return config;
 }
 
 function applyAddons() {
-    if (config.addonsEnabled) {
-        console.log('Loading addons:');
-        loadFilesFromDirectory(addonsDirectory, '.css', (cssContent, filePath) => {
-            console.log(`Load CSS: ${path.relative(addonsDirectory, filePath)}`);
-            const script = `(() => {
+  if (config.addonsEnabled) {
+    console.log('Loading addons:');
+    loadFilesFromDirectory(addonsDirectory, '.css', (cssContent, filePath) => {
+      console.log(`Load CSS: ${path.relative(addonsDirectory, filePath)}`);
+      const script = `(() => {
                 const style = document.createElement('style');
                 style.textContent = \`${cssContent.replace(/\\/g, '\\\\').replace(/`/g, '\`')}\`;
                 document.body.appendChild(style);
             })();`;
-            mainWindow.webContents.executeJavaScript(script).catch(err => {
-                console.error('Error inserting CSS:', err);
-            });
-        });
-        loadFilesFromDirectory(addonsDirectory, '.js', (jsContent, filePath) => {
-            console.log(`Load JS: ${path.relative(addonsDirectory, filePath)}`);
-            mainWindow.webContents.executeJavaScript(jsContent).catch(err => {
-                console.error('Error executing JS:', err);
-            });
-        });
-    } else {
-        console.log('Addons are disabled');
-    }
+      mainWindow.webContents.executeJavaScript(script).catch(err => {
+        console.error('Error inserting CSS:', err);
+      });
+    });
+    loadFilesFromDirectory(addonsDirectory, '.js', (jsContent, filePath) => {
+      console.log(`Load JS: ${path.relative(addonsDirectory, filePath)}`);
+      mainWindow.webContents.executeJavaScript(jsContent).catch(err => {
+        console.error('Error executing JS:', err);
+      });
+    });
+  } else {
+    console.log('Addons are disabled');
+  }
 }
 
 function loadFilesFromDirectory(directory, extension, callback) {
-    fs.readdir(directory, (err, files) => {
+  fs.readdir(directory, (err, files) => {
+    if (err) {
+      console.error('Error reading directory:', err);
+      return;
+    }
+    files.forEach(file => {
+      const filePath = path.join(directory, file);
+      fs.stat(filePath, (err, stat) => {
         if (err) {
-            console.error('Error reading directory:', err);
-            return;
+          console.error('Error stating file:', err);
+          return;
         }
-        files.forEach(file => {
-            const filePath = path.join(directory, file);
-            fs.stat(filePath, (err, stat) => {
-                if (err) {
-                    console.error('Error stating file:', err);
-                    return;
-                }
-                if (stat.isDirectory()) {
-                    loadFilesFromDirectory(filePath, extension, callback);
-                } else if (path.extname(file) === extension) {
-                    fs.readFile(filePath, 'utf8', (err, content) => {
-                        if (err) {
-                            console.error(`Error reading ${file}:`, err);
-                            return;
-                        }
-                        callback(content, filePath);
-                    });
-                }
-            });
-        });
+        if (stat.isDirectory()) {
+          loadFilesFromDirectory(filePath, extension, callback);
+        } else if (path.extname(file) === extension) {
+          fs.readFile(filePath, 'utf8', (err, content) => {
+            if (err) {
+              console.error(`Error reading ${file}:`, err);
+              return;
+            }
+            callback(content, filePath);
+          });
+        }
+      });
     });
+  });
 }
