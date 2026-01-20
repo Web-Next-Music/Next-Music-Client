@@ -2,7 +2,7 @@
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/96758708-0ba6-4a73-b49e-cc0476445116" />
 
 # Next Music
-Web client for Yandex Music with support for themes and addons
+Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)
 
 ## 🚀 Installation
 
