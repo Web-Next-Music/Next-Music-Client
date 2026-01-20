@@ -1,6 +1,6 @@
 {
   "name": "next-music",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)",
   "main": "src/index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "build": {
     "appId": "com.nextmusic.client",
-    "productName": "Next Music",
+    "productName": "Next-Music",
     "files": [
       "src/**/*",
       "node_modules/**/*",
@@ -22,7 +22,6 @@
       "output": "dist"
     },
     "win": {
-      "name": "Next-Music",
       "target": [
         {
           "target": "nsis",
@@ -34,7 +33,6 @@
       "icon": "src/app/icons/icon-256.png"
     },
     "linux": {
-      "name": "Next-Music",
       "target": [
         "AppImage",
         "deb"
