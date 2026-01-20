@@ -1,8 +1,7 @@
 {
-  "name": "next-music-client",
+  "name": "next-music",
   "version": "2.0.0",
-  "description": "",
-  "author": "Diramix <39developer@diram1x.ru>",
+  "description": "Web client for Yandex Music with support for themes and addons",
   "main": "src/index.js",
   "scripts": {
     "start": "electron .",
@@ -48,8 +47,8 @@
     "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Diramix <39developer@diram1x.ru>",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"

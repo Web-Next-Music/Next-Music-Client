@@ -106,7 +106,12 @@ function createWindow() {
       }
     }
 
-    applyAddons();
+    // Загружаем аддоны
+    if (config.addonsEnabled) {
+      applyAddons();
+    } else {
+      console.log('Addons are disabled');
+    }
 
     // Показываем основное окно
     if (!config.startMinimized) {
