@@ -1,6 +1,6 @@
 {
   "name": "next-music",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Web client for Yandex Music with support for themes and addons",
   "main": "src/index.js",
   "scripts": {
@@ -57,5 +57,8 @@
   "devDependencies": {
     "electron": "^40.0.0",
     "electron-builder": "^26.4.0"
+  },
+  "dependencies": {
+    "node-notifier": "^10.0.1"
   }
 }

@@ -1,5 +1,6 @@
 const { Tray, Menu, shell, BrowserWindow, app, ipcRenderer } = require('electron');
 const path = require('path');
+const { checkForUpdates } = require('../updater/updater.js');
 
 let infoWindow = null;
 const infoPath = path.join(__dirname, "../info/info.html");
@@ -44,6 +45,12 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
         {
             label: 'Info',
             click: () => createInfoWindow(iconPath)
+        },
+        {
+            label: 'Check updates',
+            click: () => {
+                checkForUpdates();
+            }
         },
         {
             label: 'Restart',

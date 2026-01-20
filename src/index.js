@@ -13,8 +13,9 @@ const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
 const addonsDirectory = path.join(nextMusicDirectory, "Addons");
 const configFilePath = path.join(nextMusicDirectory, "config.json");
 
-// Трей
+// Модули
 const { createTray } = require('./app/tray/tray.js');
+const { checkForUpdates } = require('./app/updater/updater.js');
 let mainWindow;
 
 let config = {
@@ -23,6 +24,7 @@ let config = {
   freeWindowResize: false,
   // Program Settings
   addonsEnabled: true,
+  checkUpdates: true,
   // Launch Settings
   preloadWindow: true,
   startMinimized: false,
@@ -30,6 +32,9 @@ let config = {
 
 app.whenReady().then(() => {
   config = loadConfig(nextMusicDirectory, config);
+  if (config.checkUpdates) {
+    checkForUpdates();
+  }
   mainWindow = createWindow();
   createTray(appIcon, mainWindow, nextMusicDirectory, configFilePath, config);
 
