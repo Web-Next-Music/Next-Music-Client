@@ -4,6 +4,7 @@ const { Client } = require("@xhayper/discord-rpc");
 const WebSocket = require("ws");
 
 const CLIENT_ID = "1300258490815741952"; // your Discord Client ID
+const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`
 let rpc;
 let isReady = false;
 let lastActivity;
@@ -75,9 +76,11 @@ function updateActivity(data) {
         return;
     }
 
-    const title = data.title || "null";
-    const artist = data.artists || "null";
+    const title = data.title || "";
+    const artist = data.artists || "";
     const img = data.img || DEFAULT_IMG;
+    const albumUrl = data.albumUrl || "";
+    const artistUrl = data.artistUrl || "";
 
     const now = Math.floor(Date.now() / 1000);
     const current = parseTime(data.timeCurrent);
@@ -107,10 +110,17 @@ function updateActivity(data) {
         details: title,
         state: artist,
         largeImageKey: img,
+        largeImageUrl: GITHUB_LINK,
         startTimestamp,
         endTimestamp,
         statusDisplayType: 1,
         instance: false,
+        ...(albumUrl ? {
+            detailsUrl: albumUrl
+        } : {}),
+        ...(artistUrl ? {
+            stateUrl: artistUrl
+        } : {})
     };
 
     // Only update activity if title, artist, image, or timestamps changed

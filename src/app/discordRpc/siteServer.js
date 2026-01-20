@@ -24,6 +24,14 @@
             `[class*="PlayerBar_root"] * [class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img`
         )?.src ?? null;
 
+        const albumUrl = playerEl.querySelector(
+            `[class*="PlayerBar_root"] * [class*="Meta_albumLink"]`
+        )?.href?.trim() ?? null;
+
+        const artistUrl = playerEl.querySelector(
+            `[class*="PlayerBar_root"] * [class*="Meta_link"]`
+        )?.href?.trim() ?? null;
+
         const title = playerEl.querySelector(
             `[class*="PlayerBar_root"] * [class*="Meta_title"]`
         )?.textContent?.trim() ?? null;
@@ -40,7 +48,7 @@
             `[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_end"] > span`
         )?.textContent ?? null;
 
-        return { img, title, artists, timeCurrent, timeEnd, ts: Date.now() };
+        return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, ts: Date.now() };
     }
 
     function sendPlayerData(playerEl, index) {
