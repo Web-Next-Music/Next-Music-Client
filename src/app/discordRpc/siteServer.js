@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    const WS_URL = "ws://localhost:8765";
+    const WS_URL = "ws://localhost:6972";
     let ws;
 
     function connect() {
