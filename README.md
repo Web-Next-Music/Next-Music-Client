@@ -1,5 +1,4 @@
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/9f6cc079-894e-4ce0-a5b3-677761fcfa1b" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/96758708-0ba6-4a73-b49e-cc0476445116" />
+<img width="1478" height="989" alt="image" src="https://github.com/user-attachments/assets/8c70332b-f663-462a-8af2-7e792d864e8c" />
 
 # Next Music
 Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)
@@ -17,3 +16,6 @@ paru -S next-music
 
 ### 🐧 Other Linux
 Download the package from the [releases page](https://github.com/Web-Next-Music/Next-Music-Client/releases/latest).
+
+## To change the program settings, open the config using the button in the system tray.
+<img width="296" height="228" alt="image" src="https://github.com/user-attachments/assets/1fa725f2-b560-4f70-984a-d0cc3c174b4e" />
