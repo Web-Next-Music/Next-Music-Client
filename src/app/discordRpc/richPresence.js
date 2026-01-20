@@ -75,9 +75,9 @@ function updateActivity(data) {
         return;
     }
 
-    const title = data.title || "null";
-    const artist = data.artists || "null";
-    const img = data.img || DEFAULT_IMG;
+    const title = data.title || "";
+    const artist = data.artists || "";
+    const img = data.img || "icon";
 
     const now = Math.floor(Date.now() / 1000);
     const current = parseTime(data.timeCurrent);

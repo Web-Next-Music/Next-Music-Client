@@ -25,7 +25,7 @@
         )?.src ?? null;
 
         const title = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="Meta_albumLink"] > span`
+            `[class*="PlayerBar_root"] * [class*="Meta_title"]`
         )?.textContent?.trim() ?? null;
 
         const artists = playerEl.querySelector(
@@ -53,7 +53,7 @@
 
     // Observe each player for changes
     const players = document.querySelectorAll(
-        "section.PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN.PlayerBar_root__cXUnU"
+        `[class*="PlayerBar_root"]`
     );
 
     players.forEach((playerEl, index) => {
