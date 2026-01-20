@@ -1,9 +1,15 @@
 const { shell } = require('electron');
 const fs = require('fs');
 
-let currentPkgVersion = "v2.0.0";
-document.querySelector(".version").textContent = currentPkgVersion;
-const title = `Next Music ${currentPkgVersion} By Diramix`
+// Берём версию автоматически из package.json
+const { version: currentPkgVersion } = require("../../../package.json");
+
+const CURRENT_VERSION = currentPkgVersion.startsWith("v")
+    ? currentPkgVersion
+    : `v${currentPkgVersion}`;
+
+document.querySelector(".version").textContent = CURRENT_VERSION;
+const title = `Next Music ${CURRENT_VERSION} By Diramix`
 document.querySelector(".nm_title").textContent = title;
 
 // Buttons

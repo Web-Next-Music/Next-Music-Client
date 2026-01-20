@@ -1,7 +1,7 @@
 {
-  "name": "next-music-client",
-  "version": "2.0.0",
-  "description": "",
+  "name": "next-music",
+  "version": "2.2.1",
+  "description": "Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)",
   "main": "src/index.js",
   "scripts": {
     "start": "electron .",
@@ -10,8 +10,8 @@
     "build:linux": "electron-builder --linux"
   },
   "build": {
-    "appId": "com.webnext.nextmusic",
-    "productName": "Next Music",
+    "appId": "com.nextmusic.client",
+    "productName": "Next-Music",
     "files": [
       "src/**/*",
       "node_modules/**/*",
@@ -37,6 +37,8 @@
         "AppImage",
         "deb"
       ],
+      "category": "Audio",
+      "maintainer": "Diramix <39developer@diram1x.ru>",
       "icon": "src/app/icons/icon-256.png"
     }
   },
@@ -45,8 +47,8 @@
     "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Diramix <39developer@diram1x.ru>",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
@@ -55,5 +57,9 @@
   "devDependencies": {
     "electron": "^40.0.0",
     "electron-builder": "^26.4.0"
+  },
+  "dependencies": {
+    "@xhayper/discord-rpc": "^1.3.0",
+    "node-notifier": "^10.0.1"
   }
 }
