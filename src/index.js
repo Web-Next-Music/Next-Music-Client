@@ -19,21 +19,29 @@ const { checkForUpdates } = require('./app/updater/updater.js');
 let mainWindow;
 
 let config = {
-  // Window Settings
-  alwaysOnTop: false,
-  freeWindowResize: false,
-  // Program Settings
-  richPresence: true,
-  addonsEnabled: true,
-  checkUpdates: true,
-  // Launch Settings
-  preloadWindow: true,
-  startMinimized: false,
+  windowSettings: {
+    alwaysOnTop: false,
+    freeWindowResize: false,
+  },
+
+  programSettings: {
+    richPresence: {
+      enabled: true,
+      rpcTitle: "Next Music",
+    },
+    addonsEnabled: true,
+    checkUpdates: true,
+  },
+
+  launchSettings: {
+    preloadWindow: true,
+    startMinimized: false,
+  },
 };
 
 app.whenReady().then(() => {
   config = loadConfig(nextMusicDirectory, config);
-  if (config.checkUpdates) {
+  if (config.programSettings.checkUpdates) {
     checkForUpdates();
   }
   mainWindow = createWindow();
@@ -67,10 +75,10 @@ function createPreloadWindow() {
 }
 
 function createWindow() {
-  const showWindow = !config.startMinimized;
+  const showWindow = !config.launchSettings.startMinimized;
 
   // Если включен preload, создаём его перед основным окном
-  if (config.preloadWindow && showWindow) {
+  if (config.launchSettings.preloadWindow && showWindow) {
     createPreloadWindow();
   }
 
@@ -79,9 +87,9 @@ function createWindow() {
     width: 1280,
     height: 800,
     autoHideMenuBar: true,
-    minWidth: config.freeWindowResize ? 0 : 800,
-    minHeight: config.freeWindowResize ? 0 : 650,
-    alwaysOnTop: config.alwaysOnTop,
+    minWidth: config.windowSettings.freeWindowResize ? 0 : 800,
+    minHeight: config.windowSettings.freeWindowResize ? 0 : 650,
+    alwaysOnTop: config.windowSettings.alwaysOnTop,
     backgroundColor: '#0D0D0D',
     icon: appIcon,
     webPreferences: {
@@ -115,7 +123,7 @@ function createWindow() {
   // Когда страница основного окна загрузилась
   mainWindow.webContents.on('did-finish-load', () => {
     // Закрываем preload окно (если оно есть)
-    if (config.preloadWindow && preloadWindow) {
+    if (config.launchSettings.preloadWindow && preloadWindow) {
       try {
         preloadWindow.close();
         preloadWindow = null;
@@ -125,14 +133,14 @@ function createWindow() {
     }
 
     // Загружаем аддоны
-    if (config.addonsEnabled) {
+    if (config.programSettings.addonsEnabled) {
       applyAddons();
     } else {
       console.log('Addons are disabled');
     }
 
     // Initialize Discord RPC and inject siteServer.js only if enabled
-    if (config.richPresence) {
+    if (config.programSettings.richPresence.enabled) {
       try {
         const { initRPC } = require('./app/discordRpc/richPresence.js');
 
@@ -173,9 +181,9 @@ function createWindow() {
   });
 
   // Логика на старте: если стартуем свернутым
-  if (config.startMinimized) {
+  if (config.launchSettings.startMinimized) {
     mainWindow.hide();
-  } else if (!config.preloadWindow) {
+  } else if (!config.launchSettings.preloadWindow) {
     mainWindow.show();
   }
 
@@ -188,32 +196,70 @@ function createWindow() {
   return mainWindow;
 }
 
-/**
- * Загружает конфиг приложения. Если файла нет — создаёт с дефолтными значениями.
- * Добавляет недостающие опции в существующий конфиг и сразу сохраняет их.
- * @param {string} nextMusicDirectory - путь к папке приложения
- * @param {object} defaultConfig - объект конфигурации по умолчанию
- * @returns {object} config - актуальный объект конфигурации
- */
+function normalizeConfig(defaultConfig, savedConfig) {
+  let changed = false;
+
+  function walk(defaultVal, savedVal) {
+    // если дефолт — объект
+    if (
+      typeof defaultVal === "object" &&
+      defaultVal !== null &&
+      !Array.isArray(defaultVal)
+    ) {
+      if (typeof savedVal !== "object" || savedVal === null || Array.isArray(savedVal)) {
+        changed = true;
+        return structuredClone(defaultVal);
+      }
+
+      const result = {};
+      for (const key of Object.keys(defaultVal)) {
+        if (!(key in savedVal)) {
+          changed = true;
+          result[key] = structuredClone(defaultVal[key]);
+        } else {
+          result[key] = walk(defaultVal[key], savedVal[key]);
+        }
+      }
+      return result;
+    }
+
+    // массив
+    if (Array.isArray(defaultVal)) {
+      if (!Array.isArray(savedVal)) {
+        changed = true;
+        return structuredClone(defaultVal);
+      }
+      return savedVal;
+    }
+
+    // примитивы
+    if (typeof savedVal !== typeof defaultVal) {
+      changed = true;
+      return defaultVal;
+    }
+
+    return savedVal;
+  }
+
+  const normalized = walk(defaultConfig, savedConfig);
+  return { config: normalized, changed };
+}
+
 function loadConfig(nextMusicDirectory, defaultConfig) {
-  // 1. Создаём основную папку
   if (!fs.existsSync(nextMusicDirectory)) {
     fs.mkdirSync(nextMusicDirectory, { recursive: true });
     console.log("📁 Folder created:", nextMusicDirectory);
   }
 
-  // 2. Создаём папку Addons
   if (!fs.existsSync(addonsDirectory)) {
     fs.mkdirSync(addonsDirectory, { recursive: true });
     console.log("📁 Folder created:", addonsDirectory);
   }
 
   let config;
-  let needSave = false; // флаг, если нужно переписать файл
 
   if (!fs.existsSync(configFilePath)) {
-    // Конфига нет → создаём
-    config = { ...defaultConfig };
+    config = structuredClone(defaultConfig);
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
     console.log("⚙️ config.json created");
   } else {
@@ -221,35 +267,34 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
       const raw = fs.readFileSync(configFilePath, "utf-8");
       const savedConfig = JSON.parse(raw);
 
-      // Берём дефолтный конфиг, дополняем его значениями из файла
-      config = { ...defaultConfig, ...savedConfig };
+      const { config: normalizedConfig, changed } =
+        normalizeConfig(defaultConfig, savedConfig);
 
-      // Проверяем, есть ли недостающие опции
-      for (const key of Object.keys(defaultConfig)) {
-        if (!(key in savedConfig)) {
-          needSave = true; // что-то добавилось
-          console.log(`⚙️ Added missing config option: ${key}`);
-        }
+      config = normalizedConfig;
+
+      if (changed) {
+        fs.writeFileSync(
+          configFilePath,
+          JSON.stringify(config, null, 2),
+          "utf-8"
+        );
+        console.log("⚙️ config.json fixed (invalid or missing options)");
+      } else {
+        console.log("⚙️ Config loaded (no fixes needed)");
       }
-
-      if (needSave) {
-        fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
-        console.log("⚙️ config.json updated with missing options");
-      }
-
-      console.log("⚙️ Config loaded from file");
     } catch (err) {
-      console.error("❌ Error reading config.json, using default", err);
-      config = { ...defaultConfig };
+      console.error("❌ Error reading config.json, reset to default", err);
+      config = structuredClone(defaultConfig);
       fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
     }
   }
 
+  module.exports = config;
   return config;
 }
 
 function applyAddons() {
-  if (config.addonsEnabled) {
+  if (config.programSettings.addonsEnabled) {
     console.log('Loading addons:');
     loadFilesFromDirectory(addonsDirectory, '.css', (cssContent, filePath) => {
       console.log(`Load CSS: ${path.relative(addonsDirectory, filePath)}`);

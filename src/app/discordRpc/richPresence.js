@@ -2,10 +2,12 @@
 
 const { Client } = require("@xhayper/discord-rpc");
 const WebSocket = require("ws");
+const config = require("../../index.js");
 
 const CLIENT_ID = "1300258490815741952"; // your Discord Client ID
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`
 let rpc;
+let activityName;
 let isReady = false;
 let lastActivity;
 let lastTimeCurrentPerPlayer = {}; // stores last timeCurrent for each player
@@ -106,6 +108,7 @@ function updateActivity(data) {
     const endTimestamp = startTimestamp + total;
 
     const activityObject = {
+        name: config.programSettings.richPresence.rpcTitle,
         type: 2, // LISTENING
         details: title,
         state: artist,
