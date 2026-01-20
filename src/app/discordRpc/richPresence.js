@@ -4,9 +4,6 @@ const { Client } = require("@xhayper/discord-rpc");
 const WebSocket = require("ws");
 
 const CLIENT_ID = "1300258490815741952"; // your Discord Client ID
-const DEFAULT_IMG =
-    "https://avatars.githubusercontent.com/u/79011730?s=400&u=86dcdee3c368799308c6b712c256c92dcc92da06&v=4";
-
 let rpc;
 let isReady = false;
 let lastActivity;
