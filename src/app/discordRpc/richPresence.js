@@ -80,7 +80,7 @@ function updateActivity(data) {
 
     const title = data.title || "";
     const artist = data.artists || "";
-    const img = data.img || DEFAULT_IMG;
+    const img = data.img || "icon";
     const albumUrl = data.albumUrl || "";
     const artistUrl = data.artistUrl || "";
 
