@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, session } = require("electron");
 const path = require("path");
 const fs = require('fs');
 
@@ -23,6 +23,7 @@ let config = {
   alwaysOnTop: false,
   freeWindowResize: false,
   // Program Settings
+  richPresence: true,
   addonsEnabled: true,
   checkUpdates: true,
   // Launch Settings
@@ -69,7 +70,7 @@ function createWindow() {
   const showWindow = !config.startMinimized;
 
   // Если включен preload, создаём его перед основным окном
-  if (config.preloadWindow && !config.startMinimized) {
+  if (config.preloadWindow && showWindow) {
     createPreloadWindow();
   }
 
@@ -84,28 +85,40 @@ function createWindow() {
     backgroundColor: '#0D0D0D',
     icon: appIcon,
     webPreferences: {
+      webSecurity: false, // для обхода CORS, но CSP всё равно надо менять
       nodeIntegration: false,
       contextIsolation: true,
     },
-    show: false,
+    show: false, // показываем вручную
+  });
+
+  // Убираем CSP для обхода блокировок
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const headers = details.responseHeaders || {};
+
+    delete headers['content-security-policy'];
+    delete headers['Content-Security-Policy'];
+
+    callback({ responseHeaders: headers });
   });
 
   // Загружаем основной URL приложения
   mainWindow.loadURL("https://music.yandex.ru/");
 
-  // 2. Перехватываем Alt, чтобы меню не всплывало
+  // Перехватываем Alt, чтобы меню не всплывало
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'Alt') {
-      event.preventDefault(); // блокируем стандартное поведение
+      event.preventDefault();
     }
   });
 
   // Когда страница основного окна загрузилась
   mainWindow.webContents.on('did-finish-load', () => {
     // Закрываем preload окно (если оно есть)
-    if (config.preloadWindow && !config.startMinimized) {
+    if (config.preloadWindow && preloadWindow) {
       try {
         preloadWindow.close();
+        preloadWindow = null;
       } catch (err) {
         console.log('Preload window is missing');
       }
@@ -118,19 +131,55 @@ function createWindow() {
       console.log('Addons are disabled');
     }
 
+    // Initialize Discord RPC and inject siteServer.js only if enabled
+    if (config.richPresence) {
+      try {
+        const { initRPC } = require('./app/discordRpc/richPresence.js');
+
+        initRPC();
+
+        // Inject siteServer.js
+        const preloadPath = path.join(__dirname, "app/discordRpc/siteServer.js");
+        const normalizedPath = preloadPath.replace(/\\/g, "/");
+
+        const injectScript = `
+      (() => {
+        if (!document.querySelector('script[data-injected="${normalizedPath}"]')) {
+          const s = document.createElement('script');
+          s.src = "file://${normalizedPath}";
+          s.type = "text/javascript";
+          s.defer = true;
+          s.dataset.injected = "${normalizedPath}";
+          document.head.appendChild(s);
+        }
+      })();
+    `;
+
+        mainWindow.webContents.executeJavaScript(injectScript)
+          .then(() => console.log("[RPC] ✅ siteServer.js injected"))
+          .catch(console.error);
+
+      } catch (err) {
+        console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
+      }
+    } else {
+      console.log("[RPC] ⚠️ Discord RPC is disabled");
+    }
+
     // Показываем основное окно
-    if (!config.startMinimized) {
+    if (showWindow) {
       mainWindow.show();
     }
   });
 
-  // Если стартуем свернутым
+  // Логика на старте: если стартуем свернутым
   if (config.startMinimized) {
     mainWindow.hide();
   } else if (!config.preloadWindow) {
     mainWindow.show();
   }
 
+  // При закрытии окна — просто скрываем
   mainWindow.on('close', (event) => {
     event.preventDefault();
     mainWindow.hide();
