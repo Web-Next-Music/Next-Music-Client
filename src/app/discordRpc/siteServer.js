@@ -21,31 +21,31 @@
         if (!playerEl) return null;
 
         const img = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img`
+            `[class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img`
         )?.src ?? null;
 
         const albumUrl = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="Meta_albumLink"]`
+            `[class*="Meta_albumLink"]`
         )?.href?.trim() ?? null;
 
         const artistUrl = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="Meta_link"]`
+            `[class*="Meta_link"]`
         )?.href?.trim() ?? null;
 
         const title = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="Meta_title"]`
+            `[class*="Meta_title"]`
         )?.textContent?.trim() ?? null;
 
         const artists = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="SeparatedArtists_root_clamp"]`
+            `[class*="SeparatedArtists_root_clamp"]`
         )?.textContent?.trim() ?? null;
 
         const timeCurrent = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_current_animation"] > span`
+            `[class*="TimecodeGroup_timecode_current_animation"] > span`
         )?.textContent ?? null;
 
         const timeEnd = playerEl.querySelector(
-            `[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_end"] > span`
+            `[class*="TimecodeGroup_timecode_end"] > span`
         )?.textContent ?? null;
 
         return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, ts: Date.now() };
