@@ -23,4 +23,4 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 ## Recomended Scripts
 ### [Yandex Music Downloader](https://greasyfork.org/en/scripts/558745-yandex-music-downloader)
 
-https://github.com/user-attachments/assets/06972142-e7db-426b-a77d-5287d8c386b4
+https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
