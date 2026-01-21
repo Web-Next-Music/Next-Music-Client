@@ -19,3 +19,8 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 
 ## To change the program settings, open the config using the button in the system tray.
 <img width="296" height="228" alt="image" src="https://github.com/user-attachments/assets/1fa725f2-b560-4f70-984a-d0cc3c174b4e" />
+
+## Recomended Scripts
+### [Yandex Music Downloader](https://greasyfork.org/en/scripts/558745-yandex-music-downloader)
+
+https://github.com/user-attachments/assets/06972142-e7db-426b-a77d-5287d8c386b4
