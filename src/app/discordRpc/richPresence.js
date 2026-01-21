@@ -6,6 +6,7 @@ const config = require("../../index.js");
 
 const CLIENT_ID = "1300258490815741952"; // your Discord Client ID
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`
+const WSPORT = 6972;
 let rpc;
 let isReady = false;
 let lastActivity;
@@ -32,8 +33,8 @@ function initRPC() {
 }
 
 // --- WebSocket server ---
-const wss = new WebSocket.Server({ port: 6972 }, () =>
-    console.log("[WS] ✅ WebSocket server listening at ws://127.0.0.1:8765"),
+const wss = new WebSocket.Server({ port: WSPORT }, () =>
+    console.log(`[WS] ✅ WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 );
 
 wss.on("connection", (ws) => {
@@ -109,7 +110,7 @@ function updateActivity(data) {
             lastActivity.details !== activityObject.details ||
             lastActivity.state !== activityObject.state ||
             lastActivity.largeImageKey !== activityObject.largeImageKey ||
-            lastPlayerState !== 'play'; // обновляем, если сменился статус
+            lastPlayerState !== 'play';
 
         if (hasChanged) {
             rpc.user?.setActivity(activityObject).catch(console.error);

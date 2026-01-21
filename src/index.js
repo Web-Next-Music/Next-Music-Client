@@ -280,7 +280,7 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
         );
         console.log("⚙️ config.json fixed (invalid or missing options)");
       } else {
-        console.log("⚙️ Config loaded (no fixes needed)");
+        console.log("⚙️ Config loaded successfully");
       }
     } catch (err) {
       console.error("❌ Error reading config.json, reset to default", err);

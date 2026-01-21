@@ -1,7 +1,9 @@
 (function () {
     "use strict";
 
-    const WS_URL = "ws://127.0.0.1:6972";
+    const WSPORT = 6972;
+
+    const WS_URL = `ws://127.0.0.1:${WSPORT}`;
     let ws;
 
     function connect() {
