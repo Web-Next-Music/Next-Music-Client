@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    const WS_URL = "ws://localhost:6972";
+    const WS_URL = "ws://127.0.0.1:6972";
     let ws;
 
     function connect() {
@@ -48,7 +48,11 @@
             `[class*="TimecodeGroup_timecode_end"] > span`
         )?.textContent ?? null;
 
-        return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, ts: Date.now() };
+        const playerState = playerEl.querySelector(
+            '[class*="BaseSonataControlsDesktop_playButtonIcon__TlFqv"] > use'
+        )?.href?.baseVal ?? null;
+
+        return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, playerState, ts: Date.now() };
     }
 
     function sendPlayerData(playerEl, index) {
