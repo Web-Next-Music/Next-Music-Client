@@ -11,6 +11,8 @@ let rpc;
 let isReady = false;
 let lastActivity;
 let lastPlayerState = null;
+let cooldown = false;
+let pendingData = null;
 
 // --- Initialize RPC ---
 function initRPC() {
@@ -24,7 +26,7 @@ function initRPC() {
     rpc.on("disconnected", () => {
         console.log("[RPC] ❌ Disconnected from Discord, reconnecting...");
         isReady = false;
-        setTimeout(initRPC, 5000);
+        setTimeout(initRPC, 2000);
     });
 
     rpc.on("error", console.error);
@@ -63,8 +65,27 @@ function parseTime(timeString) {
 }
 
 // --- Update Discord activity ---
+let pauseTimeout = null;
+
+
 function updateActivity(data) {
     if (!rpc || !isReady) return;
+
+    // --- Кулдаун: если уже обрабатываем, сохраняем последние данные ---
+    if (cooldown) {
+        pendingData = data;
+        return;
+    }
+
+    cooldown = true;
+    setTimeout(() => {
+        cooldown = false;
+        if (pendingData) {
+            const lastData = pendingData;
+            pendingData = null;
+            updateActivity(lastData);
+        }
+    }, 2000);
 
     const title = data.title || "";
     const artist = data.artists || "";
@@ -80,7 +101,7 @@ function updateActivity(data) {
 
     const activityObject = {
         name: config.programSettings.richPresence.rpcTitle,
-        type: 2, // LISTENING
+        type: 2,
         details: title,
         state: artist,
         largeImageKey: img,
@@ -93,37 +114,47 @@ function updateActivity(data) {
         ...(artistUrl ? { stateUrl: artistUrl } : {})
     };
 
-    // Пауза
-    if (data.playerState?.includes('play')) {
-        if (lastPlayerState !== 'pause') {
-            rpc.user?.clearActivity().catch(console.error);
-            console.log("[RPC] ⏸ Activity cleared (paused)");
-            lastPlayerState = 'pause';
+    const playerState = data.playerState?.toLowerCase() || "";
+
+    // --- Пауза с таймером 2 секунды ---
+    if (playerState.includes("play")) {
+        if (lastPlayerState !== "pause") {
+            if (pauseTimeout) clearTimeout(pauseTimeout);
+
+            pauseTimeout = setTimeout(() => {
+                rpc.user?.clearActivity().catch(console.error);
+                console.log("[RPC] ⏸ Activity cleared (paused 2s)");
+                lastPlayerState = "pause";
+                pauseTimeout = null;
+            }, 2000);
         }
         return;
     }
 
-    // Воспроизведение
-    if (data.playerState?.includes('pause')) {
+    // --- Воспроизведение / трек идёт ---
+    if (playerState.includes("pause") || playerState.includes("playing")) {
+        if (pauseTimeout) {
+            clearTimeout(pauseTimeout);
+            pauseTimeout = null;
+        }
+
         const hasChanged =
             !lastActivity ||
             lastActivity.details !== activityObject.details ||
             lastActivity.state !== activityObject.state ||
             lastActivity.largeImageKey !== activityObject.largeImageKey ||
-            lastPlayerState !== 'play';
+            lastPlayerState !== "play";
 
         if (hasChanged) {
             rpc.user?.setActivity(activityObject).catch(console.error);
             lastActivity = activityObject;
-            lastPlayerState = 'play';
+            lastPlayerState = "play";
             console.log(`[RPC] 🎧 Listening to ${title} — ${artist}`);
         } else {
-            // Даже если песня не поменялась, обновляем таймстампы
             rpc.user?.setActivity({ ...lastActivity, startTimestamp, endTimestamp }).catch(console.error);
         }
     }
 }
 
-initRPC();
-
+// --- Экспорт функции initRPC корректно в конце файла ---
 module.exports = { initRPC };

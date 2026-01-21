@@ -2,9 +2,12 @@
     "use strict";
 
     const WSPORT = 6972;
-
     const WS_URL = `ws://127.0.0.1:${WSPORT}`;
     let ws;
+    let forceSend = false;
+
+    // Последнее отправленное состояние для каждого плеера
+    const lastSentState = new Map();
 
     function connect() {
         ws = new WebSocket(WS_URL);
@@ -51,31 +54,121 @@
         )?.textContent ?? null;
 
         const playerState = playerEl.querySelector(
-            '[class*="BaseSonataControlsDesktop_playButtonIcon__TlFqv"] > use'
+            '[class*="BaseSonataControlsDesktop_playButtonIcon"] > use'
         )?.href?.baseVal ?? null;
 
-        return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, playerState, ts: Date.now() };
+        return {
+            img,
+            albumUrl,
+            artistUrl,
+            title,
+            artists,
+            timeCurrent,
+            timeEnd,
+            playerState,
+            ts: Date.now()
+        };
+    }
+
+    // Убираем поля, которые НЕ должны влиять на сравнение
+    function normalizeForCompare(data) {
+        const {
+            timeCurrent,
+            ts,
+            ...rest
+        } = data;
+        return rest;
+    }
+
+    function isChanged(index, data) {
+        const normalized = normalizeForCompare(data);
+        const last = lastSentState.get(index);
+
+        if (!last) {
+            lastSentState.set(index, normalized);
+            return true;
+        }
+
+        const changed = Object.keys(normalized).some(
+            key => normalized[key] !== last[key]
+        );
+
+        if (changed) {
+            lastSentState.set(index, normalized);
+        }
+
+        return changed;
     }
 
     function sendPlayerData(playerEl, index) {
-        const data = getPlayerData(playerEl);
+        // Если forceSend, пересоздаём данные заново
+        const data = forceSend ? getPlayerData(playerEl) : getPlayerData(playerEl);
         if (!data) return;
+
+        const shouldSend = forceSend || isChanged(index, data);
+        if (!shouldSend) return;
+
         if (ws?.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ playerIndex: index, ...data }));
+            // payload всегда актуальный, прямо сейчас собранный
+            const payload = {
+                playerIndex: index,
+                ...getPlayerData(playerEl) // ✅ заново вычисляем данные
+            };
+
+            ws.send(JSON.stringify(payload));
         }
+
+        // Сохраняем нормализованное состояние только если это не forceSend
+        if (!forceSend) {
+            const normalized = normalizeForCompare(data);
+            lastSentState.set(index, normalized);
+        }
+
+        // Сбрасываем флаг после отправки
+        forceSend = false;
     }
 
-    // Observe each player for changes
+    // Observe players
     const players = document.querySelectorAll(
         `[class*="PlayerBar_root"]`
     );
 
     players.forEach((playerEl, index) => {
-        const observer = new MutationObserver(() => sendPlayerData(playerEl, index));
+        const observer = new MutationObserver(() =>
+            sendPlayerData(playerEl, index)
+        );
+
         observer.observe(playerEl, {
             childList: true,
             subtree: true,
             characterData: true
         });
+    });
+
+    players.forEach((playerEl, index) => {
+        const observer = new MutationObserver(() =>
+            sendPlayerData(playerEl, index)
+        );
+
+        observer.observe(playerEl, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+
+        // 🎚️ Слайдер прогресса
+        const slider = playerEl.querySelector(
+            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]'
+        );
+
+        if (slider) {
+            const triggerForceSend = () => {
+                forceSend = true;
+                sendPlayerData(playerEl, index);
+            };
+
+            slider.addEventListener("mouseup", triggerForceSend);
+            slider.addEventListener("touchend", triggerForceSend);
+        }
     });
 })();
