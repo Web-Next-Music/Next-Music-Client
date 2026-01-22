@@ -86,8 +86,9 @@ function createInfoWindow(icon) {
     }
 
     infoWindow = new BrowserWindow({
-        width: 600,
-        height: 400,
+        width: 585,
+        height: 360,
+        useContentSize: true,
         resizable: false,
         autoHideMenuBar: true,
         alwaysOnTop: true,
