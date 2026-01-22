@@ -39,22 +39,38 @@ let config = {
   },
 };
 
-app.whenReady().then(() => {
-  config = loadConfig(nextMusicDirectory, config);
-  if (config.programSettings.checkUpdates) {
-    checkForUpdates();
-  }
-  mainWindow = createWindow();
-  createTray(appIcon, mainWindow, nextMusicDirectory, configFilePath, config);
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+if (!app.requestSingleInstanceLock()) {
+  // Если есть уже запущенный экземпляр, выходим
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    // Это событие вызывается, когда кто-то пытается открыть вторую копию
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
-});
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
+  app.whenReady().then(() => {
+    config = loadConfig(nextMusicDirectory, config);
+
+    if (config.programSettings.checkUpdates) {
+      checkForUpdates();
+    }
+
+    mainWindow = createWindow();
+    createTray(appIcon, mainWindow, nextMusicDirectory, configFilePath, config);
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit();
+  });
+}
 
 function createPreloadWindow() {
   preloadWindow = new BrowserWindow({
