@@ -97,7 +97,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    show: false, // показываем вручную
+    show: false,
   });
 
   // Убираем CSP для обхода блокировок

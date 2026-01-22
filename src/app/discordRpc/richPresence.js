@@ -4,15 +4,14 @@ const { Client } = require("@xhayper/discord-rpc");
 const WebSocket = require("ws");
 const config = require("../../index.js");
 
-const CLIENT_ID = "1300258490815741952"; // your Discord Client ID
+const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`
 const WSPORT = 6972;
+
 let rpc;
 let isReady = false;
 let lastActivity;
 let lastPlayerState = null;
-let cooldown = false;
-let pendingData = null;
 
 // --- Initialize RPC ---
 function initRPC() {
@@ -39,10 +38,10 @@ const wss = new WebSocket.Server({ port: WSPORT }, () =>
     console.log(`[WS] ✅ WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 );
 
-wss.on("connection", (ws) => {
+wss.on("connection", ws => {
     console.log("[WS] 🔌 New connection");
 
-    ws.on("message", (msg) => {
+    ws.on("message", msg => {
         try {
             const data = JSON.parse(msg.toString());
             updateActivity(data);
@@ -50,42 +49,22 @@ wss.on("connection", (ws) => {
             console.error("[WS] ❌ Error parsing data:", e);
         }
     });
-
-    ws.on("close", () => console.log("[WS] ⚠️ Connection closed"));
-    ws.on("error", (err) => console.error("[WS] ❌ WS error:", err));
 });
 
 // --- Parse time hh:mm:ss or mm:ss ---
 function parseTime(timeString) {
     if (!timeString) return 0;
     const parts = timeString.split(":").map(Number);
-    if (parts.length === 2) return parts[0] * 60 + parts[1]; // mm:ss
-    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]; // hh:mm:ss
-    return 0;
+    return parts.length === 2
+        ? parts[0] * 60 + parts[1]
+        : parts.length === 3
+        ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+        : 0;
 }
 
 // --- Update Discord activity ---
-let pauseTimeout = null;
-
-
 function updateActivity(data) {
     if (!rpc || !isReady) return;
-
-    // --- Кулдаун: если уже обрабатываем, сохраняем последние данные ---
-    if (cooldown) {
-        pendingData = data;
-        return;
-    }
-
-    cooldown = true;
-    setTimeout(() => {
-        cooldown = false;
-        if (pendingData) {
-            const lastData = pendingData;
-            pendingData = null;
-            updateActivity(lastData);
-        }
-    }, 2000);
 
     const title = data.title || "";
     const artist = data.artists || "";
@@ -116,28 +95,15 @@ function updateActivity(data) {
 
     const playerState = data.playerState?.toLowerCase() || "";
 
-    // --- Пауза с таймером 2 секунды ---
+    // --- Если в паузе, очищаем активность сразу ---
     if (playerState.includes("play")) {
-        if (lastPlayerState !== "pause") {
-            if (pauseTimeout) clearTimeout(pauseTimeout);
-
-            pauseTimeout = setTimeout(() => {
-                rpc.user?.clearActivity().catch(console.error);
-                console.log("[RPC] ⏸ Activity cleared (paused 2s)");
-                lastPlayerState = "pause";
-                pauseTimeout = null;
-            }, 2000);
-        }
+        rpc.user?.clearActivity().catch(console.error);
+        lastPlayerState = "pause";
         return;
     }
 
-    // --- Воспроизведение / трек идёт ---
+    // --- Если идёт трек ---
     if (playerState.includes("pause") || playerState.includes("playing")) {
-        if (pauseTimeout) {
-            clearTimeout(pauseTimeout);
-            pauseTimeout = null;
-        }
-
         const hasChanged =
             !lastActivity ||
             lastActivity.details !== activityObject.details ||
@@ -156,5 +122,4 @@ function updateActivity(data) {
     }
 }
 
-// --- Экспорт функции initRPC корректно в конце файла ---
 module.exports = { initRPC };

@@ -4,10 +4,11 @@
     const WSPORT = 6972;
     const WS_URL = `ws://127.0.0.1:${WSPORT}`;
     let ws;
-    let forceSend = false;
 
-    // Последнее отправленное состояние для каждого плеера
     const lastSentState = new Map();
+    const lastTimeCurrent = new Map();
+    const pendingData = new Map();
+    const canSend = new Map();
 
     function connect() {
         ws = new WebSocket(WS_URL);
@@ -57,118 +58,89 @@
             '[class*="BaseSonataControlsDesktop_playButtonIcon"] > use'
         )?.href?.baseVal ?? null;
 
-        return {
-            img,
-            albumUrl,
-            artistUrl,
-            title,
-            artists,
-            timeCurrent,
-            timeEnd,
-            playerState,
-            ts: Date.now()
-        };
+        return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, playerState };
     }
 
-    // Убираем поля, которые НЕ должны влиять на сравнение
-    function normalizeForCompare(data) {
-        const {
-            timeCurrent,
-            ts,
-            ...rest
-        } = data;
-        return rest;
+    function parseTimeToSec(time) {
+        if (!time) return 0;
+        const parts = time.split(":").map(Number);
+        return parts.length === 2
+            ? parts[0] * 60 + parts[1]
+            : parts.length === 3
+            ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+            : 0;
     }
 
+    // проверка на изменения и накопление timeCurrent
     function isChanged(index, data) {
-        const normalized = normalizeForCompare(data);
         const last = lastSentState.get(index);
+        const currentSec = parseTimeToSec(data.timeCurrent || "0:00");
+        const lastAccum = lastTimeCurrent.get(index) ?? 0;
+
+        let effectiveTimeChange = Math.abs(currentSec - lastAccum);
 
         if (!last) {
-            lastSentState.set(index, normalized);
+            lastSentState.set(index, { ...data, timeCurrent: undefined });
+            lastTimeCurrent.set(index, currentSec);
             return true;
         }
 
-        const changed = Object.keys(normalized).some(
-            key => normalized[key] !== last[key]
-        );
+        // сравниваем все поля кроме timeCurrent
+        const { timeCurrent, ...rest } = data;
+        const { timeCurrent: _, ...lastRest } = last;
 
-        if (changed) {
-            lastSentState.set(index, normalized);
+        const otherChanged = Object.keys(rest).some(k => rest[k] !== lastRest[k]);
+
+        if (otherChanged || effectiveTimeChange >= 2) {
+            lastSentState.set(index, { ...data, timeCurrent: undefined });
+            lastTimeCurrent.set(index, currentSec);
+            return true;
         }
 
-        return changed;
+        return false;
     }
 
     function sendPlayerData(playerEl, index) {
-        // Если forceSend, пересоздаём данные заново
-        const data = forceSend ? getPlayerData(playerEl) : getPlayerData(playerEl);
+        const data = getPlayerData(playerEl);
         if (!data) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-        const shouldSend = forceSend || isChanged(index, data);
-        if (!shouldSend) return;
-
-        if (ws?.readyState === WebSocket.OPEN) {
-            // payload всегда актуальный, прямо сейчас собранный
-            const payload = {
-                playerIndex: index,
-                ...getPlayerData(playerEl) // ✅ заново вычисляем данные
-            };
-
-            ws.send(JSON.stringify(payload));
+        if (!canSend.get(index)) {
+            // кулдаун активен, сохраняем последние данные
+            pendingData.set(index, data);
+            return;
         }
 
-        // Сохраняем нормализованное состояние только если это не forceSend
-        if (!forceSend) {
-            const normalized = normalizeForCompare(data);
-            lastSentState.set(index, normalized);
+        if (isChanged(index, data)) {
+            ws.send(JSON.stringify({ playerIndex: index, ...data }));
         }
 
-        // Сбрасываем флаг после отправки
-        forceSend = false;
+        // ставим кулдаун на 2 секунды
+        canSend.set(index, false);
+        setTimeout(() => {
+            canSend.set(index, true);
+            // если за 2 сек накопились новые данные — отправляем последние
+            const pending = pendingData.get(index);
+            if (pending) {
+                pendingData.delete(index);
+                sendPlayerData(playerEl, index);
+            }
+        }, 2000);
     }
 
-    // Observe players
-    const players = document.querySelectorAll(
-        `[class*="PlayerBar_root"]`
-    );
+    const players = document.querySelectorAll(`[class*="PlayerBar_root"]`);
 
     players.forEach((playerEl, index) => {
-        const observer = new MutationObserver(() =>
-            sendPlayerData(playerEl, index)
-        );
+        canSend.set(index, true);
 
-        observer.observe(playerEl, {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
-    });
+        const observer = new MutationObserver(() => sendPlayerData(playerEl, index));
+        observer.observe(playerEl, { childList: true, subtree: true, characterData: true });
 
-    players.forEach((playerEl, index) => {
-        const observer = new MutationObserver(() =>
-            sendPlayerData(playerEl, index)
-        );
-
-        observer.observe(playerEl, {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
-
-        // 🎚️ Слайдер прогресса
-        const slider = playerEl.querySelector(
-            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]'
-        );
-
+        const slider = playerEl.querySelector('[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]');
         if (slider) {
-            const triggerForceSend = () => {
-                forceSend = true;
-                sendPlayerData(playerEl, index);
-            };
-
-            slider.addEventListener("mouseup", triggerForceSend);
-            slider.addEventListener("touchend", triggerForceSend);
+            const triggerSend = () => sendPlayerData(playerEl, index);
+            slider.addEventListener("mouseup", triggerSend);
+            slider.addEventListener("touchend", triggerSend);
         }
     });
 })();
