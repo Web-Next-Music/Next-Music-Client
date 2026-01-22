@@ -34,7 +34,6 @@ function getJson(url) {
     });
 }
 
-// ✅ ТОЛЬКО ФУНКЦИЯ
 async function checkForUpdates() {
     try {
         const release = await getJson(GITHUB_API_URL);
