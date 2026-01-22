@@ -58,8 +58,8 @@ function parseTime(timeString) {
     return parts.length === 2
         ? parts[0] * 60 + parts[1]
         : parts.length === 3
-        ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-        : 0;
+            ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+            : 0;
 }
 
 // --- Update Discord activity ---
@@ -97,6 +97,7 @@ function updateActivity(data) {
 
     // --- Если в паузе, очищаем активность сразу ---
     if (playerState.includes("play")) {
+        console.log(`[RPC] ⏸ Clearing activity (pause)`);
         rpc.user?.clearActivity().catch(console.error);
         lastPlayerState = "pause";
         return;
@@ -111,13 +112,19 @@ function updateActivity(data) {
             lastActivity.largeImageKey !== activityObject.largeImageKey ||
             lastPlayerState !== "play";
 
+        // Проверка для обновления только таймстампов
+        const timestampDiff = lastActivity ? Math.abs(activityObject.startTimestamp - lastActivity.startTimestamp) : Infinity;
+
         if (hasChanged) {
+            console.log(`[RPC] 🎧 Setting new activity: ${title} — ${artist}`, activityObject);
             rpc.user?.setActivity(activityObject).catch(console.error);
             lastActivity = activityObject;
             lastPlayerState = "play";
-            console.log(`[RPC] 🎧 Listening to ${title} — ${artist}`);
-        } else {
+        } else if (timestampDiff > 1) {
+            console.log(`[RPC] 🔄 Updating timestamps for: ${title} — ${artist}`, { startTimestamp, endTimestamp });
             rpc.user?.setActivity({ ...lastActivity, startTimestamp, endTimestamp }).catch(console.error);
+            lastActivity.startTimestamp = startTimestamp; // обновляем последний таймстамп
+            lastActivity.endTimestamp = endTimestamp;
         }
     }
 }
