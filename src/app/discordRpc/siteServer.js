@@ -157,10 +157,10 @@
     players.forEach((playerEl, index) => {
         log(index, "👀 Player observer initialized");
 
-        const observer = new MutationObserver(() =>
+        const playerObserve = new MutationObserver(() =>
             sendPlayerData(playerEl, index),
         );
-        observer.observe(playerEl, {
+        playerObserve.observe(playerEl, {
             childList: true,
             subtree: true,
             characterData: true,
