@@ -61,7 +61,7 @@
 
     // резкая перемотка > 1 сек
     function isTimeJump(index, data) {
-        const current = parseTimeToSec(data.timeCurrent || "0:00");
+        const current = parseTimeToSec(data.timeCurrent || "");
         const last = lastTimeCurrent.get(index);
         lastTimeCurrent.set(index, current);
         if (last == null) return false;

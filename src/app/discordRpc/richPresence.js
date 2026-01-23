@@ -85,13 +85,22 @@ function updateActivity(data) {
         state: artist,
         largeImageKey: img,
         largeImageUrl: GITHUB_LINK,
-        startTimestamp,
-        endTimestamp,
         statusDisplayType: 1,
         instance: false,
         ...(albumUrl ? { detailsUrl: albumUrl } : {}),
-        ...(artistUrl ? { stateUrl: artistUrl } : {})
+        ...(artistUrl ? { stateUrl: artistUrl } : {}),
+        ...((data.timeCurrent && data.timeCurrent !== "00:00") || (data.timeEnd && data.timeEnd !== "00:00")
+            ? {
+                startTimestamp: Math.floor(Date.now() / 1000) - parseTime(data.timeCurrent),
+                endTimestamp: Math.floor(Date.now() / 1000) - parseTime(data.timeCurrent) + parseTime(data.timeEnd)
+            }
+            : {})
     };
+
+    // Сбрасываем lastActivity, если трек не даёт таймстампы
+    if (!activityObject.startTimestamp || !activityObject.endTimestamp) {
+        lastActivity = null;
+    }
 
     const playerState = data.playerState?.toLowerCase() || "";
 
