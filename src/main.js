@@ -18,6 +18,9 @@ const { createTray } = require('./app/tray/tray.js');
 const { checkForUpdates } = require('./app/updater/updater.js');
 let mainWindow;
 
+// flags
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+
 // Window color fix
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('disable-features', 'WaylandWpColorManagerV1');
