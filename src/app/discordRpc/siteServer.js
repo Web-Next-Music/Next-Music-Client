@@ -67,8 +67,8 @@
         return parts.length === 2
             ? parts[0] * 60 + parts[1]
             : parts.length === 3
-            ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-            : 0;
+                ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+                : 0;
     }
 
     // проверка на изменения и накопление timeCurrent
@@ -104,6 +104,9 @@
         const data = getPlayerData(playerEl);
         if (!data) return;
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+        // ❌ Не отправляем, если таймстамп "00:00"
+        if (data.timeCurrent === "00:00") return;
 
         if (!canSend.get(index)) {
             // кулдаун активен, сохраняем последние данные
