@@ -6,7 +6,7 @@ const fs = require('fs');
 const appIcon = path.join(__dirname, "app/icons/icon-256.png");
 
 // Пути Модулей
-const preloadPath = path.join(__dirname, "app/preload/preload.html");
+const loaderPath = path.join(__dirname, "app/loader/loader.html");
 
 // Получаем папку для хранения данных приложения
 const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
@@ -42,7 +42,7 @@ let config = {
   },
 
   launchSettings: {
-    preloadWindow: true,
+    loaderWindow: true,
     startMinimized: false,
   },
 };
@@ -80,8 +80,8 @@ if (!app.requestSingleInstanceLock()) {
   });
 }
 
-function createPreloadWindow() {
-  preloadWindow = new BrowserWindow({
+function createLoaderWindow() {
+  loaderWindow = new BrowserWindow({
     width: 240,
     height: 280,
     backgroundColor: "#000",
@@ -95,15 +95,15 @@ function createPreloadWindow() {
     icon: appIcon,
   });
 
-  preloadWindow.loadURL(`file://${preloadPath}`)
+  loaderWindow.loadURL(`file://${loaderPath}`)
 }
 
 function createWindow() {
   const showWindow = !config.launchSettings.startMinimized;
 
-  // Если включен preload, создаём его перед основным окном
-  if (config.launchSettings.preloadWindow && showWindow) {
-    createPreloadWindow();
+  // Если включен loader, создаём его перед основным окном
+  if (config.launchSettings.loaderWindow && showWindow) {
+    createLoaderWindow();
   }
 
   // Основное окно приложения
@@ -146,13 +146,13 @@ function createWindow() {
 
   // Когда страница основного окна загрузилась
   mainWindow.webContents.on('did-finish-load', () => {
-    // Закрываем preload окно (если оно есть)
-    if (config.launchSettings.preloadWindow && preloadWindow) {
+    // Закрываем loader окно (если оно есть)
+    if (config.launchSettings.loaderWindow && loaderWindow) {
       try {
-        preloadWindow.close();
-        preloadWindow = null;
+        loaderWindow.close();
+        loaderWindow = null;
       } catch (err) {
-        console.log('Preload window is missing');
+        console.log('Loader window is missing');
       }
     }
 
@@ -171,8 +171,8 @@ function createWindow() {
         initRPC();
 
         // Inject siteServer.js
-        const preloadPath = path.join(__dirname, "app/discordRpc/siteServer.js");
-        const normalizedPath = preloadPath.replace(/\\/g, "/");
+        const loaderPath = path.join(__dirname, "app/discordRpc/siteServer.js");
+        const normalizedPath = loaderPath.replace(/\\/g, "/");
 
         const injectScript = `
       (() => {
@@ -207,7 +207,7 @@ function createWindow() {
   // Логика на старте: если стартуем свернутым
   if (config.launchSettings.startMinimized) {
     mainWindow.hide();
-  } else if (!config.launchSettings.preloadWindow) {
+  } else if (!config.launchSettings.loaderWindow) {
     mainWindow.show();
   }
 
