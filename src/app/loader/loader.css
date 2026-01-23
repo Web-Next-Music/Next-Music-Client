@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap");
 
 body {
     display: flex;
@@ -7,14 +7,14 @@ body {
     height: 100%;
     margin: 0;
     background-color: #000;
-    font-family: 'Noto Sans', sans-serif;
+    font-family: "Noto Sans", sans-serif;
 }
 
 .next_icon {
     position: fixed;
     width: 100px;
     height: 100px;
-    background-image: url('../icons/icon-256.png');
+    background-image: url("../icons/icon-256.png");
     background-size: cover;
     top: 18%;
     left: calc(50% - 50px);
@@ -38,7 +38,7 @@ body {
     height: 36px;
     bottom: 18%;
     left: calc(50% - 18px);
-    background-image: url('assets/loading.png');
+    background-image: url("assets/loading.png");
     background-repeat: no-repeat;
     background-size: contain;
     animation: spin 6s ease-in-out infinite;

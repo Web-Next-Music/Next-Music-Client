@@ -14,8 +14,8 @@ function getJson(url) {
                 {
                     headers: {
                         "User-Agent": "Next-Music-Updater",
-                        "Accept": "application/vnd.github+json"
-                    }
+                        Accept: "application/vnd.github+json",
+                    },
                 },
                 (res) => {
                     let data = "";
@@ -28,7 +28,7 @@ function getJson(url) {
                             reject(err);
                         }
                     });
-                }
+                },
             )
             .on("error", reject);
     });
@@ -63,7 +63,7 @@ function showUpdateDialog(version, releaseUrl) {
             buttons: ["Yes", "Cancel"],
             defaultId: 0,
             cancelId: 1,
-            noLink: true
+            noLink: true,
         })
         .then(({ response }) => {
             if (response === 0) {
@@ -73,5 +73,5 @@ function showUpdateDialog(version, releaseUrl) {
 }
 
 module.exports = {
-    checkForUpdates
+    checkForUpdates,
 };

@@ -1,6 +1,6 @@
-const { Tray, Menu, shell, BrowserWindow, app, ipcRenderer } = require('electron');
-const path = require('path');
-const { checkForUpdates } = require('../updater/updater.js');
+const { Tray, Menu, shell, BrowserWindow, app } = require("electron");
+const path = require("path");
+const { checkForUpdates } = require("../updater/updater.js");
 
 let infoWindow = null;
 const infoPath = path.join(__dirname, "../info/info.html");
@@ -11,7 +11,7 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
 
     const contextMenu = Menu.buildFromTemplate([
         {
-            label: 'Open Next Music folder',
+            label: "Open Next Music folder",
             click: () => {
                 if (!nextMusicDirectory) {
                     console.error("nextMusicDirectory is undefined");
@@ -19,10 +19,10 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
                 }
 
                 shell.openPath(nextMusicDirectory);
-            }
+            },
         },
         {
-            label: 'Open config',
+            label: "Open config",
             click: () => {
                 if (!configFilePath) {
                     console.error("configFilePath is undefined");
@@ -30,49 +30,52 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
                 }
 
                 shell.openPath(configFilePath);
-            }
+            },
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
-            label: 'Download extensions',
-            click: () => shell.openExternal('https://github.com/Web-Next-Music/Next-Music-Extensions')
-        },
-        {
-            label: 'Donate',
-            click: () => shell.openExternal('https://boosty.to/diramix')
-        },
-        { type: 'separator' },
-        {
-            label: 'Info',
-            click: () => createInfoWindow(iconPath)
+            label: "Download extensions",
+            click: () =>
+                shell.openExternal(
+                    "https://github.com/Web-Next-Music/Next-Music-Extensions",
+                ),
         },
         {
-            label: 'Check updates',
+            label: "Donate",
+            click: () => shell.openExternal("https://boosty.to/diramix"),
+        },
+        { type: "separator" },
+        {
+            label: "Info",
+            click: () => createInfoWindow(iconPath),
+        },
+        {
+            label: "Check updates",
             click: () => {
                 checkForUpdates();
-            }
+            },
         },
         {
-            label: 'Restart',
+            label: "Restart",
             click: () => {
                 app.relaunch();
                 app.exit(0);
-            }
+            },
         },
         {
-            label: 'Quit',
+            label: "Quit",
             click: () => {
                 // Снимаем все обработчики close, чтобы можно было выйти
-                mainWindow.removeAllListeners('close');
+                mainWindow.removeAllListeners("close");
                 app.quit();
-            }
-        }
+            },
+        },
     ]);
 
-    tray.setToolTip('Next Music');
+    tray.setToolTip("Next Music");
     tray.setContextMenu(contextMenu);
 
-    tray.on('click', () => {
+    tray.on("click", () => {
         mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
     });
 }
@@ -92,19 +95,19 @@ function createInfoWindow(icon) {
         resizable: false,
         autoHideMenuBar: true,
         alwaysOnTop: true,
-        backgroundColor: '#030117',
+        backgroundColor: "#030117",
         icon: appIcon,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-        }
+        },
     });
 
     infoWindow.loadFile(infoPath);
 
     infoWindow.setMenu(null);
 
-    infoWindow.on('closed', () => {
+    infoWindow.on("closed", () => {
         infoWindow = null;
     });
 }

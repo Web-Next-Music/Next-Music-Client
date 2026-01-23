@@ -5,7 +5,7 @@ const WebSocket = require("ws");
 const config = require("../../main.js");
 
 const CLIENT_ID = "1300258490815741952";
-const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`
+const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
 const WSPORT = 6972;
 
 let rpc;
@@ -35,13 +35,15 @@ function initRPC() {
 
 // --- WebSocket server ---
 const wss = new WebSocket.Server({ port: WSPORT }, () =>
-    console.log(`[WS] ✅ WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
+    console.log(
+        `[WS] ✅ WebSocket server listening at ws://127.0.0.1:${WSPORT}`,
+    ),
 );
 
-wss.on("connection", ws => {
+wss.on("connection", (ws) => {
     console.log("[WS] 🔌 New connection");
 
-    ws.on("message", msg => {
+    ws.on("message", (msg) => {
         try {
             const data = JSON.parse(msg.toString());
             updateActivity(data);
@@ -58,8 +60,8 @@ function parseTime(timeString) {
     return parts.length === 2
         ? parts[0] * 60 + parts[1]
         : parts.length === 3
-            ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-            : 0;
+          ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+          : 0;
 }
 
 // --- Update Discord activity ---
@@ -89,12 +91,18 @@ function updateActivity(data) {
         instance: false,
         ...(albumUrl ? { detailsUrl: albumUrl } : {}),
         ...(artistUrl ? { stateUrl: artistUrl } : {}),
-        ...((data.timeCurrent && data.timeCurrent !== "00:00") || (data.timeEnd && data.timeEnd !== "00:00")
+        ...((data.timeCurrent && data.timeCurrent !== "00:00") ||
+        (data.timeEnd && data.timeEnd !== "00:00")
             ? {
-                startTimestamp: Math.floor(Date.now() / 1000) - parseTime(data.timeCurrent),
-                endTimestamp: Math.floor(Date.now() / 1000) - parseTime(data.timeCurrent) + parseTime(data.timeEnd)
-            }
-            : {})
+                  startTimestamp:
+                      Math.floor(Date.now() / 1000) -
+                      parseTime(data.timeCurrent),
+                  endTimestamp:
+                      Math.floor(Date.now() / 1000) -
+                      parseTime(data.timeCurrent) +
+                      parseTime(data.timeEnd),
+              }
+            : {}),
     };
 
     // Сбрасываем lastActivity, если трек не даёт таймстампы
@@ -122,16 +130,28 @@ function updateActivity(data) {
             lastPlayerState !== "play";
 
         // Проверка для обновления только таймстампов
-        const timestampDiff = lastActivity ? Math.abs(activityObject.startTimestamp - lastActivity.startTimestamp) : Infinity;
+        const timestampDiff = lastActivity
+            ? Math.abs(
+                  activityObject.startTimestamp - lastActivity.startTimestamp,
+              )
+            : Infinity;
 
         if (hasChanged) {
-            console.log(`[RPC] 🎧 Setting new activity: ${title} — ${artist}`, activityObject);
+            console.log(
+                `[RPC] 🎧 Setting new activity: ${title} — ${artist}`,
+                activityObject,
+            );
             rpc.user?.setActivity(activityObject).catch(console.error);
             lastActivity = activityObject;
             lastPlayerState = "play";
         } else if (timestampDiff > 1) {
-            console.log(`[RPC] 🔄 Updating timestamps for: ${title} — ${artist}`, { startTimestamp, endTimestamp });
-            rpc.user?.setActivity({ ...lastActivity, startTimestamp, endTimestamp }).catch(console.error);
+            console.log(
+                `[RPC] 🔄 Updating timestamps for: ${title} — ${artist}`,
+                { startTimestamp, endTimestamp },
+            );
+            rpc.user
+                ?.setActivity({ ...lastActivity, startTimestamp, endTimestamp })
+                .catch(console.error);
             lastActivity.startTimestamp = startTimestamp; // обновляем последний таймстамп
             lastActivity.endTimestamp = endTimestamp;
         }

@@ -1,65 +1,65 @@
 {
-  "name": "next-music",
-  "version": "2.2.7",
-  "description": "Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)",
-  "main": "src/main.js",
-  "scripts": {
-    "start": "electron .",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux"
-  },
-  "build": {
-    "appId": "com.nextmusic.client",
-    "productName": "Next Music",
-    "files": [
-      "src/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "buildResources": "src/app/icons",
-      "output": "dist"
+    "name": "next-music",
+    "version": "2.2.7",
+    "description": "Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "electron .",
+        "build": "electron-builder",
+        "build:win": "electron-builder --win",
+        "build:linux": "electron-builder --linux"
     },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+    "build": {
+        "appId": "com.nextmusic.client",
+        "productName": "Next Music",
+        "files": [
+            "src/**/*",
+            "node_modules/**/*",
+            "package.json"
+        ],
+        "directories": {
+            "buildResources": "src/app/icons",
+            "output": "dist"
+        },
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "icon": "src/app/icons/icon-256.png"
+        },
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "category": "Audio",
+            "maintainer": "Diramix <39developer@diram1x.ru>",
+            "icon": "src/app/icons/icon-256.png"
         }
-      ],
-      "icon": "src/app/icons/icon-256.png"
     },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Audio",
-      "maintainer": "Diramix <39developer@diram1x.ru>",
-      "icon": "src/app/icons/icon-256.png"
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
+    },
+    "keywords": [],
+    "author": "Diramix <39developer@diram1x.ru>",
+    "license": "MIT",
+    "type": "commonjs",
+    "bugs": {
+        "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
+    },
+    "homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
+    "devDependencies": {
+        "electron": "^40.0.0",
+        "electron-builder": "^26.4.0"
+    },
+    "dependencies": {
+        "@xhayper/discord-rpc": "^1.3.0",
+        "node-notifier": "^10.0.1"
     }
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
-  },
-  "keywords": [],
-  "author": "Diramix <39developer@diram1x.ru>",
-  "license": "MIT",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
-  },
-  "homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
-  "devDependencies": {
-    "electron": "^40.0.0",
-    "electron-builder": "^26.4.0"
-  },
-  "dependencies": {
-    "@xhayper/discord-rpc": "^1.3.0",
-    "node-notifier": "^10.0.1"
-  }
 }
