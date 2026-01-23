@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { version: CURRENT_VERSION } = require("../package.json");
 
 // Иконка
 const appIcon = path.join(__dirname, "app/icons/icon-256.png");
@@ -65,11 +66,12 @@ if (!app.requestSingleInstanceLock()) {
 
     app.whenReady().then(() => {
         config = loadConfig(nextMusicDirectory, config);
-
-        if (config.programSettings.checkUpdates) {
+        if (
+            config.programSettings.checkUpdates &&
+            !CURRENT_VERSION.includes("beta")
+        ) {
             checkForUpdates();
         }
-
         mainWindow = createWindow();
         createTray(
             appIcon,
@@ -78,7 +80,6 @@ if (!app.requestSingleInstanceLock()) {
             configFilePath,
             config,
         );
-
         app.on("activate", () => {
             if (BrowserWindow.getAllWindows().length === 0) createWindow();
         });
