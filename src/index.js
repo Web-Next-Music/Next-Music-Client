@@ -348,15 +348,21 @@ function loadFilesFromDirectory(directory, extension, callback) {
       console.error('Error reading directory:', err);
       return;
     }
+
     files.forEach(file => {
       const filePath = path.join(directory, file);
+
       fs.stat(filePath, (err, stat) => {
         if (err) {
           console.error('Error stating file:', err);
           return;
         }
+
         if (stat.isDirectory()) {
-          loadFilesFromDirectory(filePath, extension, callback);
+          // Пропускаем папки, начинающиеся с "!"
+          if (!file.startsWith('!')) {
+            loadFilesFromDirectory(filePath, extension, callback);
+          }
         } else if (path.extname(file) === extension) {
           fs.readFile(filePath, 'utf8', (err, content) => {
             if (err) {
