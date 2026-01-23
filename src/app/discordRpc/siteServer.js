@@ -8,13 +8,21 @@
     const lastSentState = new Map();
     const lastTimeCurrent = new Map();
     const pendingData = new Map();
-    const canSend = new Map();
+    const cooldownDuration = 2000;
+    const cooldownTimers = new Map();
+
+    function log(index, msg, data) {
+        console.log(
+            `%c[PLAYER ${index}] ${msg}`,
+            "color:#4caf50;font-weight:bold;",
+            data ?? ""
+        );
+    }
 
     function connect() {
         ws = new WebSocket(WS_URL);
-
         ws.onopen = () => console.log("[WS] ✅ Connected to", WS_URL);
-        ws.onerror = (e) => console.error("[WS] ❌ WS Error:", e);
+        ws.onerror = e => console.error("[WS] ❌ WS Error:", e);
         ws.onclose = () => {
             console.warn("[WS] ⚠️ Connection closed, reconnecting in 3 sec");
             setTimeout(connect, 3000);
@@ -23,127 +31,110 @@
 
     connect();
 
+    /* ===================== DATA ===================== */
+
     function getPlayerData(playerEl) {
         if (!playerEl) return null;
-
-        const img = playerEl.querySelector(
-            `[class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img`
-        )?.src ?? null;
-
-        const albumUrl = playerEl.querySelector(
-            `[class*="Meta_albumLink"]`
-        )?.href?.trim() ?? null;
-
-        const artistUrl = playerEl.querySelector(
-            `[class*="Meta_link"]`
-        )?.href?.trim() ?? null;
-
-        const title = playerEl.querySelector(
-            `[class*="Meta_title"]`
-        )?.textContent?.trim() ?? null;
-
-        const artists = playerEl.querySelector(
-            `[class*="SeparatedArtists_root_clamp"]`
-        )?.textContent?.trim() ?? null;
-
-        const timeCurrent = playerEl.querySelector(
-            `[class*="TimecodeGroup_timecode_current_animation"] > span`
-        )?.textContent ?? null;
-
-        const timeEnd = playerEl.querySelector(
-            `[class*="TimecodeGroup_timecode_end"] > span`
-        )?.textContent ?? null;
-
-        const playerState = playerEl.querySelector(
-            '[class*="BaseSonataControlsDesktop_playButtonIcon"] > use'
-        )?.href?.baseVal ?? null;
-
-        return { img, albumUrl, artistUrl, title, artists, timeCurrent, timeEnd, playerState };
+        return {
+            img: playerEl.querySelector(
+                `[class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img`
+            )?.src ?? null,
+            albumUrl: playerEl.querySelector(`[class*="Meta_albumLink"]`)?.href?.trim() ?? null,
+            artistUrl: playerEl.querySelector(`[class*="Meta_link"]`)?.href?.trim() ?? null,
+            title: playerEl.querySelector(`[class*="Meta_title"]`)?.textContent?.trim() ?? null,
+            artists: playerEl.querySelector(`[class*="SeparatedArtists_root_clamp"]`)?.textContent?.trim() ?? null,
+            timeCurrent: playerEl.querySelector(`[class*="TimecodeGroup_timecode_current_animation"] > span`)?.textContent ?? null,
+            timeEnd: playerEl.querySelector(`[class*="TimecodeGroup_timecode_end"] > span`)?.textContent ?? null,
+            playerState: playerEl.querySelector('[class*="BaseSonataControlsDesktop_playButtonIcon"] > use')?.href?.baseVal ?? null
+        };
     }
 
     function parseTimeToSec(time) {
         if (!time) return 0;
-        const parts = time.split(":").map(Number);
-        return parts.length === 2
-            ? parts[0] * 60 + parts[1]
-            : parts.length === 3
-                ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+        const p = time.split(":").map(Number);
+        return p.length === 2 ? p[0] * 60 + p[1]
+            : p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2]
                 : 0;
     }
 
-    // проверка на изменения и накопление timeCurrent
-    function isChanged(index, data) {
+    /* ===================== CHANGE DETECTION ===================== */
+
+    // резкая перемотка > 1 сек
+    function isTimeJump(index, data) {
+        const current = parseTimeToSec(data.timeCurrent || "0:00");
+        const last = lastTimeCurrent.get(index);
+        lastTimeCurrent.set(index, current);
+        if (last == null) return false;
+        return Math.abs(current - last) > 1;
+    }
+
+    function isStateChanged(index, data) {
         const last = lastSentState.get(index);
-        const currentSec = parseTimeToSec(data.timeCurrent || "0:00");
-        const lastAccum = lastTimeCurrent.get(index) ?? 0;
-
-        let effectiveTimeChange = Math.abs(currentSec - lastAccum);
-
         if (!last) {
             lastSentState.set(index, { ...data, timeCurrent: undefined });
-            lastTimeCurrent.set(index, currentSec);
+            log(index, "🆕 First state detected");
             return true;
         }
-
-        // сравниваем все поля кроме timeCurrent
         const { timeCurrent, ...rest } = data;
         const { timeCurrent: _, ...lastRest } = last;
+        const changed = Object.keys(rest).some(k => rest[k] !== lastRest[k]);
+        if (changed) lastSentState.set(index, { ...data, timeCurrent: undefined });
+        return changed;
+    }
 
-        const otherChanged = Object.keys(rest).some(k => rest[k] !== lastRest[k]);
+    /* ===================== SEND LOGIC ===================== */
 
-        if (otherChanged || effectiveTimeChange >= 2) {
-            lastSentState.set(index, { ...data, timeCurrent: undefined });
-            lastTimeCurrent.set(index, currentSec);
-            return true;
-        }
+    function scheduleSend(playerEl, index, data) {
+        // перезаписываем последнее состояние
+        pendingData.set(index, data);
 
-        return false;
+        // если таймер кулдауна уже запущен — ничего не делаем
+        if (cooldownTimers.has(index)) return;
+
+        // запускаем кулдаун
+        cooldownTimers.set(
+            index,
+            setInterval(() => {
+                const pending = pendingData.get(index);
+                if (!pending) return;
+
+                // отправляем только последнее состояние
+                const payload = { playerIndex: index, ...pending };
+                ws.send(JSON.stringify(payload));
+                log(index, "📤 Sent after cooldown", payload);
+
+                // удаляем pending после отправки
+                pendingData.delete(index);
+            }, cooldownDuration)
+        );
     }
 
     function sendPlayerData(playerEl, index) {
         const data = getPlayerData(playerEl);
-        if (!data) return;
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
-        // ❌ Не отправляем, если таймстамп "00:00"
+        if (!data || !ws || ws.readyState !== WebSocket.OPEN) return;
         if (data.timeCurrent === "00:00") return;
 
-        if (!canSend.get(index)) {
-            // кулдаун активен, сохраняем последние данные
-            pendingData.set(index, data);
-            return;
-        }
+        const timeJump = isTimeJump(index, data);
+        const stateChanged = isStateChanged(index, data);
 
-        if (isChanged(index, data)) {
-            ws.send(JSON.stringify({ playerIndex: index, ...data }));
-        }
+        if (!timeJump && !stateChanged) return;
 
-        // ставим кулдаун на 2 секунды
-        canSend.set(index, false);
-        setTimeout(() => {
-            canSend.set(index, true);
-            // если за 2 сек накопились новые данные — отправляем последние
-            const pending = pendingData.get(index);
-            if (pending) {
-                pendingData.delete(index);
-                sendPlayerData(playerEl, index);
-            }
-        }, 2000);
+        log(index, timeJump ? "⏩ Triggered (time jump)" : "📤 Triggered (state change)", data);
+        scheduleSend(playerEl, index, data);
     }
 
     const players = document.querySelectorAll(`[class*="PlayerBar_root"]`);
-
     players.forEach((playerEl, index) => {
-        canSend.set(index, true);
+        log(index, "👀 Player observer initialized");
 
         const observer = new MutationObserver(() => sendPlayerData(playerEl, index));
         observer.observe(playerEl, { childList: true, subtree: true, characterData: true });
 
         const slider = playerEl.querySelector('[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]');
         if (slider) {
-            const triggerSend = () => sendPlayerData(playerEl, index);
-            slider.addEventListener("mouseup", triggerSend);
-            slider.addEventListener("touchend", triggerSend);
+            const trigger = () => sendPlayerData(playerEl, index);
+            slider.addEventListener("mouseup", trigger);
+            slider.addEventListener("touchend", trigger);
         }
     });
 })();
