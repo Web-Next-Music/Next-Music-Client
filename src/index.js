@@ -18,6 +18,14 @@ const { createTray } = require('./app/tray/tray.js');
 const { checkForUpdates } = require('./app/updater/updater.js');
 let mainWindow;
 
+// Window color fix
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('disable-features', 'WaylandWpColorManagerV1');
+}
+
+app.commandLine.appendSwitch('force-color-profile', 'srgb');
+
+// Config
 let config = {
   windowSettings: {
     alwaysOnTop: false,

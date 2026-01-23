@@ -11,7 +11,7 @@
   },
   "build": {
     "appId": "com.nextmusic.client",
-    "productName": "Next-Music",
+    "productName": "Next Music",
     "files": [
       "src/**/*",
       "node_modules/**/*",
