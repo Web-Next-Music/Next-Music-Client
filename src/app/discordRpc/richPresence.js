@@ -2,7 +2,7 @@
 
 const { Client } = require("@xhayper/discord-rpc");
 const WebSocket = require("ws");
-const config = require("../../index.js");
+const config = require("../../main.js");
 
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`
