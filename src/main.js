@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, session } = require("electron");
 const path = require("path");
 const fs = require('fs');
 
-//Иконка
+// Иконка
 const appIcon = path.join(__dirname, "app/icons/icon-256.png");
 
 // Пути Модулей
@@ -13,7 +13,7 @@ const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
 const addonsDirectory = path.join(nextMusicDirectory, "Addons");
 const configFilePath = path.join(nextMusicDirectory, "config.json");
 
-// Модули
+// Libs
 const { createTray } = require('./app/tray/tray.js');
 const { checkForUpdates } = require('./app/updater/updater.js');
 let mainWindow;
@@ -166,40 +166,7 @@ function createWindow() {
       console.log('Addons are disabled');
     }
 
-    // Initialize Discord RPC and inject siteServer.js only if enabled
-    if (config.programSettings.richPresence.enabled) {
-      try {
-        const { initRPC } = require('./app/discordRpc/richPresence.js');
-
-        initRPC();
-
-        // Inject siteServer.js
-        const loaderPath = path.join(__dirname, "app/discordRpc/siteServer.js");
-        const normalizedPath = loaderPath.replace(/\\/g, "/");
-
-        const injectScript = `
-      (() => {
-        if (!document.querySelector('script[data-injected="${normalizedPath}"]')) {
-          const s = document.createElement('script');
-          s.src = "file://${normalizedPath}";
-          s.type = "text/javascript";
-          s.defer = true;
-          s.dataset.injected = "${normalizedPath}";
-          document.head.appendChild(s);
-        }
-      })();
-    `;
-
-        mainWindow.webContents.executeJavaScript(injectScript)
-          .then(() => console.log("[RPC] ✅ siteServer.js injected"))
-          .catch(console.error);
-
-      } catch (err) {
-        console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
-      }
-    } else {
-      console.log("[RPC] ⚠️ Discord RPC is disabled");
-    }
+    activateRpc();
 
     // Показываем основное окно
     if (showWindow) {
@@ -378,4 +345,41 @@ function loadFilesFromDirectory(directory, extension, callback) {
       });
     });
   });
+}
+
+// Initialize Discord RPC and inject siteServer.js only if enabled
+function activateRpc() {
+  if (config.programSettings.richPresence.enabled) {
+    try {
+      const { initRPC } = require('./app/discordRpc/richPresence.js');
+
+      initRPC();
+
+      // Inject siteServer.js
+      const loaderPath = path.join(__dirname, "app/discordRpc/siteServer.js");
+      const normalizedPath = loaderPath.replace(/\\/g, "/");
+
+      const injectScript = `
+          (() => {
+            if (!document.querySelector('script[data-injected="${normalizedPath}"]')) {
+              const s = document.createElement('script');
+              s.src = "file://${normalizedPath}";
+              s.type = "text/javascript";
+              s.defer = true;
+              s.dataset.injected = "${normalizedPath}";
+              document.head.appendChild(s);
+            }
+          })();
+        `;
+
+      mainWindow.webContents.executeJavaScript(injectScript)
+        .then(() => console.log("[RPC] ✅ siteServer.js injected"))
+        .catch(console.error);
+
+    } catch (err) {
+      console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
+    }
+  } else {
+    console.log("[RPC] ⚠️ Discord RPC is disabled");
+  }
 }
