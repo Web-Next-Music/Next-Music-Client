@@ -19,10 +19,25 @@
         );
     }
 
+    /* ===================== WEBSOCKET ===================== */
+
     function connect() {
         ws = new WebSocket(WS_URL);
-        ws.onopen = () => console.log("[WS] ✅ Connected to", WS_URL);
+
+        ws.onopen = () => {
+            console.log("[WS] ✅ Connected to", WS_URL);
+
+            // отправляем все pending данные, которые могли накопиться
+            pendingData.forEach((data, index) => {
+                const payload = { playerIndex: index, ...data };
+                ws.send(JSON.stringify(payload));
+                log(index, "📤 Sent pending on reconnect", payload);
+                pendingData.delete(index);
+            });
+        };
+
         ws.onerror = (e) => console.error("[WS] ❌ WS Error:", e);
+
         ws.onclose = () => {
             console.warn("[WS] ⚠️ Connection closed, reconnecting in 3 sec");
             setTimeout(connect, 3000);
@@ -31,7 +46,7 @@
 
     connect();
 
-    /* ===================== DATA ===================== */
+    /* ===================== DATA EXTRACTION ===================== */
 
     function getPlayerData(playerEl) {
         if (!playerEl) return null;
@@ -82,7 +97,6 @@
 
     /* ===================== CHANGE DETECTION ===================== */
 
-    // резкая перемотка > 1 сек
     function isTimeJump(index, data) {
         const current = parseTimeToSec(data.timeCurrent || "");
         const last = lastTimeCurrent.get(index);
@@ -109,34 +123,31 @@
     /* ===================== SEND LOGIC ===================== */
 
     function scheduleSend(playerEl, index, data) {
-        // перезаписываем последнее состояние
         pendingData.set(index, data);
 
-        // если таймер кулдауна уже запущен — ничего не делаем
-        if (cooldownTimers.has(index)) return;
+        // если уже есть таймер, сбрасываем его
+        if (cooldownTimers.has(index)) {
+            clearTimeout(cooldownTimers.get(index));
+        }
 
-        // запускаем кулдаун
-        cooldownTimers.set(
-            index,
-            setInterval(() => {
-                const pending = pendingData.get(index);
-                if (!pending) return;
-
-                // отправляем только последнее состояние
+        // ставим новый таймер
+        const timer = setTimeout(() => {
+            const pending = pendingData.get(index);
+            if (pending && ws && ws.readyState === WebSocket.OPEN) {
                 const payload = { playerIndex: index, ...pending };
                 ws.send(JSON.stringify(payload));
                 log(index, "📤 Sent after cooldown", payload);
+            }
+            pendingData.delete(index);
+            cooldownTimers.delete(index);
+        }, cooldownDuration);
 
-                // удаляем pending после отправки
-                pendingData.delete(index);
-            }, cooldownDuration),
-        );
+        cooldownTimers.set(index, timer);
     }
 
     function sendPlayerData(playerEl, index) {
         const data = getPlayerData(playerEl);
-        if (!data || !ws || ws.readyState !== WebSocket.OPEN) return;
-        if (data.timeCurrent === "00:00") return;
+        if (!data || data.timeCurrent === "00:00") return;
 
         const timeJump = isTimeJump(index, data);
         const stateChanged = isStateChanged(index, data);
@@ -152,6 +163,8 @@
         );
         scheduleSend(playerEl, index, data);
     }
+
+    /* ===================== OBSERVER ===================== */
 
     const players = document.querySelectorAll(`[class*="PlayerBar_root"]`);
     players.forEach((playerEl, index) => {

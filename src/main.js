@@ -1,7 +1,6 @@
 const { app, BrowserWindow, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { version: CURRENT_VERSION } = require("../package.json");
 
 // Иконка
 const appIcon = path.join(__dirname, "app/icons/icon-256.png");
@@ -388,41 +387,52 @@ function loadFilesFromDirectory(directory, extension, callback) {
 }
 
 // Initialize Discord RPC and inject siteServer.js only if enabled
+
 function activateRpc() {
-    if (config.programSettings.richPresence.enabled) {
-        try {
-            const { initRPC } = require("./app/discordRpc/richPresence.js");
+    // 1. Init protect
+    if (!config?.programSettings?.richPresence?.enabled) {
+        console.log("[RPC] ⚠️ Discord RPC is disabled or config not ready");
+        return;
+    }
 
-            initRPC();
+    try {
+        // 2. Lazy import
+        const rpcPath = path.join(__dirname, "app/discordRpc/richPresence.js");
+        const { initRPC } = require(rpcPath);
 
-            // Inject siteServer.js
-            const loaderPath = path.join(
-                __dirname,
-                "app/discordRpc/siteServer.js",
-            );
-            const normalizedPath = loaderPath.replace(/\\/g, "/");
+        if (typeof initRPC !== "function") {
+            throw new Error("initRPC is not a function");
+        }
 
-            const injectScript = `
-          (() => {
-            if (!document.querySelector('script[data-injected="${normalizedPath}"]')) {
-              const s = document.createElement('script');
-              s.src = "file://${normalizedPath}";
-              s.type = "text/javascript";
-              s.defer = true;
-              s.dataset.injected = "${normalizedPath}";
-              document.head.appendChild(s);
-            }
-          })();
+        initRPC();
+
+        // 3. Inject siteServer.js
+        const loaderPath = path.join(__dirname, "app/discordRpc/siteServer.js");
+        const normalizedPath = loaderPath.replace(/\\/g, "/");
+
+        const injectScript = `
+            (() => {
+                const injectedPath = "${normalizedPath}";
+                if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
+                    const s = document.createElement("script");
+                    s.src = "file://" + injectedPath;
+                    s.type = "text/javascript";
+                    s.defer = true;
+                    s.dataset.injected = injectedPath;
+                    document.head.appendChild(s);
+                }
+            })();
         `;
 
-            mainWindow.webContents
-                .executeJavaScript(injectScript)
-                .then(() => console.log("[RPC] ✅ siteServer.js injected"))
-                .catch(console.error);
-        } catch (err) {
-            console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
-        }
-    } else {
-        console.log("[RPC] ⚠️ Discord RPC is disabled");
+        mainWindow.webContents
+            .executeJavaScript(injectScript)
+            .then(() => {
+                console.log("[RPC] ✅ siteServer.js injected");
+            })
+            .catch((err) => {
+                console.error("[RPC] ❌ Failed to inject siteServer.js:", err);
+            });
+    } catch (err) {
+        console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
     }
 }
