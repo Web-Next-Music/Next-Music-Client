@@ -33,6 +33,7 @@ let config = {
     windowSettings: {
         alwaysOnTop: false,
         freeWindowResize: false,
+        nextTitle: true,
     },
 
     programSettings: {
@@ -312,6 +313,10 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
 
 // Injector
 const injectList = [
+    {
+        file: "nextTitle.js",
+        condition: (config) => config?.windowSettings?.nextTitle,
+    },
     {
         file: "siteRPCServer.js",
         condition: (config) => config?.programSettings?.richPresence?.enabled,
