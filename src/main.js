@@ -154,7 +154,7 @@ function createWindow() {
     // Когда страница основного окна загрузилась
     mainWindow.webContents.on("did-finish-load", () => {
         // Inject all scripts
-        injector(mainWindow);
+        injector(mainWindow, config);
 
         // Inject addons
         if (config.programSettings.addonsEnabled) {
@@ -311,16 +311,32 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
 }
 
 // Injector
-function injector(mainWindow) {
+const injectList = [
+    {
+        file: "siteRPCServer.js",
+        condition: (config) => config?.programSettings?.richPresence?.enabled,
+    },
+];
+
+function injector(mainWindow, config) {
     try {
         const injectDir = path.join(__dirname, "inject");
 
-        const scripts = fs
-            .readdirSync(injectDir)
-            .filter((file) => file.endsWith(".js"));
+        for (const item of injectList) {
+            const { file, condition } = item;
 
-        for (const file of scripts) {
+            // если есть условие и оно false — пропускаем
+            if (typeof condition === "function" && !condition(config)) {
+                console.log("[Injector] ⏭ Skipped by config:", file);
+                continue;
+            }
+
             const fullPath = path.join(injectDir, file).replace(/\\/g, "/");
+
+            if (!fs.existsSync(fullPath)) {
+                console.warn("[Injector] ⚠️ File not found:", file);
+                continue;
+            }
 
             const injectScript = `
                 (() => {
