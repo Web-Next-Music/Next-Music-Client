@@ -1,25 +1,40 @@
-(function nextTitleObserver() {
+(function hardNextTitleShield() {
     const REQUIRED_TITLE = "Next Music";
 
-    if (document.title !== REQUIRED_TITLE) {
-        document.title = REQUIRED_TITLE;
-    }
+    document.title = REQUIRED_TITLE;
 
-    const titleElement = document.querySelector("title");
-
-    if (!titleElement) {
-        return;
-    }
-
-    const observer = new MutationObserver(() => {
+    function enforceTitle() {
         if (document.title !== REQUIRED_TITLE) {
             document.title = REQUIRED_TITLE;
         }
+        const titleEl = document.querySelector("title");
+        if (titleEl && titleEl.textContent !== REQUIRED_TITLE) {
+            titleEl.textContent = REQUIRED_TITLE;
+        }
+    }
+
+    Object.defineProperty(document, "title", {
+        configurable: true,
+        enumerable: true,
+        get() {
+            return REQUIRED_TITLE;
+        },
+        set(_) {
+            enforceTitle();
+        },
     });
 
-    observer.observe(titleElement, {
+    const observer = new MutationObserver(enforceTitle);
+    observer.observe(document.head || document.documentElement, {
         childList: true,
+        subtree: true,
+        characterData: true,
     });
 
-    window.stopNextTitleObserver = () => observer.disconnect();
+    const interval = setInterval(enforceTitle, 500);
+
+    window.stopNextTitleShield = () => {
+        observer.disconnect();
+        clearInterval(interval);
+    };
 })();
