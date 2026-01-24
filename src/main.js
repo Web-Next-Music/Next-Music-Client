@@ -69,6 +69,8 @@ if (!app.requestSingleInstanceLock()) {
             checkForUpdates();
         }
         mainWindow = createWindow();
+        presenceService(config);
+        injector(mainWindow);
         createTray(
             appIcon,
             mainWindow,
@@ -169,8 +171,6 @@ function createWindow() {
             console.log("Addons are disabled");
         }
 
-        activateRpc();
-
         // Показываем основное окно
         if (showWindow) {
             mainWindow.show();
@@ -197,7 +197,6 @@ function normalizeConfig(defaultConfig, savedConfig) {
     let changed = false;
 
     function walk(defaultVal, savedVal) {
-        // если дефолт — объект
         if (
             typeof defaultVal === "object" &&
             defaultVal !== null &&
@@ -246,6 +245,7 @@ function normalizeConfig(defaultConfig, savedConfig) {
     return { config: normalized, changed };
 }
 
+// Load config
 function loadConfig(nextMusicDirectory, defaultConfig) {
     if (!fs.existsSync(nextMusicDirectory)) {
         fs.mkdirSync(nextMusicDirectory, { recursive: true });
@@ -308,6 +308,47 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
     return config;
 }
 
+// Injector
+function injector(mainWindow) {
+    try {
+        const injectDir = path.join(__dirname, "inject");
+
+        const scripts = fs
+            .readdirSync(injectDir)
+            .filter((file) => file.endsWith(".js"));
+
+        for (const file of scripts) {
+            const fullPath = path.join(injectDir, file).replace(/\\/g, "/");
+
+            const injectScript = `
+                (() => {
+                    const injectedPath = "${fullPath}";
+                    if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
+                        const s = document.createElement("script");
+                        s.src = "file://" + injectedPath;
+                        s.type = "text/javascript";
+                        s.defer = true;
+                        s.dataset.injected = injectedPath;
+                        document.head.appendChild(s);
+                    }
+                })();
+            `;
+
+            mainWindow.webContents
+                .executeJavaScript(injectScript)
+                .then(() => {
+                    console.log("[Injector] ✅ Injected:", file);
+                })
+                .catch((err) => {
+                    console.error("[Injector] ❌ Failed to inject:", file, err);
+                });
+        }
+    } catch (err) {
+        console.error("[Injector] ❌ Injector error:", err);
+    }
+}
+
+// Addons
 function applyAddons() {
     if (config.programSettings.addonsEnabled) {
         console.log("Loading addons:");
@@ -384,58 +425,18 @@ function loadFilesFromDirectory(directory, extension, callback) {
     });
 }
 
-// Initialize Discord RPC and inject siteServer.js only if enabled
-
-function activateRpc() {
-    // 1. Init protect
+// Initialize Discord RPC
+function presenceService(config) {
     if (!config?.programSettings?.richPresence?.enabled) {
         console.log("[RPC] ⚠️ Discord RPC is disabled or config not ready");
         return;
     }
 
     try {
-        // 2. Lazy import
-        const rpcPath = path.join(
-            __dirname,
-            "services/discordRpc/richPresence.js",
-        );
-        const { initRPC } = require(rpcPath);
-
-        if (typeof initRPC !== "function") {
-            throw new Error("initRPC is not a function");
-        }
-
+        const { initRPC } = require("./services/discordRpc/richPresence.js");
         initRPC();
 
-        // 3. Inject siteServer.js
-        const loaderPath = path.join(
-            __dirname,
-            "services/discordRpc/siteServer.js",
-        );
-        const normalizedPath = loaderPath.replace(/\\/g, "/");
-
-        const injectScript = `
-            (() => {
-                const injectedPath = "${normalizedPath}";
-                if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
-                    const s = document.createElement("script");
-                    s.src = "file://" + injectedPath;
-                    s.type = "text/javascript";
-                    s.defer = true;
-                    s.dataset.injected = injectedPath;
-                    document.head.appendChild(s);
-                }
-            })();
-        `;
-
-        mainWindow.webContents
-            .executeJavaScript(injectScript)
-            .then(() => {
-                console.log("[RPC] ✅ siteServer.js injected");
-            })
-            .catch((err) => {
-                console.error("[RPC] ❌ Failed to inject siteServer.js:", err);
-            });
+        console.log("[RPC] ✅ Discord RPC initialized");
     } catch (err) {
         console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
     }
