@@ -66,10 +66,7 @@ if (!app.requestSingleInstanceLock()) {
 
     app.whenReady().then(() => {
         config = loadConfig(nextMusicDirectory, config);
-        if (
-            config.programSettings.checkUpdates &&
-            !CURRENT_VERSION.includes("beta")
-        ) {
+        if (config.programSettings.checkUpdates) {
             checkForUpdates();
         }
         mainWindow = createWindow();
