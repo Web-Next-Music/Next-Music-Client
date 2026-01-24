@@ -30,6 +30,11 @@ app.commandLine.appendSwitch("force-color-profile", "srgb");
 
 // Config
 let config = {
+    launchSettings: {
+        loaderWindow: true,
+        startMinimized: false,
+    },
+
     windowSettings: {
         alwaysOnTop: false,
         freeWindowResize: false,
@@ -45,9 +50,8 @@ let config = {
         checkUpdates: true,
     },
 
-    launchSettings: {
-        loaderWindow: true,
-        startMinimized: false,
+    audioSettings: {
+        volumeNormalization: false,
     },
 };
 
@@ -320,6 +324,10 @@ const injectList = [
     {
         file: "siteRPCServer.js",
         condition: (config) => config?.programSettings?.richPresence?.enabled,
+    },
+    {
+        file: "volumeNormalization.js",
+        condition: (config) => config?.audioSettings?.volumeNormalization,
     },
 ];
 
