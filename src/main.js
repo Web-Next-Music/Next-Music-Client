@@ -50,7 +50,7 @@ let config = {
         checkUpdates: true,
     },
 
-    audioSettings: {
+    experimental: {
         volumeNormalization: false,
     },
 };
@@ -327,7 +327,7 @@ const injectList = [
     },
     {
         file: "volumeNormalization.js",
-        condition: (config) => config?.audioSettings?.volumeNormalization,
+        condition: (config) => config?.experimental?.volumeNormalization,
     },
 ];
 
