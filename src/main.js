@@ -70,7 +70,6 @@ if (!app.requestSingleInstanceLock()) {
         }
         mainWindow = createWindow();
         presenceService(config);
-        injector(mainWindow);
         createTray(
             appIcon,
             mainWindow,
@@ -154,6 +153,16 @@ function createWindow() {
 
     // Когда страница основного окна загрузилась
     mainWindow.webContents.on("did-finish-load", () => {
+        // Inject all scripts
+        injector(mainWindow);
+
+        // Inject addons
+        if (config.programSettings.addonsEnabled) {
+            applyAddons();
+        } else {
+            console.log("Addons are disabled");
+        }
+
         // Закрываем loader окно (если оно есть)
         if (config.launchSettings.loaderWindow && loaderWindow) {
             try {
@@ -162,13 +171,6 @@ function createWindow() {
             } catch (err) {
                 console.log("Loader window is missing");
             }
-        }
-
-        // Загружаем аддоны
-        if (config.programSettings.addonsEnabled) {
-            applyAddons();
-        } else {
-            console.log("Addons are disabled");
         }
 
         // Показываем основное окно
