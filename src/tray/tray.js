@@ -1,9 +1,9 @@
 const { Tray, Menu, shell, BrowserWindow, app } = require("electron");
 const path = require("path");
-const { checkForUpdates } = require("../updater/updater.js");
+const { checkForUpdates } = require("../services/updater/updater");
 
 let infoWindow = null;
-const infoPath = path.join(__dirname, "../info/info.html");
+const infoPath = path.join(__dirname, "../renderer/info/info.html");
 let appIcon = null;
 
 function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {

@@ -18,7 +18,7 @@
             "package.json"
         ],
         "directories": {
-            "buildResources": "src/app/icons",
+            "buildResources": "src/aseets",
             "output": "dist"
         },
         "win": {
@@ -30,7 +30,7 @@
                     ]
                 }
             ],
-            "icon": "src/app/icons/icon-256.png"
+            "icon": "src/assets/icon-256.png"
         },
         "linux": {
             "target": [
@@ -39,7 +39,7 @@
             ],
             "category": "Audio",
             "maintainer": "Diramix <39developer@diram1x.ru>",
-            "icon": "src/app/icons/icon-256.png"
+            "icon": "src/assets/icon-256.png"
         }
     },
     "repository": {

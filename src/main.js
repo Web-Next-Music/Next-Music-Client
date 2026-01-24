@@ -3,10 +3,10 @@ const path = require("path");
 const fs = require("fs");
 
 // Иконка
-const appIcon = path.join(__dirname, "app/icons/icon-256.png");
+const appIcon = path.join(__dirname, "assets/icon-256.png");
 
 // Пути Модулей
-const loaderPath = path.join(__dirname, "app/loader/loader.html");
+const loaderPath = path.join(__dirname, "renderer/loader/loader.html");
 
 // Получаем папку для хранения данных приложения
 const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
@@ -14,8 +14,8 @@ const addonsDirectory = path.join(nextMusicDirectory, "Addons");
 const configFilePath = path.join(nextMusicDirectory, "config.json");
 
 // Libs
-const { createTray } = require("./app/tray/tray.js");
-const { checkForUpdates } = require("./app/updater/updater.js");
+const { createTray } = require("./tray/tray.js");
+const { checkForUpdates } = require("./services/updater/updater.js");
 let mainWindow;
 
 // flags
@@ -395,7 +395,10 @@ function activateRpc() {
 
     try {
         // 2. Lazy import
-        const rpcPath = path.join(__dirname, "app/discordRpc/richPresence.js");
+        const rpcPath = path.join(
+            __dirname,
+            "services/discordRpc/richPresence.js",
+        );
         const { initRPC } = require(rpcPath);
 
         if (typeof initRPC !== "function") {
@@ -405,7 +408,10 @@ function activateRpc() {
         initRPC();
 
         // 3. Inject siteServer.js
-        const loaderPath = path.join(__dirname, "app/discordRpc/siteServer.js");
+        const loaderPath = path.join(
+            __dirname,
+            "services/discordRpc/siteServer.js",
+        );
         const normalizedPath = loaderPath.replace(/\\/g, "/");
 
         const injectScript = `

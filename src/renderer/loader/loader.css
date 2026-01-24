@@ -14,7 +14,7 @@ body {
     position: fixed;
     width: 100px;
     height: 100px;
-    background-image: url("../icons/icon-256.png");
+    background-image: url("../../assets/icon-256.png");
     background-size: cover;
     top: 18%;
     left: calc(50% - 50px);
@@ -38,7 +38,7 @@ body {
     height: 36px;
     bottom: 18%;
     left: calc(50% - 18px);
-    background-image: url("assets/loading.png");
+    background-image: url("../../assets/loading.png");
     background-repeat: no-repeat;
     background-size: contain;
     animation: spin 6s ease-in-out infinite;
