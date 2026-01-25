@@ -4,7 +4,9 @@
     const targetRMS = 0.015; // целевой уровень громкости
     const minGain = 0.015; // старт почти выключен
     const maxGain = 10; // максимальный gain
-    const smoothing = 0.015; // EMA для RMS, быстрее реагирует
+    const smoothing = 0.015; // EMA для RMS
+    const attack = 0.001; // скорость увеличения громкости (медленнее)
+    const release = 0.2; // скорость снижения громкости (быстрее)
 
     const OriginalAudioContext = window.AudioContext;
     window.AudioContext = function (...args) {
@@ -19,7 +21,6 @@
             analyser.fftSize = 2048;
             const dataArray = new Uint8Array(analyser.fftSize);
 
-            // Подключаем gainNode → analyser → ctx.destination
             gainNode.connect(analyser);
             analyser.connect(ctx.destination);
 
@@ -42,13 +43,20 @@
                 let desiredGain = targetRMS / (avgRMS || 0.0001);
                 desiredGain = Math.max(minGain, Math.min(maxGain, desiredGain));
 
-                // **Мгновенное изменение громкости**
-                gainNode.gain.value = desiredGain;
+                // Асимметричное сглаживание gain
+                if (desiredGain > gainNode.gain.value) {
+                    // увеличение — медленно
+                    gainNode.gain.value +=
+                        (desiredGain - gainNode.gain.value) * attack;
+                } else {
+                    // уменьшение — быстро
+                    gainNode.gain.value +=
+                        (desiredGain - gainNode.gain.value) * release;
+                }
 
                 requestAnimationFrame(normalize);
             }
 
-            // Старт через 50мс, чтобы analyser собрал первые данные
             setTimeout(normalize, 50);
 
             return gainNode;
@@ -58,6 +66,6 @@
     };
 
     console.log(
-        "✅ Page-wide audio normalizer active (instant gain, minGain 0.015)",
+        "✅ Page-wide audio normalizer active (asymmetric gain: fast down, slow up)",
     );
 })();
