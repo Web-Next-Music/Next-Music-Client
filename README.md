@@ -3,7 +3,12 @@
 # Next Music
 Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)
 
-## 🚀 Installation
+## Features
+* Themes & addons [repo](https://github.com/Web-Next-Music/Next-Music-Extensions)
+* Discord Rich Presence
+* Volume normalization (Experimental)
+
+## Installation
 
 ### Windows
 Download the latest installer from the [releases page](https://github.com/Web-Next-Music/Next-Music-Client/releases/latest).
@@ -14,7 +19,7 @@ Install via AUR using your preferred AUR helper:
 paru -S next-music
 ```
 
-### 🐧 Other Linux
+### Other Linux
 Download the package from the [releases page](https://github.com/Web-Next-Music/Next-Music-Client/releases/latest).
 
 ## To change the program settings, open the config using the button in the system tray.
