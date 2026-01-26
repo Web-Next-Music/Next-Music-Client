@@ -1,5 +1,6 @@
 const { app, BrowserWindow, session } = require("electron");
 const path = require("path");
+const http = require("http");
 const fs = require("fs");
 
 // Иконка
@@ -421,38 +422,209 @@ function applyAddons() {
     }
 }
 
-function loadFilesFromDirectory(directory, extension, callback) {
-    fs.readdir(directory, (err, files) => {
-        if (err) {
-            console.error("Error reading directory:", err);
+const ASSETS = [];
+let serverStarted = false;
+
+//Поднимаем сервер один раз
+function startAssetServer() {
+    if (serverStarted) return;
+    serverStarted = true;
+
+    http.createServer((req, res) => {
+        let parsed;
+
+        try {
+            parsed = new URL(req.url, "http://127.0.0.1:2007");
+        } catch {
+            res.writeHead(400);
+            return res.end("Bad URL");
+        }
+
+        const pathname = parsed.pathname;
+
+        // декодируем name максимально терпимо
+        let name = parsed.searchParams.get("name");
+        if (name) {
+            name = decodeURIComponent(name.replace(/\+/g, " "));
+        }
+
+        // /assets/...
+        if (pathname.startsWith("/assets/")) {
+            const fileName = decodeURIComponent(
+                pathname.slice("/assets/".length),
+            );
+
+            if (!name) {
+                res.writeHead(400);
+                return res.end("Missing name");
+            }
+
+            name = decodeURIComponent(name.replace(/\+/g, " "));
+
+            const assetsRoot = path.join(addonsDirectory, name, "assets");
+
+            if (!fs.existsSync(assetsRoot)) {
+                res.writeHead(404);
+                return res.end("Assets folder not found");
+            }
+
+            // Рекурсивный поиск файла в assets
+            function findFileRecursive(dir) {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isFile() && entry.name === fileName)
+                        return fullPath;
+                    if (entry.isDirectory()) {
+                        const found = findFileRecursive(fullPath);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            }
+
+            const filePath = findFileRecursive(assetsRoot);
+
+            if (!filePath) {
+                res.writeHead(404);
+                return res.end("File not found in assets");
+            }
+
+            res.writeHead(200);
+            fs.createReadStream(filePath).pipe(res);
             return;
         }
 
-        files.forEach((file) => {
-            const filePath = path.join(directory, file);
+        // /get_handle
+        if (pathname === "/get_handle") {
+            if (!name) {
+                res.writeHead(400);
+                return res.end("Missing name");
+            }
 
-            fs.stat(filePath, (err, stat) => {
+            // декодируем имя
+            name = decodeURIComponent(name.replace(/\+/g, " "));
+
+            // путь к handleEvents.json в папке родителя
+            const handleFile = path.join(
+                addonsDirectory,
+                name,
+                "handleEvents.json",
+            );
+
+            if (!fs.existsSync(handleFile)) {
+                console.error("[get_handle] File not found:", handleFile);
+                res.writeHead(404);
+                return res.end("handleEvents.json not found");
+            }
+
+            // читаем файл и сразу оборачиваем в { data: ... }
+            fs.readFile(handleFile, "utf8", (err, fileContent) => {
                 if (err) {
-                    console.error("Error stating file:", err);
-                    return;
+                    res.writeHead(500);
+                    return res.end("Server error");
                 }
 
-                if (stat.isDirectory()) {
-                    // Пропускаем папки, начинающиеся с "!"
-                    if (!file.startsWith("!")) {
-                        loadFilesFromDirectory(filePath, extension, callback);
-                    }
-                } else if (path.extname(file) === extension) {
-                    fs.readFile(filePath, "utf8", (err, content) => {
-                        if (err) {
-                            console.error(`Error reading ${file}:`, err);
-                            return;
-                        }
-                        callback(content, filePath);
-                    });
+                try {
+                    const parsed = JSON.parse(fileContent); // проверяем JSON
+                    const wrapped = { data: parsed }; // оборачиваем
+                    res.writeHead(200, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify(wrapped));
+                } catch (e) {
+                    console.error("[get_handle] Invalid JSON:", e);
+                    res.writeHead(500);
+                    res.end("Invalid JSON in handleEvents.json");
                 }
             });
-        });
+
+            return;
+        }
+        if (pathname === "/get_handle") {
+            if (!name) {
+                res.writeHead(400);
+                return res.end("Missing name");
+            }
+
+            // декодируем имя
+            name = decodeURIComponent(name.replace(/\+/g, " "));
+
+            // путь к handleEvents.json в папке родителя
+            const handleFile = path.join(
+                addonsDirectory,
+                name,
+                "handleEvents.json",
+            );
+
+            if (!fs.existsSync(handleFile)) {
+                console.error("[get_handle] File not found:", handleFile);
+                res.writeHead(404);
+                return res.end("handleEvents.json not found");
+            }
+
+            // читаем файл и сразу оборачиваем в { data: ... }
+            fs.readFile(handleFile, "utf8", (err, fileContent) => {
+                if (err) {
+                    res.writeHead(500);
+                    return res.end("Server error");
+                }
+
+                try {
+                    const parsed = JSON.parse(fileContent); // проверяем JSON
+                    const wrapped = { data: parsed }; // оборачиваем
+                    res.writeHead(200, { "Content-Type": "application/json" });
+                    res.end(JSON.stringify(wrapped));
+                } catch (e) {
+                    console.error("[get_handle] Invalid JSON:", e);
+                    res.writeHead(500);
+                    res.end("Invalid JSON in handleEvents.json");
+                }
+            });
+
+            return;
+        }
+
+        // fallback
+        res.writeHead(404);
+        res.end("Not found");
+    }).listen(2007, "127.0.0.1", () => {
+        console.log("[Assets] Server running on http://127.0.0.1:2007");
+    });
+}
+
+// Рекурсивный обход директорий
+function loadFilesFromDirectory(directory, extension, callback) {
+    fs.readdir(directory, { withFileTypes: true }, (err, entries) => {
+        if (err) return;
+
+        for (const entry of entries) {
+            const fullPath = path.join(directory, entry.name);
+
+            // нашли assets
+            if (entry.isDirectory() && entry.name === "assets") {
+                ASSETS.push({
+                    path: fullPath,
+                    parent: path.basename(directory),
+                });
+
+                startAssetServer();
+                continue;
+            }
+
+            // пропускаем !папки
+            if (entry.isDirectory()) {
+                if (!entry.name.startsWith("!")) {
+                    loadFilesFromDirectory(fullPath, extension, callback);
+                }
+                continue;
+            }
+
+            // обычные файлы
+            if (path.extname(entry.name) === extension) {
+                fs.readFile(fullPath, "utf8", (err, content) => {
+                    if (!err) callback(content, fullPath);
+                });
+            }
+        }
     });
 }
 
