@@ -1,0 +1,21 @@
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    color: #5e5e5e;
+    font-family: Arial, sans-serif;
+}
+
+.next_logo {
+    width: 100px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+.error_text {
+    font-size: 15px;
+}

@@ -185,6 +185,12 @@ function createWindow() {
         }
     });
 
+    mainWindow.webContents.on("did-fail-load", () => {
+        mainWindow.loadFile(
+            path.join(__dirname, "renderer/fallback/fallback.html"),
+        );
+    });
+
     // Логика на старте: если стартуем свернутым
     if (config.launchSettings.startMinimized) {
         mainWindow.hide();
