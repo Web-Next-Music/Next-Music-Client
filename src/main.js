@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, nativeTheme } = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("fs");
+const axios = require("axios");
 
 // Иконка
 const appIcon = path.join(__dirname, "assets/icon-256.png");
@@ -47,7 +48,10 @@ let config = {
             enabled: true,
             rpcTitle: "Next Music",
         },
-        addonsEnabled: true,
+        addons: {
+            enable: true,
+            onlineScripts: [],
+        },
         checkUpdates: true,
     },
 
@@ -165,7 +169,7 @@ function createWindow() {
         injector(mainWindow, config);
 
         // Inject addons
-        if (config.programSettings.addonsEnabled) {
+        if (config.programSettings.addons.enable) {
             applyAddons();
         } else {
             console.log("Addons are disabled");
@@ -395,50 +399,79 @@ function injector(mainWindow, config) {
 
 // Addons
 function applyAddons() {
-    if (config.programSettings.addonsEnabled) {
-        console.log("Loading addons:");
-        loadFilesFromDirectory(
-            addonsDirectory,
-            ".css",
-            (cssContent, filePath) => {
-                console.log(
-                    `Load CSS: ${path.relative(addonsDirectory, filePath)}`,
-                );
-                const script = `(() => {
-                const style = document.createElement('style');
-                style.textContent = \`${cssContent.replace(/\\/g, "\\\\").replace(/`/g, "\`")}\`;
-                document.body.appendChild(style);
-            })();`;
-                mainWindow.webContents
-                    .executeJavaScript(script)
-                    .catch((err) => {
-                        console.error("Error inserting CSS:", err);
-                    });
-            },
-        );
-        loadFilesFromDirectory(
-            addonsDirectory,
-            ".js",
-            (jsContent, filePath) => {
-                console.log(
-                    `Load JS: ${path.relative(addonsDirectory, filePath)}`,
-                );
-                mainWindow.webContents
-                    .executeJavaScript(jsContent)
-                    .catch((err) => {
-                        console.error("Error executing JS:", err);
-                    });
-            },
-        );
-    } else {
+    if (!config.programSettings.addons.enable) {
         console.log("Addons are disabled");
+        return;
     }
+
+    console.log("Loading addons:");
+
+    // --- Local CSS ---
+    loadFilesFromDirectory(addonsDirectory, ".css", (cssContent, filePath) => {
+        console.log(`Load CSS: ${path.relative(addonsDirectory, filePath)}`);
+        const script = `(() => {
+                const style = document.createElement('style');
+                style.textContent = \`${cssContent.replace(/\\/g, "\\\\").replace(/`/g, "\\`")}\`;
+                document.head.appendChild(style);
+            })();`;
+        mainWindow.webContents.executeJavaScript(script).catch(console.error);
+    });
+
+    // --- Local JS ---
+    loadFilesFromDirectory(addonsDirectory, ".js", (jsContent, filePath) => {
+        console.log(`Load JS: ${path.relative(addonsDirectory, filePath)}`);
+        mainWindow.webContents
+            .executeJavaScript(jsContent)
+            .catch(console.error);
+    });
+
+    // --- Online addons (JS and CSS separately) ---
+    const onlineAddons = config.programSettings.addons.onlineScripts;
+    onlineAddons.forEach((url) => {
+        console.log(`Loading online addon: ${url}`);
+
+        fetch(url)
+            .then((res) => res.text())
+            .then((content) => {
+                if (url.endsWith(".js")) {
+                    // Execute as JS
+                    mainWindow.webContents
+                        .executeJavaScript(content)
+                        .catch((err) => {
+                            console.error(
+                                `Error executing online JS from ${url}:`,
+                                err,
+                            );
+                        });
+                } else if (url.endsWith(".css")) {
+                    // Inject as style
+                    const script = `(() => {
+                        const style = document.createElement('style');
+                        style.textContent = \`${content.replace(/\\/g, "\\\\").replace(/`/g, "\\`")}\`;
+                        document.head.appendChild(style);
+                    })();`;
+                    mainWindow.webContents
+                        .executeJavaScript(script)
+                        .catch((err) => {
+                            console.error(
+                                `Error injecting online CSS from ${url}:`,
+                                err,
+                            );
+                        });
+                } else {
+                    console.warn(`Unknown file type for online addon: ${url}`);
+                }
+            })
+            .catch((err) => {
+                console.error(`Failed to load online addon from ${url}:`, err);
+            });
+    });
 }
 
+// Поднимаем сервер один раз
 const ASSETS = [];
 let serverStarted = false;
 
-//Поднимаем сервер один раз
 function startAssetServer() {
     if (serverStarted) return;
     serverStarted = true;
