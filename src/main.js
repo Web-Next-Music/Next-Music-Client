@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require("electron");
+const { app, BrowserWindow, session, nativeTheme } = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("fs");
@@ -127,7 +127,9 @@ function createWindow() {
         minWidth: config.windowSettings.freeWindowResize ? 0 : 800,
         minHeight: config.windowSettings.freeWindowResize ? 0 : 650,
         alwaysOnTop: config.windowSettings.alwaysOnTop,
-        backgroundColor: "#0D0D0D",
+        backgroundColor: nativeTheme.shouldUseDarkColors
+            ? "#0D0D0D"
+            : "#E6E6E6",
         icon: appIcon,
         webPreferences: {
             webSecurity: false, // для обхода CORS, но CSP всё равно надо менять
@@ -185,11 +187,16 @@ function createWindow() {
         }
     });
 
-    mainWindow.webContents.on("did-fail-load", () => {
-        mainWindow.loadFile(
-            path.join(__dirname, "renderer/fallback/fallback.html"),
-        );
-    });
+    mainWindow.webContents.on(
+        "did-fail-load",
+        (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+            if (isMainFrame) {
+                mainWindow.loadFile(
+                    path.join(__dirname, "renderer/fallback/fallback.html"),
+                );
+            }
+        },
+    );
 
     // Логика на старте: если стартуем свернутым
     if (config.launchSettings.startMinimized) {
