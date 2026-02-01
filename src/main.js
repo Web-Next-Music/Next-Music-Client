@@ -330,6 +330,8 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
         }
     }
 
+    module.exports = config;
+
     return config;
 }
 
@@ -690,5 +692,3 @@ function presenceService(config) {
         console.error("[RPC] ❌ Failed to initialize Discord RPC:", err);
     }
 }
-
-module.exports = config;
