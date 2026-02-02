@@ -30,7 +30,8 @@
                     ]
                 }
             ],
-            "icon": "src/assets/icon-256.png"
+            "icon": "src/assets/icon-256.png",
+            "executableName": "Next Music"
         },
         "linux": {
             "target": [
@@ -39,7 +40,8 @@
             ],
             "category": "Audio",
             "maintainer": "Diramix <39developer@diram1x.ru>",
-            "icon": "src/assets/icon-256.png"
+            "icon": "src/assets/icon-256.png",
+            "executableName": "Next Music"
         }
     },
     "repository": {
