@@ -22,6 +22,7 @@
             "output": "dist"
         },
         "win": {
+            "artifactName": "${name}_${version}_${arch}-Setup.${ext}",
             "target": [
                 {
                     "target": "nsis",
@@ -34,6 +35,7 @@
             "executableName": "Next Music"
         },
         "linux": {
+            "artifactName": "${name}_${version}_${arch}.${ext}",
             "target": [
                 "AppImage",
                 "deb"
