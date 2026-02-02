@@ -4,10 +4,10 @@ const { checkForUpdates } = require("../services/updater/updater");
 
 let infoWindow = null;
 const infoPath = path.join(__dirname, "../renderer/info/info.html");
-const trayIcon = path.join(__dirname, "assets/icon-256.png");
+const trayIcon = path.join(__dirname, "../assets/nm-tray.png");
 
 function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
-    const tray = new Tray(iconPath);
+    const tray = new Tray(trayIcon);
 
     const contextMenu = Menu.buildFromTemplate([
         {
