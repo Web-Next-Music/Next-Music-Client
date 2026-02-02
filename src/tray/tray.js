@@ -1,10 +1,14 @@
-const { Tray, Menu, shell, BrowserWindow, app } = require("electron");
+const { Tray, Menu, shell, BrowserWindow, nativeImage, app } = require("electron");
 const path = require("path");
 const { checkForUpdates } = require("../services/updater/updater");
 
 let infoWindow = null;
 const infoPath = path.join(__dirname, "../renderer/info/info.html");
-const trayIcon = path.join(__dirname, "../assets/nm-tray.png");
+const trayIconPath = path.join(__dirname, "../assets/nm-logo.png");
+
+const trayIcon = nativeImage
+  .createFromPath(trayIconPath)
+  .resize({ width: 24, height: 24 })
 
 function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
     const tray = new Tray(trayIcon);
