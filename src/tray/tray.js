@@ -4,7 +4,7 @@ const { checkForUpdates } = require("../services/updater/updater");
 
 let infoWindow = null;
 const infoPath = path.join(__dirname, "../renderer/info/info.html");
-let appIcon = null;
+const trayIcon = path.join(__dirname, "assets/icon-256.png");
 
 function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
     const tray = new Tray(iconPath);
@@ -81,8 +81,6 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
 }
 
 function createInfoWindow(icon) {
-    appIcon = icon;
-
     if (infoWindow) {
         infoWindow.focus();
         return;
@@ -96,7 +94,7 @@ function createInfoWindow(icon) {
         autoHideMenuBar: true,
         alwaysOnTop: true,
         backgroundColor: "#030117",
-        icon: appIcon,
+        icon: trayIcon,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
