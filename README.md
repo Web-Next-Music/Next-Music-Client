@@ -29,3 +29,6 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 ### [Yandex Music Downloader](https://greasyfork.org/en/scripts/558745-yandex-music-downloader)
 
 https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
+
+# Discord Server - Click on the image below
+[![Discord](https://github.com/Web-Next-Music/Next-Music-Client/blob/main/doc/discord.png?raw=true)](https://discord.gg/ky6bcdy7KA)
