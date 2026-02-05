@@ -1,0 +1,49 @@
+body {
+    margin: 0;
+    background: transparent;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.widget {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 500px;
+    height: 100px;
+    padding: 10px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    background-color: #141414;
+    border: 1px solid #fff3;
+}
+
+.cover {
+    width: 80px; /* увеличиваем обложку */
+    height: 80px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 380px;
+    box-sizing: border-box;
+}
+
+.artist {
+    font-size: 18px;
+    opacity: 0.5;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 380px;
+    box-sizing: border-box;
+}

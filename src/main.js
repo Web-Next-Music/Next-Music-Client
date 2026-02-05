@@ -3,6 +3,7 @@ const path = require("path");
 const http = require("http");
 const fs = require("fs");
 const axios = require("axios");
+const obsWidgetService = require("./services/obsWidget/obsWidget.js");
 
 // Иконка
 const appIcon = path.join(__dirname, "assets/icon-256.png");
@@ -52,6 +53,7 @@ let config = {
             enable: true,
             onlineScripts: [],
         },
+        obsWidget: false,
         checkUpdates: true,
     },
 
@@ -87,6 +89,11 @@ if (!app.requestSingleInstanceLock()) {
             configFilePath,
             config,
         );
+        if (config.programSettings.obsWidget) {
+            obsWidgetService.startServer({
+                port: 4091,
+            });
+        }
         app.on("activate", () => {
             if (BrowserWindow.getAllWindows().length === 0) createWindow();
         });
@@ -340,6 +347,10 @@ const injectList = [
     {
         file: "nextTitle.js",
         condition: (config) => config?.windowSettings?.nextTitle,
+    },
+    {
+        file: "obsWidget.js",
+        condition: (config) => config?.programSettings?.obsWidget,
     },
     {
         file: "siteRPCServer.js",
