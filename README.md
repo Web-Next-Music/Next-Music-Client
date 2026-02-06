@@ -4,9 +4,31 @@
 Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)
 
 ## Features
-* Themes & addons [repo](https://github.com/Web-Next-Music/Next-Music-Extensions)
-* Discord Rich Presence
-* Volume normalization (Experimental)
+<details>
+  <summary>Themes & addons. repo - https://github.com/Web-Next-Music/Next-Music-Extensions</summary>
+  
+  <img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/dfb7bff5-7c7d-4974-ad53-637b6120ff30" />
+</details>
+
+<details>
+  <summary>Discord Rich Presence</summary>
+  
+  <img width="337" height="890" alt="image" src="https://github.com/user-attachments/assets/afe8945c-590a-4252-953e-169c9eab6ceb" />
+</details>
+
+<details>
+  <summary>Volume normalization (Experimental)</summary>
+</details>
+
+<details>
+  <summary>OBS widget</summary>
+  
+  > It can be enabled in the config. It opens at `localhost:4091`
+  
+  <img width="739" height="597" alt="image" src="https://github.com/user-attachments/assets/b71762b0-bf52-483a-98b7-7e20ffda155f" />
+  
+  https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
+</details>
 
 ## Installation
 
