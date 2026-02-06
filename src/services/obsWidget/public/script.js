@@ -8,7 +8,7 @@ ws.onmessage = (e) => {
     const data = JSON.parse(e.data);
     log("Track update", data);
 
-    document.getElementById("cover").src = data.cover || "icon-256.png";
+    document.getElementById("cover").src = data.cover || "assets/icon-256.png";
     document.getElementById("title").textContent = data.title || "";
     document.getElementById("artist").textContent = data.artist || "";
     document.getElementById("widget").style.backgroundColor = data.color || "";

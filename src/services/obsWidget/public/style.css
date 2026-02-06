@@ -7,6 +7,8 @@ body {
 
 .widget {
     display: flex;
+    position: relative;
+    overflow: hidden;
     align-items: center;
     gap: 16px;
     width: 500px;
@@ -16,6 +18,22 @@ body {
     box-sizing: border-box;
     background-color: #141414;
     border: 1px solid #fff3;
+    transition: background-color 0.3s ease-in;
+}
+
+.decor {
+    position: absolute;
+    right: 0;
+    top: 0;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.dimmer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(90deg, #0000 0%, #0003 90%);
 }
 
 .cover {
@@ -23,9 +41,11 @@ body {
     height: 80px;
     border-radius: 12px;
     flex-shrink: 0;
+    z-index: 2;
 }
 
 .title {
+    position: relative;
     font-size: 24px;
     font-weight: bold;
     white-space: nowrap;
@@ -34,6 +54,7 @@ body {
     display: block;
     width: 380px;
     box-sizing: border-box;
+    z-index: 2;
 }
 
 .artist {
@@ -46,4 +67,5 @@ body {
     display: block;
     width: 380px;
     box-sizing: border-box;
+    z-index: 2;
 }
