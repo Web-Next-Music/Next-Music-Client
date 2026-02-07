@@ -1,3 +1,13 @@
+@font-face {
+    font-family: "JetBrainsMonoNerd";
+    src: url("./fonts/JetBrainsMonoNLNerdFont-Bold.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "GG Sans";
+    src: url("./fonts/ggsans-Bold.ttf") format("truetype");
+}
+
 body {
     margin: 0;
     background: transparent;
@@ -45,8 +55,9 @@ body {
 }
 
 .title {
+    font-family: "GG Sans", monospace;
     position: relative;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
@@ -58,6 +69,7 @@ body {
 }
 
 .artist {
+    font-family: "GG Sans", monospace;
     font-size: 18px;
     opacity: 0.5;
     font-weight: bold;
@@ -68,4 +80,30 @@ body {
     width: 380px;
     box-sizing: border-box;
     z-index: 2;
+}
+
+.timeline {
+    font-family: "JetBrainsMonoNerd", monospace;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    z-index: 5;
+    font-weight: 600;
+}
+
+.progress {
+    flex: 1;
+    height: 5px;
+    background: #0005;
+    border-radius: 999px;
+    overflow: hidden;
+    z-index: 5;
+}
+
+.progress-filled {
+    height: 100%;
+    width: 0%;
+    background: #fff;
+    transition: width 0.1s linear;
 }

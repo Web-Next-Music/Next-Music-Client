@@ -44,12 +44,6 @@ function startServer(options = {}) {
                 const data = JSON.parse(msg.toString());
                 lastData = data;
 
-                log("Track update received:");
-                log(`  Title : ${data.title}`);
-                log(`  Artist: ${data.artist}`);
-                log(`  Cover : ${data.cover}`);
-                log(`  Color : ${data.color}`);
-
                 // Рассылаем всем клиентам
                 wss.clients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {

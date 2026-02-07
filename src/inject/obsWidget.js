@@ -38,7 +38,6 @@
         return img?.src || "";
     }
 
-    // Получаем значение CSS-переменной --player-average-color-background
     function getPlayerColor() {
         const root = qs('[class*="PlayerBar_root"]');
         if (!root) return null;
@@ -50,7 +49,19 @@
         );
     }
 
-    setInterval(() => {
+    function getCurrentTime() {
+        return getText(
+            '[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_current_animation"] > span',
+        );
+    }
+
+    function getDuration() {
+        return getText(
+            '[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_end"] > span',
+        );
+    }
+
+    function collectAndSend() {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
         const data = {
@@ -59,16 +70,45 @@
                 '[class*="PlayerBar_root"] * [class*="SeparatedArtists_root_clamp"]',
             ),
             cover: getCover(),
-            color: getPlayerColor(), // добавляем цвет
+            color: getPlayerColor(),
+            position: getCurrentTime(),
+            duration: getDuration(),
         };
 
         if (!data.title) return;
 
         const payload = JSON.stringify(data);
+
         if (payload !== lastPayload) {
             lastPayload = payload;
-            log("Track changed → sending", data);
+            log("DOM change → sending", data);
             ws.send(payload);
         }
-    }, 1000);
+    }
+
+    function waitForPlayerAndObserve() {
+        const root = qs('[class*="PlayerBar_root"]');
+        if (!root) {
+            setTimeout(waitForPlayerAndObserve, 500);
+            return;
+        }
+
+        log("PlayerBar found, observing…");
+
+        const observer = new MutationObserver(() => {
+            collectAndSend();
+        });
+
+        observer.observe(root, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+        });
+
+        // первый пуш сразу
+        collectAndSend();
+    }
+
+    waitForPlayerAndObserve();
 })();
