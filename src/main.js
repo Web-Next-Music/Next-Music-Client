@@ -2,7 +2,6 @@ const { app, BrowserWindow, session, nativeTheme } = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("fs");
-const axios = require("axios");
 const obsWidgetService = require("./services/obsWidget/obsWidget.js");
 
 // Иконка
