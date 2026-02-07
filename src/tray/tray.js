@@ -8,6 +8,7 @@ const {
 } = require("electron");
 const path = require("path");
 const { checkForUpdates } = require("../services/updater/updater");
+const { version: CURRENT_VERSION } = require("../../package.json");
 
 let infoWindow = null;
 const infoPath = path.join(__dirname, "../renderer/info/info.html");
@@ -21,6 +22,11 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
     const tray = new Tray(trayIcon);
 
     const contextMenu = Menu.buildFromTemplate([
+        {
+            label: `💖 Next Music v${CURRENT_VERSION} ⚡`,
+            enabled: false,
+        },
+        { type: "separator" },
         {
             label: "Open Next Music folder",
             click: () => {
