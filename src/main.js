@@ -2,7 +2,7 @@ const { app, BrowserWindow, session, nativeTheme } = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("fs");
-const obsWidgetService = require("./services/obsWidget/obsWidget.js");
+let config = require("./config.js");
 
 // Иконка
 const appIcon = path.join(__dirname, "assets/icon-256.png");
@@ -18,6 +18,7 @@ const configFilePath = path.join(nextMusicDirectory, "config.json");
 // Libs
 const { createTray } = require("./tray/tray.js");
 const { checkForUpdates } = require("./services/updater/updater.js");
+const obsWidgetService = require("./services/obsWidget/obsWidget.js");
 let mainWindow;
 
 // flags
@@ -29,41 +30,6 @@ if (process.platform === "linux") {
 }
 
 app.commandLine.appendSwitch("force-color-profile", "srgb");
-
-// Config
-let config = {
-    launchSettings: {
-        loaderWindow: true,
-        startMinimized: false,
-    },
-
-    windowSettings: {
-        alwaysOnTop: false,
-        freeWindowResize: false,
-        nextTitle: true,
-    },
-
-    programSettings: {
-        richPresence: {
-            enabled: true,
-            rpcTitle: "Next Music",
-            buttons: {
-                trackButton: true,
-                githubButton: true,
-            },
-        },
-        addons: {
-            enable: true,
-            onlineScripts: [],
-        },
-        obsWidget: false,
-        checkUpdates: true,
-    },
-
-    experimental: {
-        volumeNormalization: false,
-    },
-};
 
 if (!app.requestSingleInstanceLock()) {
     // Если есть уже запущенный экземпляр, выходим
