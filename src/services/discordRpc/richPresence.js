@@ -117,7 +117,7 @@ function updateActivity(data) {
                 ? [
                       {
                           label: "Next Music Project",
-                          url: "https://github.com/Web-Next-Music/Next-Music-Client",
+                          url: GITHUB_LINK,
                       },
                   ]
                 : []),
