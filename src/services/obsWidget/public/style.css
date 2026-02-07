@@ -88,8 +88,10 @@ body {
     align-items: center;
     gap: 10px;
     width: 100%;
-    z-index: 5;
     font-weight: 600;
+    position: relative;
+    z-index: 5;
+    color: #fff;
 }
 
 .progress {
