@@ -25,7 +25,7 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
   
   > It can be enabled in the config. It opens at `localhost:4091`
   
-  <img width="740" height="612" alt="image" src="https://github.com/user-attachments/assets/70fb9a6b-9a18-48d4-9fc6-8ed110af6151" />
+  <img width="757" height="623" alt="image" src="https://github.com/user-attachments/assets/f11c325d-4bc1-4544-ad8e-7e0e923e2dfd" />
 
   https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
 </details>
