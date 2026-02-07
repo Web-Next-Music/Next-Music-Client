@@ -47,6 +47,10 @@ let config = {
         richPresence: {
             enabled: true,
             rpcTitle: "Next Music",
+            buttons: {
+                trackButton: true,
+                githubButton: true,
+            },
         },
         addons: {
             enable: true,

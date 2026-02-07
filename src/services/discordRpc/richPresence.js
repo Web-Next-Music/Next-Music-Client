@@ -103,6 +103,25 @@ function updateActivity(data) {
                       parseTime(data.timeEnd),
               }
             : {}),
+        buttons: [
+            ...(config.programSettings.richPresence.buttons.trackButton &&
+            albumUrl
+                ? [
+                      {
+                          label: "Open in Yandex Music",
+                          url: albumUrl,
+                      },
+                  ]
+                : []),
+            ...(config.programSettings.richPresence.buttons.githubButton
+                ? [
+                      {
+                          label: "Next Music Project",
+                          url: "https://github.com/Web-Next-Music/Next-Music-Client",
+                      },
+                  ]
+                : []),
+        ],
     };
 
     // Сбрасываем lastActivity, если трек не даёт таймстампы
