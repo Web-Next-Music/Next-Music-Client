@@ -45,7 +45,7 @@ paru -S next-music
 Download the package from the [releases page](https://github.com/Web-Next-Music/Next-Music-Client/releases/latest).
 
 ## To change the program settings, open the config using the button in the system tray.
-<img width="296" height="228" alt="image" src="https://github.com/user-attachments/assets/1fa725f2-b560-4f70-984a-d0cc3c174b4e" />
+<img width="312" height="247" alt="image" src="https://github.com/user-attachments/assets/b8ac49cd-eb46-4b65-a3fd-828f7538b963" />
 
 ## Recomended Scripts
 ### [Yandex Music Downloader](https://greasyfork.org/en/scripts/558745-yandex-music-downloader)
