@@ -2,7 +2,7 @@ const { app, BrowserWindow, session, nativeTheme } = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("fs");
-let config = require("./config.js");
+let { config, injectList } = require("./config.js");
 
 // Иконка
 const appIcon = path.join(__dirname, "assets/icon-256.png");
@@ -311,47 +311,38 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
     return config;
 }
 
-// Injector
-const injectList = [
-    {
-        file: "nextTitle.js",
-        condition: (config) => config?.windowSettings?.nextTitle,
-    },
-    {
-        file: "obsWidget.js",
-        condition: (config) => config?.programSettings?.obsWidget,
-    },
-    {
-        file: "siteRPCServer.js",
-        condition: (config) => config?.programSettings?.richPresence?.enabled,
-    },
-    {
-        file: "volumeNormalization.js",
-        condition: (config) => config?.experimental?.volumeNormalization,
-    },
-];
-
 function injector(mainWindow, config) {
     try {
         const injectDir = path.join(__dirname, "inject");
-
         for (const item of injectList) {
             const { file, condition } = item;
-
-            // если есть условие и оно false — пропускаем
             if (typeof condition === "function" && !condition(config)) {
                 console.log("[Injector] ⏭ Skipped by config:", file);
                 continue;
             }
-
             const fullPath = path.join(injectDir, file).replace(/\\/g, "/");
-
             if (!fs.existsSync(fullPath)) {
                 console.warn("[Injector] ⚠️ File not found:", file);
                 continue;
             }
 
-            const injectScript = `
+            const isCSS = file.endsWith(".css");
+
+            const injectScript = isCSS
+                ? `
+                (() => {
+                    const injectedPath = "${fullPath}";
+                    if (!document.querySelector('link[data-injected="' + injectedPath + '"]')) {
+                        const l = document.createElement("link");
+                        l.rel = "stylesheet";
+                        l.type = "text/css";
+                        l.href = "file://" + injectedPath;
+                        l.dataset.injected = injectedPath;
+                        document.head.appendChild(l);
+                    }
+                })();
+                `
+                : `
                 (() => {
                     const injectedPath = "${fullPath}";
                     if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
@@ -363,7 +354,7 @@ function injector(mainWindow, config) {
                         document.head.appendChild(s);
                     }
                 })();
-            `;
+                `;
 
             mainWindow.webContents
                 .executeJavaScript(injectScript)
