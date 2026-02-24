@@ -20,6 +20,8 @@
     let isSeekingTimeline = false;
     // Блокируем исходящие события пока получаем начальное состояние от сервера
     let isInitializing = true;
+    // Если этот клиент последним сменил трек — он мастер и игнорирует входящие timeline/playstate/navigate
+    let isMaster = false;
     let initTimeout = null;
     function liftInitializing() {
         if (!isInitializing) return;
@@ -58,7 +60,8 @@
                 padding: 7px 14px 7px 10px;
                 z-index: 2147483647;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                font-size: 12px;
+                font-size: 14px;
+                font-weight: 800;
                 color: #fff;
                 user-select: none;
                 white-space: nowrap;
@@ -394,11 +397,17 @@
 
             if (msg.type === "navigate") {
                 if (msg.clientId) setActiveSender(msg.clientId);
+                // Если мы сами отправили этот navigate (clientId совпадает) — игнорируем
+                if (msg.clientId === CLIENT_ID) return;
+                // Чужой navigate — снимаем мастерство, применяем
+                isMaster = false;
                 lastReceivedPath = msg.path;
                 pendingPath = msg.path;
                 if (!isNavigating) processNext();
             } else if (msg.type === "playstate") {
                 if (msg.clientId) setActiveSender(msg.clientId);
+                // Мастер не применяет чужой playstate
+                if (isMaster) return;
                 applyPlayState(msg.href);
                 // После получения playstate от сервера при инициализации
                 // ждём timeline и потом снимаем блокировку
@@ -409,6 +418,8 @@
                 }
             } else if (msg.type === "timeline") {
                 if (msg.seek && msg.clientId) setActiveSender(msg.clientId);
+                // Мастер не применяет чужой timeline — его позиция и есть эталон
+                if (isMaster && !isInitializing) return;
                 if (isSeekingTimeline || isNavigating) return;
                 const slider = getSlider();
                 if (!slider) return;
@@ -446,6 +457,7 @@
             islandSetDisconnected();
             clearTimeout(initTimeout);
             isInitializing = true; // сбрасываем при переподключении
+            isMaster = false;
             if (e.code === 4001) {
                 console.error(`🚫 Room [${ROOM_ID}] not found on server`);
                 return;
@@ -668,6 +680,7 @@
             ws.send(
                 JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
             );
+            isMaster = true; // мы сменили трек — игнорируем чужие timeline/playstate
             setActiveSender(CLIENT_ID);
         }
     }
