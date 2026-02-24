@@ -6,7 +6,7 @@
     const ROOM_ID = _qs.get("__room") || null;
     const CLIENT_ID = _qs.get("__clientId") || null;
     const AVATAR_URL = _qs.get("__avatarUrl") || null;
-    const SYNC_THRESHOLD_SEC = 2;
+    const SYNC_THRESHOLD_SEC = 1;
 
     let ws = null;
     let observerStarted = false;
@@ -37,7 +37,7 @@
                 align-items: center;
                 gap: 8px;
                 background: rgba(15,15,15,0.9);
-                backdrop-filter: Аblur(24px);
+                backdrop-filter: blur(24px);
                 -webkit-backdrop-filter: blur(24px);
                 border-radius: 999px;
                 padding: 7px 14px 7px 10px;
@@ -92,9 +92,6 @@
                 opacity: 1;
             }
 
-            /* ── avatar picker button ── */
-
-
             /* ── individual avatar ── */
             .li-av-wrap {
                 position: relative;
@@ -120,8 +117,6 @@
             .li-av-wrap.active-sender .li-av-placeholder {
                 border-color: #1db954;
             }
-
-
 
             @keyframes liPulse {
                 0%, 100% { opacity: 1;  transform: scale(1); }
@@ -176,32 +171,25 @@
         const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
         const avRow = document.getElementById("__li_avatars__");
-        if (dot) {
-            dot.className = "disconnected";
-        }
+        if (dot) dot.className = "disconnected";
         if (status) {
             status.className = "";
             status.style.color = "#888";
             status.textContent = "No server configured";
         }
-        if (avRow) {
-            avRow.className = "";
-        } // hide avatars
+        if (avRow) avRow.className = "";
     }
 
     function islandSetConnected(serverHost) {
         clearTimeout(statusHideTimer);
         const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
-        if (dot) {
-            dot.className = "connected";
-        }
+        if (dot) dot.className = "connected";
         if (status) {
             status.className = "";
             status.style.color = "#1db954";
             status.textContent = `Connected to ${serverHost}`;
         }
-        // After 3s → hide text, show avatars
         statusHideTimer = setTimeout(() => {
             if (status) status.className = "hidden";
             const avRow = document.getElementById("__li_avatars__");
@@ -211,7 +199,7 @@
 
     // ─── Avatar map ─────────────────────────────────────────────────────
 
-    const islandAvatars = new Map(); // clientId → wrap element
+    const islandAvatars = new Map();
     function setActiveSender(clientId) {
         for (const [, wrap] of islandAvatars)
             wrap.classList.remove("active-sender");
@@ -227,12 +215,10 @@
         if (!wrap) {
             wrap = document.createElement("div");
             wrap.className = "li-av-wrap";
-
             avRow.appendChild(wrap);
             islandAvatars.set(clientId, wrap);
         }
 
-        // Remove old child image/placeholder
         const old = wrap.querySelector(".li-av-img, .li-av-placeholder");
         if (old) old.remove();
 
@@ -271,7 +257,6 @@
     function sendAvatarFromUrl() {
         if (!AVATAR_URL) return;
         if (ws && ws.readyState === WebSocket.OPEN) {
-            // Send URL as JSON to server — server fetches it (no CORS restrictions server-side)
             ws.send(
                 JSON.stringify({
                     type: "avatar_url",
@@ -334,9 +319,6 @@
             "value",
         ).set;
         setter.call(slider, value);
-        // Full event chain so React actually performs the seek.
-        // isSeekingTimeline=true is set BEFORE seekTo() is called, so
-        // onSeekEnd's guard (if isSeekingTimeline) blocks any re-broadcast.
         slider.dispatchEvent(new Event("input", { bubbles: true }));
         slider.dispatchEvent(
             new PointerEvent("pointerup", { bubbles: true, cancelable: true }),
@@ -354,9 +336,7 @@
         if (!WS_HOST || !ROOM_ID) {
             const dot = document.getElementById("__li_dot__");
             const status = document.getElementById("__li_status__");
-            if (dot) {
-                dot.className = "disconnected";
-            }
+            if (dot) dot.className = "disconnected";
             if (status) {
                 status.className = "";
                 status.style.color = "#e05c5c";
@@ -377,7 +357,6 @@
             console.log(`🔌 Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
             islandSetConnected(serverHost);
 
-            // Show own placeholder immediately so user sees themselves
             if (!islandAvatars.has(CLIENT_ID)) upsertAvatar(CLIENT_ID, null);
 
             startObserver();
@@ -405,6 +384,7 @@
                 if (msg.clientId) setActiveSender(msg.clientId);
                 applyPlayState(msg.href);
             } else if (msg.type === "timeline") {
+                if (msg.seek && msg.clientId) setActiveSender(msg.clientId);
                 if (isSeekingTimeline || isNavigating) return;
                 const slider = getSlider();
                 if (!slider) return;
@@ -420,12 +400,10 @@
                     }, 2000);
                 }
             } else if (msg.type === "client_joined") {
-                // Another client joined (or we received existing member list on connect)
                 upsertAvatar(msg.clientId, msg.avatar || null);
             } else if (msg.type === "client_left") {
                 removeAvatar(msg.clientId);
             } else if (msg.type === "avatar") {
-                // Avatar data received (after upload processed by server)
                 upsertAvatar(msg.clientId, msg.data);
             } else if (msg.type === "error") {
                 console.warn("❌ Server error:", msg.message);
@@ -444,7 +422,6 @@
         };
     }
 
-    // Exit gracefully if server not configured
     if (!WS_HOST) {
         buildIsland();
         console.warn("Listen Along: no server configured (__ws param missing)");
@@ -520,6 +497,10 @@
             isApplyingState = false;
         }, 500);
     }
+
+    // OPTIMISATION A: Play state observer — use only MutationObserver,
+    // drop the redundant setInterval polling.
+    // Narrow the observe scope to the player bar instead of entire body.
     function startPlayStateObserver() {
         let lastHref = null;
         function check() {
@@ -529,23 +510,48 @@
             lastHref = href;
             sendPlayState(href);
         }
-        new MutationObserver(check).observe(document.body, {
-            subtree: true,
-            childList: true,
-            attributes: true,
-        });
-        setInterval(check, 500);
+
+        // OPTIMISATION: watch only the player bar subtree, not full body.
+        // Falls back to body if bar not yet mounted.
+        function attachObserver() {
+            const target =
+                document.querySelector('[class*="PlayerBar_root"]') ||
+                document.body;
+            new MutationObserver(check).observe(target, {
+                subtree: true,
+                childList: true,
+                attributes: true,
+                attributeFilter: ["href", "xlink:href"],
+            });
+        }
+
+        // Wait for player bar to exist before attaching
+        if (document.querySelector('[class*="PlayerBar_root"]')) {
+            attachObserver();
+        } else {
+            const waitObs = new MutationObserver(() => {
+                if (document.querySelector('[class*="PlayerBar_root"]')) {
+                    waitObs.disconnect();
+                    attachObserver();
+                }
+            });
+            waitObs.observe(document.body, { childList: true, subtree: true });
+        }
     }
 
     // ─── Timeline sync ───────────────────────────────────────────────────
 
+    // OPTIMISATION B: Only send timeline if value actually changed.
+    // Keep 1s interval but skip if same as last sent value.
     function startTimelineObserver() {
-        // Continuously broadcast own position every 1s
         setInterval(() => {
             if (isNavigating || isSeekingTimeline) return;
             const slider = getSlider();
             if (!slider) return;
             const val = parseInt(slider.value);
+            // Skip if unchanged (saves majority of sends during paused state)
+            if (val === lastSentTimeline) return;
+            lastSentTimeline = val;
             if (ws && ws.readyState === WebSocket.OPEN)
                 ws.send(
                     JSON.stringify({
@@ -556,17 +562,19 @@
                 );
         }, 1000);
 
-        // Manual seek — broadcast immediately + mark self as sender
+        // Manual seek — broadcast immediately with seek:true flag
         function onSeekEnd(e) {
             if (isSeekingTimeline || isNavigating) return;
             const slider = getSlider();
             if (!slider || e.target !== slider) return;
             const val = parseInt(slider.value);
+            lastSentTimeline = val;
             if (ws && ws.readyState === WebSocket.OPEN)
                 ws.send(
                     JSON.stringify({
                         type: "timeline",
                         value: val,
+                        seek: true,
                         roomId: ROOM_ID,
                     }),
                 );
@@ -596,18 +604,19 @@
             setActiveSender(CLIENT_ID);
         }
     }
+
+    // OPTIMISATION C: Path observer — scope MutationObserver to PlayerBar,
+    // avoiding full-document subtree scans on every DOM mutation.
     function startObserver() {
         if (observerStarted) return;
         observerStarted = true;
         const init = getAlbumPath();
         if (init) trySend(init);
-        new MutationObserver(() => {
-            const p = getAlbumPath();
-            if (p) trySend(p);
-        }).observe(document.body, { childList: true, subtree: true });
-        let attrObs = null,
-            obsLink = null;
-        function attach() {
+
+        let attrObs = null;
+        let obsLink = null;
+
+        function attachAttrObserver() {
             const bar = document.querySelector('[class*="PlayerBar_root"]');
             if (!bar) return;
             const link = bar.querySelector('[class*="Meta_albumLink"]');
@@ -623,10 +632,30 @@
                 attributeFilter: ["href"],
             });
         }
-        attach();
-        new MutationObserver(attach).observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
+
+        // Watch for link changes inside player bar only
+        function attachBarObserver(bar) {
+            new MutationObserver(() => {
+                const p = getAlbumPath();
+                if (p) trySend(p);
+                attachAttrObserver();
+            }).observe(bar, { childList: true, subtree: true });
+            attachAttrObserver();
+        }
+
+        const bar = document.querySelector('[class*="PlayerBar_root"]');
+        if (bar) {
+            attachBarObserver(bar);
+        } else {
+            // Player bar not mounted yet — wait for it with a single body observer
+            const waitObs = new MutationObserver(() => {
+                const b = document.querySelector('[class*="PlayerBar_root"]');
+                if (b) {
+                    waitObs.disconnect();
+                    attachBarObserver(b);
+                }
+            });
+            waitObs.observe(document.body, { childList: true, subtree: true });
+        }
     }
 })();
