@@ -30,6 +30,17 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
   https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
 </details>
 
+<details>
+  <summary>Listen Along (Experimental)</summary>
+  
+  > It can be enabled in the config.
+  
+  <img width="465" height="276" alt="image" src="https://github.com/user-attachments/assets/1aef6562-6f0b-42f6-9113-0b7113d3d9b5" />
+
+  <img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/72df098f-c844-49af-b024-04d2cf8e53c2" />
+
+</details>
+
 ## Installation
 
 ### Windows
