@@ -30,6 +30,14 @@ let config = {
 
     experimental: {
         volumeNormalization: false,
+        listenAlong: {
+            enable: false,
+            host: "127.0.0.1",
+            port: 7080,
+            roomId: "",
+            clientId: "",
+            avatarUrl: "",
+        },
     },
 };
 
@@ -38,6 +46,10 @@ const injectList = [
     {
         file: "alwaysExpandedPlayer.css",
         condition: (config) => config?.programSettings?.alwaysExpandedPlayer,
+    },
+    {
+        file: "listenAlongClient.js",
+        condition: (config) => config?.experimental?.listenAlong?.enable,
     },
     {
         file: "nextTitle.js",

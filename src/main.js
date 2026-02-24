@@ -129,8 +129,21 @@ function createWindow() {
         callback({ responseHeaders: headers });
     });
 
-    // Загружаем основной URL приложения
-    mainWindow.loadURL("https://music.yandex.ru/");
+    // Load main app URL
+    const listenAlong = config?.experimental?.listenAlong;
+    if (listenAlong?.enable) {
+        const params = new URLSearchParams({
+            __ws: listenAlong.host
+                ? `${listenAlong.host}:${listenAlong.port || null}`
+                : "",
+            __room: listenAlong.roomId || "",
+            __clientId: listenAlong.clientId || "",
+            __avatarUrl: listenAlong.avatarUrl || "",
+        });
+        mainWindow.loadURL("https://music.yandex.ru/?" + params.toString());
+    } else {
+        mainWindow.loadURL("https://music.yandex.ru/");
+    }
 
     // Перехватываем Alt, чтобы меню не всплывало
     mainWindow.webContents.on("before-input-event", (event, input) => {
