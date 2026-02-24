@@ -18,6 +18,21 @@
     let lastSentPlayHref = null;
     let lastSentTimeline = null;
     let isSeekingTimeline = false;
+    // Блокируем исходящие события пока получаем начальное состояние от сервера
+    let isInitializing = true;
+    let initTimeout = null;
+    function liftInitializing() {
+        if (!isInitializing) return;
+        isInitializing = false;
+        // Синхронизируем текущее состояние чтобы observers не отправили его сразу
+        const slider = getSlider();
+        if (slider) lastSentTimeline = parseInt(slider.value);
+        const href = getPlayIconHref();
+        if (href) lastSentPlayHref = href;
+        const path = getAlbumPath();
+        if (path) lastSentPath = path;
+        console.log("✅ Initialization complete — outbound events enabled");
+    }
 
     const XLINK = "http://www.w3.org/1999/xlink";
 
@@ -36,7 +51,7 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                background: rgba(15,15,15,0.9);
+                background: #0003;
                 backdrop-filter: blur(24px);
                 -webkit-backdrop-filter: blur(24px);
                 border-radius: 999px;
@@ -52,9 +67,7 @@
                             padding 0.35s ease,
                             min-width 0.35s ease;
                 overflow: visible;
-            }
-            #__li_island__:hover {
-                transform: translateX(-50%) scale(1.04);
+                pointer-ivents: none;
             }
 
             /* ── dot ── */
@@ -363,6 +376,10 @@
             startPlayStateObserver();
             startTimelineObserver();
             sendAvatarFromUrl();
+
+            // Если сервер не пришлёт состояние — снимаем блокировку через 5с
+            clearTimeout(initTimeout);
+            initTimeout = setTimeout(liftInitializing, 5000);
         };
 
         ws.onmessage = (event) => {
@@ -383,6 +400,13 @@
             } else if (msg.type === "playstate") {
                 if (msg.clientId) setActiveSender(msg.clientId);
                 applyPlayState(msg.href);
+                // После получения playstate от сервера при инициализации
+                // ждём timeline и потом снимаем блокировку
+                if (isInitializing) {
+                    // timeline может не прийти, поэтому страхуемся таймаутом
+                    clearTimeout(initTimeout);
+                    initTimeout = setTimeout(liftInitializing, 3000);
+                }
             } else if (msg.type === "timeline") {
                 if (msg.seek && msg.clientId) setActiveSender(msg.clientId);
                 if (isSeekingTimeline || isNavigating) return;
@@ -395,9 +419,16 @@
                     );
                     isSeekingTimeline = true;
                     seekTo(msg.value);
+                    // Синхронизируем lastSentTimeline чтобы interval не отправил это значение наружу
+                    lastSentTimeline = msg.value;
                     setTimeout(() => {
                         isSeekingTimeline = false;
                     }, 2000);
+                }
+                // Timeline — последнее из трёх сообщений инициализации
+                if (isInitializing) {
+                    clearTimeout(initTimeout);
+                    initTimeout = setTimeout(liftInitializing, 1500);
                 }
             } else if (msg.type === "client_joined") {
                 upsertAvatar(msg.clientId, msg.avatar || null);
@@ -413,6 +444,8 @@
         ws.onerror = () => {};
         ws.onclose = (e) => {
             islandSetDisconnected();
+            clearTimeout(initTimeout);
+            isInitializing = true; // сбрасываем при переподключении
             if (e.code === 4001) {
                 console.error(`🚫 Room [${ROOM_ID}] not found on server`);
                 return;
@@ -454,14 +487,41 @@
                 return;
             }
             const urlMatch = window.location.pathname === expectedPath;
+
+            // Если PlayerBar уже играет именно этот трек — навигация завершена, ничего не кликаем
+            const playerBarPath = getAlbumPath();
+            const currentHref = getPlayIconHref() || "";
+            const alreadyPlayingRight =
+                playerBarPath === expectedPath &&
+                (currentHref.includes("pause") ||
+                    currentHref.includes("Pause"));
+            if (alreadyPlayingRight) {
+                clearInterval(wait);
+                console.log("▶️ Already playing right track:", expectedPath);
+                setTimeout(() => {
+                    isNavigating = false;
+                    processNext();
+                }, 500);
+                return;
+            }
+
             const btn = document.querySelector(
                 '[class*="TrackModal_modalContent"] * [class*="TrackModalControls_controlsContainer"] > button',
             );
             if (urlMatch && btn) {
                 clearInterval(wait);
                 setTimeout(() => {
-                    btn.click();
-                    console.log("▶️ Track started:", expectedPath);
+                    // Ещё раз проверяем — вдруг за эти 300мс трек уже запустился
+                    const href = getPlayIconHref() || "";
+                    const pbPath = getAlbumPath();
+                    const playing =
+                        href.includes("pause") || href.includes("Pause");
+                    if (playing && pbPath === expectedPath) {
+                        console.log("▶️ Track already playing:", expectedPath);
+                    } else {
+                        btn.click();
+                        console.log("▶️ Track started:", expectedPath);
+                    }
                     setTimeout(() => {
                         isNavigating = false;
                         processNext();
@@ -482,6 +542,7 @@
 
     function sendPlayState(href) {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        if (isInitializing) return;
         if (href === lastSentPlayHref) return;
         lastSentPlayHref = href;
         ws.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
@@ -545,7 +606,7 @@
     // Keep 1s interval but skip if same as last sent value.
     function startTimelineObserver() {
         setInterval(() => {
-            if (isNavigating || isSeekingTimeline) return;
+            if (isInitializing || isNavigating || isSeekingTimeline) return;
             const slider = getSlider();
             if (!slider) return;
             const val = parseInt(slider.value);
@@ -564,7 +625,7 @@
 
         // Manual seek — broadcast immediately with seek:true flag
         function onSeekEnd(e) {
-            if (isSeekingTimeline || isNavigating) return;
+            if (isInitializing || isSeekingTimeline || isNavigating) return;
             const slider = getSlider();
             if (!slider || e.target !== slider) return;
             const val = parseInt(slider.value);
@@ -594,7 +655,13 @@
         return link.getAttribute("href") || null;
     }
     function trySend(p) {
-        if (!p || isNavigating || p === lastSentPath || p === lastReceivedPath)
+        if (
+            !p ||
+            isInitializing ||
+            isNavigating ||
+            p === lastSentPath ||
+            p === lastReceivedPath
+        )
             return;
         lastSentPath = p;
         if (ws && ws.readyState === WebSocket.OPEN) {
