@@ -52,203 +52,220 @@
 
     (function injectStyles() {
         if (document.getElementById("__li_styles__")) return;
+
         const s = document.createElement("style");
         s.id = "__li_styles__";
         s.textContent = `
-            @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
 
-            /* ── outer shell: translateY + opacity ── */
-            #__li_island__ {
-                position: fixed;
-                top: 20px;
-                left: 50%;
-                transform-origin: center top;
-                z-index: 9999;
-                pointer-events: none;
-                transform: translateX(-50%) translateY(-140%);
-                opacity: 0;
-                background: ${islandBg};
-                backdrop-filter: blur(${islandBlur});
-                border-radius: 1000px;
-                border: solid 1px #fff1;
-            }
-            #__li_island__.island-visible {
-                animation: liIslandSlideIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                pointer-events: auto;
-            }
-            #__li_island__.island-hiding {
-                animation: liIslandSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                pointer-events: none;
-            }
+        /* ───────── OUTER SHELL ───────── */
 
-            @keyframes liIslandSlideIn {
-                0%   { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
-                100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-            }
-            @keyframes liIslandSlideOut {
-                0%   { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-                100% { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
-            }
+        #__li_island__ {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform-origin: center top;
+            z-index: 9999;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(-140%);
+            opacity: 0;
+            background: ${islandBg};
+            backdrop-filter: blur(${islandBlur});
+            border-radius: 1000px;
+            border: solid 1px #fff3;
+        }
 
-            /* ── inner pill ── */
-            #__li_inner__ {
-                position: relative;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 4px 6px 4px 12px;
-                font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                font-size: 14px;
-                font-weight: 800;
-                color: #fff;
-                user-select: none;
-                white-space: nowrap;
-                cursor: default;
-                overflow: hidden;
-                transform-origin: center center;
-                box-sizing: border-box;
-                will-change: transform;
-            }
-            /* blur на псевдоэлементе — не участвует в scaleX, нет GPU-лага */
-            #__li_inner__::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                border-radius: inherit;
-                z-index: -1;
-            }
+        #__li_island__.island-visible {
+            animation: liIslandSlideIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            pointer-events: auto;
+        }
 
-            #__li_island__.island-hiding #__li_inner__ {
-                animation: liInnerShrink 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-            }
-            #__li_island__.island-visible #__li_inner__ {
-                animation: liInnerExpand 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
-            }
+        #__li_island__.island-hiding {
+            animation: liIslandSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            pointer-events: none;
+        }
 
-            @keyframes liInnerShrink {
-                0%   { transform: scaleX(1); }
-                100% { transform: scaleX(0.1); }
-            }
-            @keyframes liInnerExpand {
-                0%   { transform: scaleX(0.1); }
-                35%  { transform: scaleX(0.1); }
-                100% { transform: scaleX(1); }
-            }
+        @keyframes liIslandSlideIn {
+            0%   { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
+            100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+        }
 
-            /* контент: фейд до сжатия / после разворачивания */
-            #__li_island__.island-hiding #__li_dot__,
-            #__li_island__.island-hiding #__li_status__,
-            #__li_island__.island-hiding #__li_avatars__ {
-                animation: liContentFadeOut 0.12s ease-in forwards !important;
-            }
-            #__li_island__.island-visible #__li_dot__,
-            #__li_island__.island-visible #__li_status__ {
-                animation: liContentFadeIn 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.35s both;
-            }
+        @keyframes liIslandSlideOut {
+            0%   { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
+        }
 
-            @keyframes liContentFadeOut {
-                to { opacity: 0; }
-            }
-            @keyframes liContentFadeIn {
-                from { opacity: 0; transform: translateY(3px); }
-                to   { opacity: 1; transform: translateY(0); }
-            }
+        /* ───────── INNER ───────── */
 
-            /* ── dot ── */
-            #__li_dot__ {
-                width: 8px; height: 8px;
-                border-radius: 50%;
-                flex-shrink: 0;
-                transition: background 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
-            }
-            #__li_dot__.disconnected { background: #555; }
-            #__li_dot__.connected    { background: #1db954; animation: liPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-            #__li_dot__.switching    { transform: scale(0); opacity: 0; }
+        #__li_inner__ {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 4px 6px 4px 12px;
+            font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+            user-select: none;
+            white-space: nowrap;
+            cursor: default;
+            overflow: hidden;
+            transform-origin: center center;
+            box-sizing: border-box;
+            will-change: transform, opacity;
+        }
 
-            /* ── status text ── */
-            #__li_status__ {
-                font-size: 12px;
-                letter-spacing: 0.02em;
-                white-space: nowrap;
-                overflow: hidden;
-                max-width: 300px;
-                transition:
-                    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                    max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                    transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                    color 0.4s ease;
-                transform: translateY(0);
-                opacity: 1;
-            }
-            #__li_status__.hidden {
-                opacity: 0;
-                max-width: 0;
-                transform: translateY(3px);
-            }
-            #__li_status__.appearing {
-                animation: liStatusIn 0.38s cubic-bezier(0.34, 1.2, 0.64, 1) both;
-            }
+        /* ───────── CONTENT FADE (НОВОЕ) ───────── */
 
-            @keyframes liStatusIn {
-                from { opacity: 0; transform: translateY(6px); }
-                to   { opacity: 1; transform: translateY(0); }
-            }
+        /* плавное исчезновение старого контента */
+        #__li_inner__.li-content-fade-out {
+            opacity: 0;
+            transform: translateY(4px) scale(0.98);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
 
-            /* ── avatar row ── */
-            #__li_avatars__ {
-                display: flex;
-                align-items: center;
-                gap: 3px;
-                transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-                overflow: hidden;
-                max-width: 0;
-                opacity: 0;
-            }
-            #__li_avatars__.visible {
-                max-width: 400px;
-                opacity: 1;
-            }
+        /* появление нового контента */
+        #__li_inner__.li-content-fade-in {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
 
-            /* ── individual avatar ── */
-            .li-av-wrap {
-                position: relative;
-                flex-shrink: 0;
-                animation: liAvatarIn 0.35s both;
-            }
-            .li-av-wrap.removing { animation: liAvatarOut 0.2s forwards; }
+        /* ───────── SHRINK / EXPAND ───────── */
 
-            .li-av-img, .li-av-placeholder {
-                width: 26px; height: 26px;
-                border-radius: 50%;
-                border: 2px solid rgba(255,255,255,0.18);
-                object-fit: cover;
-                display: block;
-                transition: border-color 0.3s ease;
-            }
-            .li-av-placeholder {
-                background: rgba(255,255,255,0.12);
-                display: flex; align-items: center; justify-content: center;
-                font-size: 11px; font-weight: 600;
-                color: rgba(255,255,255,0.7);
-            }
-            .li-av-wrap.active-sender .li-av-img,
-            .li-av-wrap.active-sender .li-av-placeholder {
-                border-color: #1db954;
-            }
+        #__li_island__.island-hiding #__li_inner__ {
+            animation: liInnerShrink 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
 
-            @keyframes liPulse {
-                0%, 100% { opacity: 1;  transform: scale(1); }
-                50%       { opacity: 0.4; transform: scale(0.7); }
-            }
-            @keyframes liAvatarIn {
-                from { transform: scale(0) rotate(-12deg); opacity: 0; }
-                to   { transform: scale(1) rotate(0deg);   opacity: 1; }
-            }
-            @keyframes liAvatarOut {
-                from { transform: scale(1); opacity: 1; max-width: 32px; margin: 0; }
-                to   { transform: scale(0); opacity: 0; max-width: 0;    margin: 0; }
-            }
-        `;
+        #__li_island__.island-visible #__li_inner__ {
+            animation: liInnerExpand 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+        }
+
+        @keyframes liInnerShrink {
+            0%   { transform: scaleX(1); }
+            100% { transform: scaleX(0.1); }
+        }
+
+        @keyframes liInnerExpand {
+            0%   { transform: scaleX(0.1); }
+            35%  { transform: scaleX(0.1); }
+            100% { transform: scaleX(1); }
+        }
+
+        /* ───────── DOT ───────── */
+
+        #__li_dot__ {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition:
+                background 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.35s ease;
+        }
+
+        #__li_dot__.disconnected { background: #555; }
+        #__li_dot__.connected    { background: #1db954; animation: liPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        #__li_dot__.switching    { transform: scale(0); opacity: 0; }
+
+        /* ───────── STATUS TEXT ───────── */
+
+        #__li_status__ {
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            max-width: calc(100vw - 200px);
+            transition:
+                opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.4s ease;
+        }
+
+        #__li_status__.hidden {
+            opacity: 0;
+            max-width: 0;
+            transform: translateY(3px);
+        }
+
+        /* ───────── AVATARS ───────── */
+
+        #__li_avatars__ {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            transition:
+                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            max-width: 0;
+            opacity: 0;
+        }
+
+        #__li_avatars__.visible {
+            max-width: 400px;
+            opacity: 1;
+        }
+
+        /* ───────── AVATAR ───────── */
+
+        .li-av-wrap {
+            position: relative;
+            flex-shrink: 0;
+            animation: liAvatarIn 0.35s both;
+        }
+
+        .li-av-wrap.removing {
+            animation: liAvatarOut 0.2s forwards;
+        }
+
+        .li-av-img,
+        .li-av-placeholder {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.18);
+            object-fit: cover;
+            display: block;
+        }
+
+        .li-av-placeholder {
+            background: rgba(255,255,255,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .li-av-wrap.active-sender .li-av-img,
+        .li-av-wrap.active-sender .li-av-placeholder {
+            border-color: #1db954;
+        }
+
+        /* ───────── ANIMATIONS ───────── */
+
+        @keyframes liPulse {
+            0%, 100% { opacity: 1;  transform: scale(1); }
+            50%      { opacity: 0.4; transform: scale(0.7); }
+        }
+
+        @keyframes liAvatarIn {
+            from { transform: scale(0) rotate(-12deg); opacity: 0; }
+            to   { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        @keyframes liAvatarOut {
+            from { transform: scale(1); opacity: 1; max-width: 32px; }
+            to   { transform: scale(0); opacity: 0; max-width: 0; }
+        }
+    `;
+
         document.head.appendChild(s);
     })();
 
