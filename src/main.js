@@ -31,6 +31,15 @@ if (process.platform === "linux") {
 
 app.commandLine.appendSwitch("force-color-profile", "srgb");
 
+// certificate spoof
+app.on(
+    "certificate-error",
+    (event, webContents, url, error, certificate, callback) => {
+        event.preventDefault();
+        callback(true);
+    },
+);
+
 if (!app.requestSingleInstanceLock()) {
     // Если есть уже запущенный экземпляр, выходим
     app.quit();
@@ -134,7 +143,7 @@ function createWindow() {
     if (listenAlong?.enable) {
         const params = new URLSearchParams({
             __blackIsland: listenAlong.blackIsland || null,
-            __ws: listenAlong.host
+            __wss: listenAlong.host
                 ? `${listenAlong.host}:${listenAlong.port || null}`
                 : "",
             __room: listenAlong.roomId || "",

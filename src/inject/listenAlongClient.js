@@ -25,14 +25,14 @@
 
     const blackIsland = _qs.get("__blackIsland") || null;
 
-    const _wsHost = _qs.get("__ws") || null;
-    const WS_HOST = _wsHost ? "ws://" + _wsHost : null;
+    const _wssHost = _qs.get("__wss") || null;
+    const WSS_HOST = _wssHost ? "wss://" + _wssHost : null;
     const ROOM_ID = _qs.get("__room") || null;
     const CLIENT_ID = _qs.get("__clientId") || null;
     const AVATAR_URL = _qs.get("__avatarUrl") || null;
     const SYNC_THRESHOLD_SEC = 1;
 
-    let ws = null;
+    let wss = null;
     let serverName = null;
     let observerStarted = false;
     let lastSentPath = null;
@@ -570,8 +570,8 @@
 
     function sendAvatarFromUrl() {
         if (!AVATAR_URL) return;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(
+        if (wss && wss.readyState === WebSocket.OPEN) {
+            wss.send(
                 JSON.stringify({
                     type: "avatar_url",
                     url: AVATAR_URL,
@@ -645,27 +645,27 @@
     // ─── WebSocket ──────────────────────────────────────────────────────
 
     function connect() {
-        if (!WS_HOST || !ROOM_ID) {
+        if (!WSS_HOST || !ROOM_ID) {
             const dot = document.getElementById("__li_dot__");
             const status = document.getElementById("__li_status__");
             if (dot) dot.className = "disconnected";
             if (status) {
                 status.className = "";
                 status.style.color = "#e05c5c";
-                status.textContent = !WS_HOST
+                status.textContent = !WSS_HOST
                     ? "No server configured"
                     : "No room configured";
             }
             console.warn(
-                "Listen Along: missing __ws or __room param — not connecting.",
+                "Listen Along: missing __wss or __room param — not connecting.",
             );
             return;
         }
-        const serverHost = WS_HOST.replace(/^wss?:\/\//, "").split("/")[0];
-        const url = `${WS_HOST}?room=${encodeURIComponent(ROOM_ID)}&clientId=${encodeURIComponent(CLIENT_ID || "user_" + Math.random().toString(36).slice(2, 7))}`;
-        ws = new WebSocket(url);
+        const serverHost = WSS_HOST.replace(/^wss?:\/\//, "").split("/")[0];
+        const url = `${WSS_HOST}?room=${encodeURIComponent(ROOM_ID)}&clientId=${encodeURIComponent(CLIENT_ID || "user_" + Math.random().toString(36).slice(2, 7))}`;
+        wss = new WebSocket(url);
 
-        ws.onopen = () => {
+        wss.onopen = () => {
             console.log(`🔌 Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
             islandSetConnected(serverName || serverHost);
 
@@ -680,7 +680,7 @@
             initTimeout = setTimeout(liftInitializing, 5000);
         };
 
-        ws.onmessage = (event) => {
+        wss.onmessage = (event) => {
             const raw = event.data;
             if (typeof raw !== "string") return;
             let msg;
@@ -787,8 +787,8 @@
             }
         };
 
-        ws.onerror = () => {};
-        ws.onclose = (e) => {
+        wss.onerror = () => {};
+        wss.onclose = (e) => {
             islandSetDisconnected();
             clearTimeout(initTimeout);
             isInitializing = true;
@@ -802,9 +802,11 @@
         };
     }
 
-    if (!WS_HOST) {
+    if (!WSS_HOST) {
         buildIsland();
-        console.warn("Listen Along: no server configured (__ws param missing)");
+        console.warn(
+            "Listen Along: no server configured (__wss param missing)",
+        );
         return;
     }
 
@@ -886,12 +888,12 @@
     // ─── Play/Pause sync ────────────────────────────────────────────────
 
     function sendPlayState(href) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        if (!wss || wss.readyState !== WebSocket.OPEN) return;
         if (isInitializing) return;
         if (href === lastSentPlayHref) return;
         lastSentPlayHref = href;
         // Отправляем команду на сервер — он обновит эталон и разошлёт state_sync
-        ws.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
+        wss.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
         setActiveSender(CLIENT_ID); // пользователь сам нажал
         console.log("📤 playstate →server:", href);
     }
@@ -1045,8 +1047,8 @@
                 val = parseInt(slider.value);
             }
 
-            if (!isNaN(val) && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(
+            if (!isNaN(val) && wss && wss.readyState === WebSocket.OPEN) {
+                wss.send(
                     JSON.stringify({
                         type: "seek",
                         position: val,
@@ -1093,8 +1095,8 @@
             return;
         }
         lastSentPath = p;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(
+        if (wss && wss.readyState === WebSocket.OPEN) {
+            wss.send(
                 JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
             );
             setActiveSender(CLIENT_ID);
