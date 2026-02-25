@@ -37,7 +37,9 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
   
   <img width="465" height="276" alt="image" src="https://github.com/user-attachments/assets/1aef6562-6f0b-42f6-9113-0b7113d3d9b5" />
 
-  <img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/72df098f-c844-49af-b024-04d2cf8e53c2" />
+  <img width="301" height="148" alt="image_2026-02-25_11-42-33" src="https://github.com/user-attachments/assets/8a62ac93-c270-47a4-9b4a-1be81aebd7ba" />
+
+  <img width="249" height="67" alt="image" src="https://github.com/user-attachments/assets/dbaf5ee9-70ee-4f0f-9d52-1f744c48061e" />
 
 </details>
 
