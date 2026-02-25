@@ -67,14 +67,16 @@
                 pointer-events: none;
                 transform: translateX(-50%) translateY(-140%);
                 opacity: 0;
+                background: ${islandBg};
+                backdrop-filter: blur(${islandBlur});
+                border-radius: 1000px;
+                border: solid 1px #fff1;
             }
             #__li_island__.island-visible {
                 animation: liIslandSlideIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-                pointer-events: auto;
             }
             #__li_island__.island-hiding {
                 animation: liIslandSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                pointer-events: none;
             }
 
             @keyframes liIslandSlideIn {
@@ -92,8 +94,6 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                border-radius: 1000px;
-                border: solid 1px #fff1;
                 padding: 4px 6px 4px 12px;
                 font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 font-size: 14px;
@@ -106,17 +106,6 @@
                 transform-origin: center center;
                 box-sizing: border-box;
                 will-change: transform;
-            }
-            /* blur на псевдоэлементе — не участвует в scaleX, нет GPU-лага */
-            #__li_inner__::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                border-radius: inherit;
-                background: ${islandBg};
-                backdrop-filter: blur(${islandBlur});
-                -webkit-backdrop-filter: blur(${islandBlur});
-                z-index: -1;
             }
 
             #__li_island__.island-hiding #__li_inner__ {
