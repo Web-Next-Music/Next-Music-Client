@@ -502,6 +502,7 @@
                 const img = document.createElement("img");
                 img.className = "li-av-img";
                 img.src = `data:image/webp;base64,${base64Data}`;
+                img.title = clientId;
                 img.onerror = () => {
                     img.replaceWith(makePlaceholder(clientId));
                 };
@@ -516,6 +517,7 @@
         const el = document.createElement("div");
         el.className = "li-av-placeholder";
         el.textContent = (clientId?.[0] || "?").toUpperCase();
+        el.title = clientId;
         return el;
     }
 
