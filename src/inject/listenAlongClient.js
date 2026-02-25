@@ -74,17 +74,19 @@
             }
             #__li_island__.island-visible {
                 animation: liIslandSlideIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                pointer-events: auto;
             }
             #__li_island__.island-hiding {
                 animation: liIslandSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                pointer-events: none;
             }
 
             @keyframes liIslandSlideIn {
                 0%   { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
-                100% { transform: translateX(-50%) translateY(0)     scale(1);   opacity: 1; }
+                100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
             }
             @keyframes liIslandSlideOut {
-                0%   { transform: translateX(-50%) translateY(0)     scale(1);   opacity: 1; }
+                0%   { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
                 100% { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
             }
 
@@ -106,6 +108,14 @@
                 transform-origin: center center;
                 box-sizing: border-box;
                 will-change: transform;
+            }
+            /* blur на псевдоэлементе — не участвует в scaleX, нет GPU-лага */
+            #__li_inner__::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: inherit;
+                z-index: -1;
             }
 
             #__li_island__.island-hiding #__li_inner__ {
@@ -227,11 +237,11 @@
             }
 
             @keyframes liPulse {
-                0%, 100% { opacity: 1;   transform: scale(1); }
-                50%       { opacity: 0.45; transform: scale(0.72); }
+                0%, 100% { opacity: 1;  transform: scale(1); }
+                50%       { opacity: 0.4; transform: scale(0.7); }
             }
             @keyframes liAvatarIn {
-                from { transform: scale(0) rotate(-15deg); opacity: 0; }
+                from { transform: scale(0) rotate(-12deg); opacity: 0; }
                 to   { transform: scale(1) rotate(0deg);   opacity: 1; }
             }
             @keyframes liAvatarOut {
@@ -283,7 +293,6 @@
         clearTimeout(hideIslandTimer);
         const island = document.getElementById("__li_island__");
         if (!island) return;
-        // Уже виден и не в процессе скрытия — не перезапускать анимацию
         if (_islandVisible && !island.classList.contains("island-hiding"))
             return;
         _islandVisible = true;
@@ -342,7 +351,7 @@
         void inner.offsetWidth;
 
         // Включаем анимацию
-        inner.style.transition = "width 0.45s";
+        inner.style.transition = "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
         inner.style.width = toW + "px";
 
         inner.addEventListener("transitionend", function handler(e) {
@@ -409,7 +418,6 @@
 
         const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
-        const avRow = document.getElementById("__li_avatars__");
 
         // Анимируем смену dot
         if (dot) {
@@ -420,8 +428,6 @@
         }
 
         if (status) {
-            // Мгновенно сбрасываем hidden (max-width:0) без анимации,
-            // чтобы текст не обрезался при реконнекте
             status.style.transition = "none";
             status.classList.remove("hidden");
             void status.offsetWidth;
@@ -440,19 +446,11 @@
             }, 250);
         }
 
-        // Прячем аватары пока показывается "Connected to ..."
-        if (avRow && avRow.classList.contains("visible")) {
-            avRow.style.transition = "none";
-            avRow.classList.remove("visible");
-            void avRow.offsetWidth;
-            avRow.style.transition = "";
-        }
-
         statusHideTimer = setTimeout(() => {
             animateInnerWidth(() => {
                 if (status) status.classList.add("hidden");
-                const av = document.getElementById("__li_avatars__");
-                if (av) av.className = "visible";
+                const avRow = document.getElementById("__li_avatars__");
+                if (avRow) avRow.className = "visible";
             });
         }, 3000);
     }
@@ -643,23 +641,26 @@
             }
 
             if (msg.type === "navigate") {
-                if (msg.clientId) setActiveSender(msg.clientId);
                 if (msg.clientId === CLIENT_ID) return;
+                if (msg.clientId) setActiveSender(msg.clientId);
                 isMaster = false;
                 lastReceivedPath = msg.path;
+                lastSentPath = null; // позволяем снова отправить этот трек
                 pendingPath = msg.path;
                 if (!isNavigating) processNext();
             } else if (msg.type === "playstate") {
+                if (msg.clientId === CLIENT_ID) return; // своё эхо
                 if (msg.clientId) setActiveSender(msg.clientId);
-                if (isMaster) return;
                 applyPlayState(msg.href);
                 if (isInitializing) {
                     clearTimeout(initTimeout);
                     initTimeout = setTimeout(liftInitializing, 3000);
                 }
             } else if (msg.type === "timeline") {
+                if (msg.clientId === CLIENT_ID) return; // своё эхо
+                // setActiveSender только при seek — обычные тики не должны сбивать подсветку
                 if (msg.seek && msg.clientId) setActiveSender(msg.clientId);
-                if (isMaster && !isInitializing) return;
+                if (!msg.seek && isMaster && !isInitializing) return;
                 if (isSeekingTimeline || isNavigating) return;
                 const slider = getSlider();
                 if (!slider) return;
@@ -727,6 +728,11 @@
         if (window.location.pathname !== p) window.next.router.push(p);
         waitForTrackAndPlay(p);
     }
+    function finishNavigation() {
+        isNavigating = false;
+        lastReceivedPath = null;
+        processNext();
+    }
     function waitForTrackAndPlay(expectedPath) {
         let attempts = 0;
         const wait = setInterval(() => {
@@ -748,8 +754,7 @@
                 clearInterval(wait);
                 console.log("▶️ Already playing right track:", expectedPath);
                 setTimeout(() => {
-                    isNavigating = false;
-                    processNext();
+                    finishNavigation();
                 }, 500);
                 return;
             }
@@ -771,16 +776,14 @@
                         console.log("▶️ Track started:", expectedPath);
                     }
                     setTimeout(() => {
-                        isNavigating = false;
-                        processNext();
+                        finishNavigation();
                     }, 1000);
                 }, 300);
                 return;
             }
             if (++attempts >= 40) {
                 clearInterval(wait);
-                isNavigating = false;
-                processNext();
+                finishNavigation();
                 console.warn("⚠️ Timed out waiting for track");
             }
         }, 500);
@@ -801,13 +804,19 @@
         const myHref = getPlayIconHref();
         if (!myHref || myHref === senderHref) return;
         isApplyingState = true;
+        // Превентивно обновляем lastSentPlayHref — чтобы observer
+        // не переотправил это состояние обратно в сеть
+        lastSentPlayHref = senderHref;
         clickPlayIcon();
         setTimeout(() => {
             isApplyingState = false;
-        }, 500);
+        }, 800);
     }
 
+    let _playStateObserverStarted = false;
     function startPlayStateObserver() {
+        if (_playStateObserverStarted) return;
+        _playStateObserverStarted = true;
         let lastHref = null;
         function check() {
             if (isApplyingState || isNavigating) return;
@@ -816,6 +825,9 @@
             lastHref = href;
             sendPlayState(href);
         }
+
+        // Polling-фолбэк: на Linux SVG-атрибуты могут не триггерить MutationObserver
+        setInterval(check, 1000);
 
         function attachObserver() {
             const target =
@@ -844,7 +856,10 @@
 
     // ─── Timeline sync ───────────────────────────────────────────────────
 
+    let _timelineObserverStarted = false;
     function startTimelineObserver() {
+        if (_timelineObserverStarted) return;
+        _timelineObserverStarted = true;
         setInterval(() => {
             if (isInitializing || isNavigating || isSeekingTimeline) return;
             const slider = getSlider();
@@ -863,9 +878,15 @@
         }, 1000);
 
         function onSeekEnd(e) {
-            if (isInitializing || isSeekingTimeline || isNavigating) return;
+            if (isInitializing || isNavigating) return;
             const slider = getSlider();
-            if (!slider || e.target !== slider) return;
+            if (!slider) return;
+            // На Linux событие может всплыть с дочернего — проверяем closest
+            const target =
+                e.target.closest?.('[aria-label="Manage time code"]') ||
+                e.target;
+            if (target !== slider) return;
+            isSeekingTimeline = false; // сбрасываем входящий seek-lock
             const val = parseInt(slider.value);
             lastSentTimeline = val;
             if (ws && ws.readyState === WebSocket.OPEN)
@@ -877,6 +898,7 @@
                         roomId: ROOM_ID,
                     }),
                 );
+            isMaster = false;
             setActiveSender(CLIENT_ID);
         }
         document.addEventListener("pointerup", onSeekEnd, true);
@@ -893,14 +915,7 @@
         return link.getAttribute("href") || null;
     }
     function trySend(p) {
-        if (
-            !p ||
-            isInitializing ||
-            isNavigating ||
-            p === lastSentPath ||
-            p === lastReceivedPath
-        )
-            return;
+        if (!p || isInitializing || isNavigating || p === lastSentPath) return;
         lastSentPath = p;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(
@@ -919,6 +934,16 @@
 
         let attrObs = null;
         let obsLink = null;
+
+        let lastPolledPath = null;
+        setInterval(() => {
+            if (isInitializing || isNavigating) return;
+            const p = getAlbumPath();
+            if (!p || p === lastPolledPath) return;
+            lastPolledPath = p;
+            trySend(p);
+            attachAttrObserver();
+        }, 1500);
 
         function attachAttrObserver() {
             const bar = document.querySelector('[class*="PlayerBar_root"]');
