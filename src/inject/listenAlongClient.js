@@ -1,4 +1,26 @@
 (async () => {
+    const SEL = {
+        // Нижняя панель плеера
+        playerBar: '[class*="PlayerBar_root"]',
+        // Ссылка на альбом/трек в нижней панели (используется как ID текущего трека)
+        albumLink: '[class*="Meta_albumLink"]',
+        // Иконка кнопки play/pause в нижней панели
+        playButtonIcon: '[class*="BaseSonataControlsDesktop_playButtonIcon__"]',
+        // Основной слайдер времени в нижней панели
+        timeSlider:
+            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
+        // Слайдер времени в полноэкранном режиме
+        fullscreenSlider:
+            'input[class*="FullscreenPlayerDesktopContent_slider"]',
+        // Строка синхронизированного текста (клик = перемотка)
+        lyricsLine: '[class*="SyncLyricsLine_root"]',
+        // Модалка трека
+        trackModal: '[class*="TrackModal_modalContent"]',
+        // Кнопка play в модалке трека
+        trackModalPlayBtn:
+            '[class*="TrackModal_modalContent"] * [class*="TrackModalControls_controlsContainer"] > button',
+    };
+
     const _qs = new URLSearchParams(location.search);
 
     const blackIsland = _qs.get("__blackIsland") || null;
@@ -18,21 +40,32 @@
     let pendingPath = null;
     let isApplyingState = false;
     let lastSentPlayHref = null;
-    let lastSentTimeline = null;
     let isSeekingTimeline = false;
+    // isInitializing: пока true — не отправляем события (ждём state_sync от сервера)
     let isInitializing = true;
-    let isMaster = false;
     let initTimeout = null;
+    // Серверный эталон, полученный последним state_sync
+    let serverState = null; // { path, playing, position, serverTime }
+    // Путь, на который сервер велел навигировать — подавляем обратную отправку
+    let _suppressSend = null;
+    // Флаг: сервер сам применяет seek — не отправлять обратно
+    let _suppressSeekSend = false;
+
     function liftInitializing() {
         if (!isInitializing) return;
         isInitializing = false;
-        const slider = getSlider();
-        if (slider) lastSentTimeline = parseInt(slider.value);
         const href = getPlayIconHref();
         if (href) lastSentPlayHref = href;
-        const path = getAlbumPath();
-        if (path) lastSentPath = path;
-        console.log("✅ Initialization complete — outbound events enabled");
+        // Запоминаем серверный path как "уже отправленный" — чтобы при первом
+        // тике poll не отправить свой локальный трек поверх серверного.
+        // Локальный трек будет отправлен только если он ИЗМЕНИТСЯ после этой точки.
+        if (serverState && serverState.path) {
+            lastSentPath = serverState.path;
+        } else {
+            const p = getAlbumPath();
+            if (p) lastSentPath = p;
+        }
+        console.log("✅ Initialization complete — lastSentPath:", lastSentPath);
     }
 
     const XLINK = "http://www.w3.org/1999/xlink";
@@ -552,9 +585,7 @@
     // ─── Play/Pause helpers ─────────────────────────────────────────────
 
     function getPlayIconEl() {
-        return document.querySelector(
-            '[class*="BaseSonataControlsDesktop_playButtonIcon__"]',
-        );
+        return document.querySelector(SEL.playButtonIcon);
     }
     function getPlayIconHref() {
         const el = getPlayIconEl();
@@ -589,7 +620,7 @@
     // ─── Timeline helpers ───────────────────────────────────────────────
 
     function getSlider() {
-        return document.querySelector('[aria-label="Manage time code"]');
+        return document.querySelector(SEL.timeSlider);
     }
 
     function seekTo(value) {
@@ -667,47 +698,85 @@
                 return;
             }
 
-            if (msg.type === "navigate") {
-                if (msg.clientId === CLIENT_ID) return;
-                if (msg.clientId) setActiveSender(msg.clientId);
-                isMaster = false;
-                lastReceivedPath = msg.path;
-                lastSentPath = null; // позволяем снова отправить этот трек
-                pendingPath = msg.path;
-                if (!isNavigating) processNext();
-            } else if (msg.type === "playstate") {
-                if (msg.clientId === CLIENT_ID) return; // своё эхо
-                if (msg.clientId) setActiveSender(msg.clientId);
-                applyPlayState(msg.href);
-                if (isInitializing) {
-                    clearTimeout(initTimeout);
-                    initTimeout = setTimeout(liftInitializing, 3000);
+            // ── state_sync — единственный источник истины ────────────────
+            // Сервер присылает это после любой команды и каждые 5 секунд.
+            // Клиент синхронизируется с сервером безусловно (кроме
+            // момента, когда сам перематывает — isSeekingTimeline).
+            if (msg.type === "state_sync") {
+                serverState = msg;
+
+                // Подсветка: обновляем только если это ДРУГОЙ клиент управляет.
+                // Если by === CLIENT_ID — мы уже подсветили себя в момент отправки команды,
+                // повторный вызов лишний. Heartbeat/server не трогают подсветку совсем.
+                if (
+                    msg.by &&
+                    msg.by !== CLIENT_ID &&
+                    msg.by !== "heartbeat" &&
+                    msg.by !== "server" &&
+                    msg.by !== "server-admin"
+                ) {
+                    setActiveSender(msg.by);
                 }
-            } else if (msg.type === "timeline") {
-                if (msg.clientId === CLIENT_ID) return; // своё эхо
-                // setActiveSender только при seek — обычные тики не должны сбивать подсветку
-                if (msg.seek && msg.clientId) setActiveSender(msg.clientId);
-                if (!msg.seek && isMaster && !isInitializing) return;
-                if (isSeekingTimeline || isNavigating) return;
-                const slider = getSlider();
-                if (!slider) return;
-                const diff = Math.abs(parseInt(slider.value) - msg.value);
-                if (diff > SYNC_THRESHOLD_SEC) {
-                    console.log(
-                        `🔄 Out of sync by ${diff}s — seeking to ${msg.value}`,
-                    );
-                    isSeekingTimeline = true;
-                    seekTo(msg.value);
-                    lastSentTimeline = msg.value;
-                    setTimeout(() => {
-                        isSeekingTimeline = false;
-                    }, 2000);
+
+                // 1. Навигация к нужному треку
+                // Игнорируем если: уже навигируем, уже на этом пути, или это наш собственный navigate
+                // (lastSentPath === msg.path означает что МЫ отправили эту команду).
+                const currentPath = getAlbumPath();
+                const needNav =
+                    msg.path &&
+                    msg.path !== currentPath &&
+                    msg.path !== lastSentPath && // мы сами не инициировали это
+                    !isNavigating;
+                if (needNav) {
+                    // Блокируем observer — когда router.push меняет path в PlayerBar,
+                    // трекер не должен отправлять его обратно на сервер
+                    _suppressSend = msg.path;
+                    pendingPath = msg.path;
+                    processNext();
                 }
+
+                // 2. Play / Pause — только если не мы сами только что нажали
+                if (!isNavigating && !isApplyingState) {
+                    applyPlayState(msg.playing);
+                }
+
+                // 3. Позиция: учитываем задержку сети
+                if (!isSeekingTimeline && !isNavigating) {
+                    const slider = getSlider();
+                    if (slider) {
+                        const networkDelay =
+                            (Date.now() - (msg.serverTime || Date.now())) /
+                            1000;
+                        const targetPos = msg.playing
+                            ? msg.position + networkDelay
+                            : msg.position;
+                        const diff = Math.abs(
+                            parseInt(slider.value) - targetPos,
+                        );
+                        if (diff > SYNC_THRESHOLD_SEC) {
+                            console.log(
+                                `🔄 Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
+                            );
+                            isSeekingTimeline = true;
+                            _suppressSeekSend = true; // не отправлять обратно на сервер
+                            seekTo(Math.round(targetPos));
+                            setTimeout(() => {
+                                isSeekingTimeline = false;
+                                _suppressSeekSend = false;
+                            }, 2000);
+                        }
+                    }
+                }
+
+                // Снимаем initializing после первого state_sync
                 if (isInitializing) {
                     clearTimeout(initTimeout);
                     initTimeout = setTimeout(liftInitializing, 1500);
                 }
-            } else if (msg.type === "client_joined") {
+                return;
+            }
+
+            if (msg.type === "client_joined") {
                 upsertAvatar(msg.clientId, msg.avatar || null);
             } else if (msg.type === "client_left") {
                 removeAvatar(msg.clientId);
@@ -723,7 +792,7 @@
             islandSetDisconnected();
             clearTimeout(initTimeout);
             isInitializing = true;
-            isMaster = false;
+            serverState = null;
             if (e.code === 4001) {
                 console.error(`🚫 Room [${ROOM_ID}] not found on server`);
                 return;
@@ -757,7 +826,7 @@
     }
     function finishNavigation() {
         isNavigating = false;
-        lastReceivedPath = null;
+        // Не сбрасываем lastSentPath здесь — это сделает trySend/_suppressSend
         processNext();
     }
     function waitForTrackAndPlay(expectedPath) {
@@ -786,9 +855,7 @@
                 return;
             }
 
-            const btn = document.querySelector(
-                '[class*="TrackModal_modalContent"] * [class*="TrackModalControls_controlsContainer"] > button',
-            );
+            const btn = document.querySelector(SEL.trackModalPlayBtn);
             if (urlMatch && btn) {
                 clearInterval(wait);
                 setTimeout(() => {
@@ -823,19 +890,29 @@
         if (isInitializing) return;
         if (href === lastSentPlayHref) return;
         lastSentPlayHref = href;
+        // Отправляем команду на сервер — он обновит эталон и разошлёт state_sync
         ws.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
-        setActiveSender(CLIENT_ID);
-        console.log("📤 playstate:", href);
+        setActiveSender(CLIENT_ID); // пользователь сам нажал
+        console.log("📤 playstate →server:", href);
     }
-    function applyPlayState(senderHref) {
+
+    /** Применить play/pause из серверного state_sync */
+    function applyPlayState(wantPlay) {
         const myHref = getPlayIconHref();
-        if (!myHref || myHref === senderHref) return;
+        if (!myHref) return;
+        const currentlyPlaying =
+            myHref.includes("pause") || myHref.includes("Pause");
+        if (currentlyPlaying === wantPlay) return;
         isApplyingState = true;
-        // Превентивно обновляем lastSentPlayHref — чтобы observer
-        // не переотправил это состояние обратно в сеть
-        lastSentPlayHref = senderHref;
+        // Превентивно блокируем observer: запоминаем текущий href,
+        // чтобы он не отправил изменение обратно на сервер.
+        // После клика href изменится — тогда lastSentPlayHref тоже обновим.
+        lastSentPlayHref = myHref;
         clickPlayIcon();
+        // После клика обновляем lastSentPlayHref на новое значение
         setTimeout(() => {
+            const newHref = getPlayIconHref();
+            if (newHref) lastSentPlayHref = newHref;
             isApplyingState = false;
         }, 800);
     }
@@ -858,8 +935,7 @@
 
         function attachObserver() {
             const target =
-                document.querySelector('[class*="PlayerBar_root"]') ||
-                document.body;
+                document.querySelector(SEL.playerBar) || document.body;
             new MutationObserver(check).observe(target, {
                 subtree: true,
                 childList: true,
@@ -868,11 +944,11 @@
             });
         }
 
-        if (document.querySelector('[class*="PlayerBar_root"]')) {
+        if (document.querySelector(SEL.playerBar)) {
             attachObserver();
         } else {
             const waitObs = new MutationObserver(() => {
-                if (document.querySelector('[class*="PlayerBar_root"]')) {
+                if (document.querySelector(SEL.playerBar)) {
                     waitObs.disconnect();
                     attachObserver();
                 }
@@ -881,53 +957,109 @@
         }
     }
 
-    // ─── Timeline sync ───────────────────────────────────────────────────
+    // ─── Timeline sync (seek-only — периодику делает сервер) ────────────
 
     let _timelineObserverStarted = false;
     function startTimelineObserver() {
         if (_timelineObserverStarted) return;
         _timelineObserverStarted = true;
-        setInterval(() => {
-            if (isInitializing || isNavigating || isSeekingTimeline) return;
-            const slider = getSlider();
-            if (!slider) return;
-            const val = parseInt(slider.value);
-            if (val === lastSentTimeline) return;
-            lastSentTimeline = val;
-            if (ws && ws.readyState === WebSocket.OPEN)
-                ws.send(
-                    JSON.stringify({
-                        type: "timeline",
-                        value: val,
-                        roomId: ROOM_ID,
-                    }),
+
+        // Три источника перемотки:
+        //   1. input[aria-label="Manage time code"]          — основной слайдер в PlayerBar
+        //   2. input.FullscreenPlayerDesktopContent_slider__* — слайдер в полноэкранном режиме
+        //   3. [class*="SyncLyricsLine_root__"]               — клик по строке текста
+
+        // Timestamp последнего реального down на любом из источников.
+        // onSeekEnd отправляет только если up пришёл в течение 500мс.
+        let _sliderDownAt = 0;
+        // Позиция, заготовленная при клике по строке текста (секунды)
+        let _lyricsSeekPos = null;
+
+        function isSeekSource(el) {
+            if (!el) return false;
+            return !!(
+                el.closest?.(SEL.timeSlider) ||
+                el.closest?.(SEL.fullscreenSlider) ||
+                el.matches?.(SEL.fullscreenSlider) ||
+                el.closest?.(SEL.lyricsLine)
+            );
+        }
+
+        function onSliderDown(e) {
+            if (!isSeekSource(e.target)) return;
+            _sliderDownAt = Date.now();
+            _lyricsSeekPos = null;
+
+            // Для строки текста — читаем позицию прямо при нажатии,
+            // т.к. после клика таймлайн может ещё не обновиться
+            const lyricLine = e.target.closest?.(SEL.lyricsLine);
+            if (lyricLine) {
+                // data-start-time или аналог; пробуем несколько атрибутов
+                const t = parseFloat(
+                    lyricLine.dataset.startTime ??
+                        lyricLine.dataset.time ??
+                        lyricLine.getAttribute("data-start-time") ??
+                        lyricLine.getAttribute("data-time") ??
+                        "",
                 );
-        }, 1000);
+                if (!isNaN(t)) _lyricsSeekPos = t;
+            }
+        }
 
         function onSeekEnd(e) {
             if (isInitializing || isNavigating) return;
-            const slider = getSlider();
-            if (!slider) return;
-            // На Linux событие может всплыть с дочернего — проверяем closest
-            const target =
-                e.target.closest?.('[aria-label="Manage time code"]') ||
-                e.target;
-            if (target !== slider) return;
-            isSeekingTimeline = false; // сбрасываем входящий seek-lock
-            const val = parseInt(slider.value);
-            lastSentTimeline = val;
-            if (ws && ws.readyState === WebSocket.OPEN)
+            if (!isSeekSource(e.target)) return;
+
+            isSeekingTimeline = false;
+
+            // Если seek запустил сам клиент в ответ на state_sync — не отправляем обратно
+            if (_suppressSeekSend) {
+                _suppressSeekSend = false;
+                return;
+            }
+
+            // Отправляем только если был реальный клик (не автодвижение таймлайна)
+            const timeSinceDown = Date.now() - _sliderDownAt;
+            if (timeSinceDown > 500) {
+                console.log(
+                    `⏭️ seek ignored — no recent click (${timeSinceDown}ms ago)`,
+                );
+                return;
+            }
+
+            // Определяем позицию
+            let val;
+            if (_lyricsSeekPos !== null) {
+                // Клик по строке текста — используем заготовленную позицию
+                val = Math.round(_lyricsSeekPos);
+                _lyricsSeekPos = null;
+            } else {
+                // Слайдер — берём текущее value (основной или fullscreen)
+                const fsSlider =
+                    e.target.closest?.(SEL.fullscreenSlider) ||
+                    (e.target.matches?.(SEL.fullscreenSlider)
+                        ? e.target
+                        : null);
+                const slider = fsSlider || getSlider();
+                if (!slider) return;
+                val = parseInt(slider.value);
+            }
+
+            if (!isNaN(val) && ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(
                     JSON.stringify({
-                        type: "timeline",
-                        value: val,
-                        seek: true,
+                        type: "seek",
+                        position: val,
                         roomId: ROOM_ID,
                     }),
                 );
-            isMaster = false;
-            setActiveSender(CLIENT_ID);
+                setActiveSender(CLIENT_ID);
+                console.log("📤 seek →server:", val);
+            }
         }
+
+        document.addEventListener("pointerdown", onSliderDown, true);
+        document.addEventListener("mousedown", onSliderDown, true);
         document.addEventListener("pointerup", onSeekEnd, true);
         document.addEventListener("mouseup", onSeekEnd, true);
     }
@@ -935,20 +1067,36 @@
     // ─── Path observer ───────────────────────────────────────────────────
 
     function getAlbumPath() {
-        const bar = document.querySelector('[class*="PlayerBar_root"]');
+        const bar = document.querySelector(SEL.playerBar);
         if (!bar) return null;
-        const link = bar.querySelector('[class*="Meta_albumLink"]');
+        const link = bar.querySelector(SEL.albumLink);
         if (!link) return null;
         return link.getAttribute("href") || null;
     }
     function trySend(p) {
-        if (!p || isInitializing || isNavigating || p === lastSentPath) return;
+        if (!p || isInitializing || isNavigating) return;
+        // Если сервер сам велел нам перейти на этот path — не отправляем его обратно
+        if (p === _suppressSend) {
+            _suppressSend = null;
+            lastSentPath = p;
+            return;
+        }
+        // Не отправляем если:
+        //   - это тот же путь что мы последний раз отправляли (дедупликация)
+        //   - ИЛИ сервер уже стоит на этом пути (незачем дублировать)
+        const serverPath = serverState ? serverState.path : null;
+        if (p === lastSentPath) return;
+        if (p === serverPath) {
+            // Сервер уже на этом треке — просто обновляем lastSentPath
+            // чтобы не отправить его повторно позже
+            lastSentPath = p;
+            return;
+        }
         lastSentPath = p;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(
                 JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
             );
-            isMaster = true;
             setActiveSender(CLIENT_ID);
         }
     }
@@ -956,26 +1104,28 @@
     function startObserver() {
         if (observerStarted) return;
         observerStarted = true;
+        // Не отправляем трек при старте — ждём state_sync от сервера.
+        // lastPolledPath инициализируем текущим значением, чтобы первый тик
+        // poll не считал это "изменением".
         const init = getAlbumPath();
-        if (init) trySend(init);
 
         let attrObs = null;
         let obsLink = null;
 
-        let lastPolledPath = null;
+        let lastPolledPath = init || null;
         setInterval(() => {
             if (isInitializing || isNavigating) return;
             const p = getAlbumPath();
             if (!p || p === lastPolledPath) return;
-            lastPolledPath = p;
+            lastPolledPath = p; // обновляем в любом случае, чтобы не дёргать повторно
             trySend(p);
             attachAttrObserver();
         }, 1500);
 
         function attachAttrObserver() {
-            const bar = document.querySelector('[class*="PlayerBar_root"]');
+            const bar = document.querySelector(SEL.playerBar);
             if (!bar) return;
-            const link = bar.querySelector('[class*="Meta_albumLink"]');
+            const link = bar.querySelector(SEL.albumLink);
             if (!link || link === obsLink) return;
             if (attrObs) attrObs.disconnect();
             obsLink = link;
@@ -998,12 +1148,12 @@
             attachAttrObserver();
         }
 
-        const bar = document.querySelector('[class*="PlayerBar_root"]');
+        const bar = document.querySelector(SEL.playerBar);
         if (bar) {
             attachBarObserver(bar);
         } else {
             const waitObs = new MutationObserver(() => {
-                const b = document.querySelector('[class*="PlayerBar_root"]');
+                const b = document.querySelector(SEL.playerBar);
                 if (b) {
                     waitObs.disconnect();
                     attachBarObserver(b);
