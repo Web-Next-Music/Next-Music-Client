@@ -11,6 +11,7 @@
     const SYNC_THRESHOLD_SEC = 1;
 
     let ws = null;
+    let serverName = null;
     let observerStarted = false;
     let lastSentPath = null;
     let lastReceivedPath = null;
@@ -617,7 +618,7 @@
 
         ws.onopen = () => {
             console.log(`🔌 Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
-            islandSetConnected(serverHost);
+            islandSetConnected(serverName || serverHost);
 
             if (!islandAvatars.has(CLIENT_ID)) upsertAvatar(CLIENT_ID, null);
 
@@ -638,6 +639,14 @@
                 msg = JSON.parse(raw.trim());
             } catch {
                 msg = { type: "navigate", path: raw.trim() };
+            }
+
+            if (msg.type === "server_info") {
+                if (msg.name) {
+                    serverName = msg.name;
+                    islandSetConnected(serverName);
+                }
+                return;
             }
 
             if (msg.type === "navigate") {
