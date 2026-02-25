@@ -1,6 +1,8 @@
 (async () => {
     const _qs = new URLSearchParams(location.search);
 
+    const blackIsland = _qs.get("__blackIsland") || null;
+
     const _wsHost = _qs.get("__ws") || null;
     const WS_HOST = _wsHost ? "ws://" + _wsHost : null;
     const ROOM_ID = _qs.get("__room") || null;
@@ -18,15 +20,12 @@
     let lastSentPlayHref = null;
     let lastSentTimeline = null;
     let isSeekingTimeline = false;
-    // Блокируем исходящие события пока получаем начальное состояние от сервера
     let isInitializing = true;
-    // Если этот клиент последним сменил трек — он мастер и игнорирует входящие timeline/playstate/navigate
     let isMaster = false;
     let initTimeout = null;
     function liftInitializing() {
         if (!isInitializing) return;
         isInitializing = false;
-        // Синхронизируем текущее состояние чтобы observers не отправили его сразу
         const slider = getSlider();
         if (slider) lastSentTimeline = parseInt(slider.value);
         const href = getPlayIconHref();
@@ -40,37 +39,120 @@
 
     // ─── Inject styles ──────────────────────────────────────────────────
 
+    const isBlackIsland = blackIsland === true || blackIsland === "true";
+
+    let islandBg, islandBlur;
+    if (isBlackIsland) {
+        islandBg = `#000`;
+        islandBlur = `0`;
+    } else {
+        islandBg = `#0005`;
+        islandBlur = `30px`;
+    }
+
     (function injectStyles() {
         if (document.getElementById("__li_styles__")) return;
         const s = document.createElement("style");
         s.id = "__li_styles__";
         s.textContent = `
+            @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
+
+            /* ── outer shell: translateY + opacity ── */
             #__li_island__ {
                 position: fixed;
-                top: 14px;
+                top: 20px;
                 left: 50%;
-                transform: translateX(-50%);
+                transform-origin: center top;
+                z-index: 9999;
+                pointer-events: none;
+                transform: translateX(-50%) translateY(-140%);
+                opacity: 0;
+            }
+            #__li_island__.island-visible {
+                animation: liIslandSlideIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+                pointer-events: auto;
+            }
+            #__li_island__.island-hiding {
+                animation: liIslandSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                pointer-events: none;
+            }
+
+            @keyframes liIslandSlideIn {
+                0%   { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
+                100% { transform: translateX(-50%) translateY(0)     scale(1);   opacity: 1; }
+            }
+            @keyframes liIslandSlideOut {
+                0%   { transform: translateX(-50%) translateY(0)     scale(1);   opacity: 1; }
+                100% { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
+            }
+
+            /* ── inner pill ── */
+            #__li_inner__ {
+                position: relative;
                 display: flex;
                 align-items: center;
                 gap: 8px;
-                background: #0003;
-                backdrop-filter: blur(24px);
-                -webkit-backdrop-filter: blur(24px);
-                border-radius: 999px;
-                padding: 7px 14px 7px 10px;
-                z-index: 2147483647;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                border-radius: 1000px;
+                border: solid 1px #fff1;
+                padding: 4px 6px 4px 12px;
+                font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 font-size: 14px;
                 font-weight: 800;
                 color: #fff;
                 user-select: none;
                 white-space: nowrap;
                 cursor: default;
-                transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1),
-                            padding 0.35s ease,
-                            min-width 0.35s ease;
-                overflow: visible;
-                pointer-ivents: none;
+                overflow: hidden;
+                transform-origin: center center;
+                box-sizing: border-box;
+                will-change: transform;
+            }
+            /* blur на псевдоэлементе — не участвует в scaleX, нет GPU-лага */
+            #__li_inner__::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                border-radius: inherit;
+                background: ${islandBg};
+                backdrop-filter: blur(${islandBlur});
+                -webkit-backdrop-filter: blur(${islandBlur});
+                z-index: -1;
+            }
+
+            #__li_island__.island-hiding #__li_inner__ {
+                animation: liInnerShrink 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            #__li_island__.island-visible #__li_inner__ {
+                animation: liInnerExpand 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+            }
+
+            @keyframes liInnerShrink {
+                0%   { transform: scaleX(1); }
+                100% { transform: scaleX(0.1); }
+            }
+            @keyframes liInnerExpand {
+                0%   { transform: scaleX(0.1); }
+                35%  { transform: scaleX(0.1); }
+                100% { transform: scaleX(1); }
+            }
+
+            /* контент: фейд до сжатия / после разворачивания */
+            #__li_island__.island-hiding #__li_dot__,
+            #__li_island__.island-hiding #__li_status__,
+            #__li_island__.island-hiding #__li_avatars__ {
+                animation: liContentFadeOut 0.12s ease-in forwards !important;
+            }
+            #__li_island__.island-visible #__li_dot__,
+            #__li_island__.island-visible #__li_status__ {
+                animation: liContentFadeIn 0.28s cubic-bezier(0.4, 0, 0.2, 1) 0.35s both;
+            }
+
+            @keyframes liContentFadeOut {
+                to { opacity: 0; }
+            }
+            @keyframes liContentFadeIn {
+                from { opacity: 0; transform: translateY(3px); }
+                to   { opacity: 1; transform: translateY(0); }
             }
 
             /* ── dot ── */
@@ -78,27 +160,47 @@
                 width: 8px; height: 8px;
                 border-radius: 50%;
                 flex-shrink: 0;
-                transition: background 0.5s ease;
+                transition: background 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
             }
-            #__li_dot__.disconnected  { background: #555; }
-            #__li_dot__.connected     { background: #1db954; animation: liPulse 2.5s ease-in-out infinite; }
+            #__li_dot__.disconnected { background: #555; }
+            #__li_dot__.connected    { background: #1db954; animation: liPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+            #__li_dot__.switching    { transform: scale(0); opacity: 0; }
 
             /* ── status text ── */
             #__li_status__ {
-                font-size: 11px;
+                font-size: 12px;
                 letter-spacing: 0.02em;
-                transition: opacity 0.4s ease, max-width 0.4s ease;
+                white-space: nowrap;
                 overflow: hidden;
-                max-width: 200px;
+                max-width: 300px;
+                transition:
+                    opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                    max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                    color 0.4s ease;
+                transform: translateY(0);
+                opacity: 1;
             }
-            #__li_status__.hidden { opacity: 0; max-width: 0; padding: 0; }
+            #__li_status__.hidden {
+                opacity: 0;
+                max-width: 0;
+                transform: translateY(3px);
+            }
+            #__li_status__.appearing {
+                animation: liStatusIn 0.38s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+            }
+
+            @keyframes liStatusIn {
+                from { opacity: 0; transform: translateY(6px); }
+                to   { opacity: 1; transform: translateY(0); }
+            }
 
             /* ── avatar row ── */
             #__li_avatars__ {
                 display: flex;
                 align-items: center;
-                gap: 5px;
-                transition: opacity 0.4s ease, max-width 0.4s ease;
+                gap: 3px;
+                transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
                 overflow: hidden;
                 max-width: 0;
                 opacity: 0;
@@ -112,9 +214,9 @@
             .li-av-wrap {
                 position: relative;
                 flex-shrink: 0;
-                animation: liAvatarIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+                animation: liAvatarIn 0.35s both;
             }
-            .li-av-wrap.removing { animation: liAvatarOut 0.2s ease forwards; }
+            .li-av-wrap.removing { animation: liAvatarOut 0.2s forwards; }
 
             .li-av-img, .li-av-placeholder {
                 width: 26px; height: 26px;
@@ -122,6 +224,7 @@
                 border: 2px solid rgba(255,255,255,0.18);
                 object-fit: cover;
                 display: block;
+                transition: border-color 0.3s ease;
             }
             .li-av-placeholder {
                 background: rgba(255,255,255,0.12);
@@ -135,16 +238,16 @@
             }
 
             @keyframes liPulse {
-                0%, 100% { opacity: 1;  transform: scale(1); }
-                50%       { opacity: 0.4; transform: scale(0.7); }
+                0%, 100% { opacity: 1;   transform: scale(1); }
+                50%       { opacity: 0.45; transform: scale(0.72); }
             }
             @keyframes liAvatarIn {
-                from { transform: scale(0) rotate(-10deg); opacity: 0; }
+                from { transform: scale(0) rotate(-15deg); opacity: 0; }
                 to   { transform: scale(1) rotate(0deg);   opacity: 1; }
             }
             @keyframes liAvatarOut {
-                from { transform: scale(1); opacity: 1; }
-                to   { transform: scale(0); opacity: 0; }
+                from { transform: scale(1); opacity: 1; max-width: 32px; margin: 0; }
+                to   { transform: scale(0); opacity: 0; max-width: 0;    margin: 0; }
             }
         `;
         document.head.appendChild(s);
@@ -158,6 +261,9 @@
         const island = document.createElement("div");
         island.id = "__li_island__";
 
+        const inner = document.createElement("div");
+        inner.id = "__li_inner__";
+
         const dot = document.createElement("span");
         dot.id = "__li_dot__";
         dot.className = "disconnected";
@@ -170,13 +276,102 @@
         const avatarRow = document.createElement("div");
         avatarRow.id = "__li_avatars__";
 
-        island.appendChild(dot);
-        island.appendChild(status);
-        island.appendChild(avatarRow);
+        inner.appendChild(dot);
+        inner.appendChild(status);
+        inner.appendChild(avatarRow);
+        island.appendChild(inner);
         document.body.appendChild(island);
     }
 
     buildIsland();
+
+    // ─── Island show / hide ─────────────────────────────────────────────
+
+    let hideIslandTimer = null;
+    let _islandVisible = false;
+
+    function showIsland() {
+        clearTimeout(hideIslandTimer);
+        const island = document.getElementById("__li_island__");
+        if (!island) return;
+        // Уже виден и не в процессе скрытия — не перезапускать анимацию
+        if (_islandVisible && !island.classList.contains("island-hiding"))
+            return;
+        _islandVisible = true;
+        island.classList.remove("island-hiding");
+        void island.offsetWidth;
+        island.classList.add("island-visible");
+    }
+
+    function hideIsland() {
+        const island = document.getElementById("__li_island__");
+        if (!island) return;
+        _islandVisible = false;
+        island.classList.remove("island-visible");
+        void island.offsetWidth;
+        island.classList.add("island-hiding");
+    }
+
+    function hideIslandAfter(ms) {
+        clearTimeout(hideIslandTimer);
+        hideIslandTimer = setTimeout(hideIsland, ms);
+    }
+
+    // Плавно анимирует ширину #__li_inner__ при изменении содержимого
+    function animateInnerWidth(changeFn) {
+        const inner = document.getElementById("__li_inner__");
+        if (!inner) {
+            changeFn();
+            return;
+        }
+
+        const fromW = inner.getBoundingClientRect().width;
+
+        // Фиксируем текущую ширину
+        inner.style.width = fromW + "px";
+
+        // Временно отключаем transition
+        inner.style.transition = "none";
+
+        // 👉 ВАЖНО: применяем изменения полностью
+        changeFn();
+
+        // 👉 Принудительно раскрываем аватар-row БЕЗ анимации
+        const avRow = document.getElementById("__li_avatars__");
+        if (avRow && avRow.classList.contains("visible")) {
+            avRow.style.transition = "none";
+            avRow.style.maxWidth = "none";
+            avRow.style.opacity = "1";
+        }
+
+        // Получаем финальную ширину
+        inner.style.width = "";
+        const toW = inner.getBoundingClientRect().width;
+
+        // Возвращаем исходную ширину
+        inner.style.width = fromW + "px";
+        void inner.offsetWidth;
+
+        // Включаем анимацию
+        inner.style.transition = "width 0.45s";
+        inner.style.width = toW + "px";
+
+        inner.addEventListener("transitionend", function handler(e) {
+            if (e.propertyName !== "width") return;
+
+            inner.style.transition = "";
+            inner.style.width = "";
+
+            // Возвращаем transition аватарам
+            if (avRow) {
+                avRow.style.transition = "";
+                avRow.style.maxWidth = "";
+                avRow.style.opacity = "";
+            }
+
+            inner.removeEventListener("transitionend", handler);
+        });
+    }
 
     // ─── Island state machine ───────────────────────────────────────────
 
@@ -184,32 +379,92 @@
 
     function islandSetDisconnected() {
         clearTimeout(statusHideTimer);
+        const island = document.getElementById("__li_island__");
         const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
         const avRow = document.getElementById("__li_avatars__");
-        if (dot) dot.className = "disconnected";
-        if (status) {
-            status.className = "";
-            status.style.color = "#888";
-            status.textContent = "No server configured";
+
+        // Анимируем смену dot
+        if (dot) {
+            dot.classList.add("switching");
+            setTimeout(() => {
+                dot.className = "disconnected";
+            }, 300);
         }
+
+        if (status) {
+            // Плавно меняем текст
+            status.style.opacity = "0";
+            status.style.transform = "translateY(4px)";
+            setTimeout(() => {
+                status.className = "";
+                status.style.color = "#888";
+                status.textContent = "Disconnected";
+                status.style.opacity = "";
+                status.style.transform = "";
+                status.classList.add("appearing");
+                setTimeout(() => status.classList.remove("appearing"), 400);
+            }, 250);
+        }
+
         if (avRow) avRow.className = "";
+
+        if (_islandVisible) {
+            hideIslandAfter(3000);
+        }
     }
 
     function islandSetConnected(serverHost) {
         clearTimeout(statusHideTimer);
+        showIsland();
+
         const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
-        if (dot) dot.className = "connected";
-        if (status) {
-            status.className = "";
-            status.style.color = "#1db954";
-            status.textContent = `Connected to ${serverHost}`;
+        const avRow = document.getElementById("__li_avatars__");
+
+        // Анимируем смену dot
+        if (dot) {
+            dot.classList.add("switching");
+            setTimeout(() => {
+                dot.className = "connected";
+            }, 300);
         }
+
+        if (status) {
+            // Мгновенно сбрасываем hidden (max-width:0) без анимации,
+            // чтобы текст не обрезался при реконнекте
+            status.style.transition = "none";
+            status.classList.remove("hidden");
+            void status.offsetWidth;
+            status.style.transition = "";
+
+            status.style.opacity = "0";
+            status.style.transform = "translateY(4px)";
+            setTimeout(() => {
+                status.className = "";
+                status.style.color = "#1db954";
+                status.textContent = `Connected to ${serverHost}`;
+                status.style.opacity = "";
+                status.style.transform = "";
+                status.classList.add("appearing");
+                setTimeout(() => status.classList.remove("appearing"), 400);
+            }, 250);
+        }
+
+        // Прячем аватары пока показывается "Connected to ..."
+        if (avRow && avRow.classList.contains("visible")) {
+            avRow.style.transition = "none";
+            avRow.classList.remove("visible");
+            void avRow.offsetWidth;
+            avRow.style.transition = "";
+        }
+
         statusHideTimer = setTimeout(() => {
-            if (status) status.className = "hidden";
-            const avRow = document.getElementById("__li_avatars__");
-            if (avRow) avRow.className = "visible";
+            animateInnerWidth(() => {
+                if (status) status.classList.add("hidden");
+                const av = document.getElementById("__li_avatars__");
+                if (av) av.className = "visible";
+            });
         }, 3000);
     }
 
@@ -227,28 +482,30 @@
         const avRow = document.getElementById("__li_avatars__");
         if (!avRow) return;
 
-        let wrap = islandAvatars.get(clientId);
-        if (!wrap) {
-            wrap = document.createElement("div");
-            wrap.className = "li-av-wrap";
-            avRow.appendChild(wrap);
-            islandAvatars.set(clientId, wrap);
-        }
+        animateInnerWidth(() => {
+            let wrap = islandAvatars.get(clientId);
+            if (!wrap) {
+                wrap = document.createElement("div");
+                wrap.className = "li-av-wrap";
+                avRow.appendChild(wrap);
+                islandAvatars.set(clientId, wrap);
+            }
 
-        const old = wrap.querySelector(".li-av-img, .li-av-placeholder");
-        if (old) old.remove();
+            const old = wrap.querySelector(".li-av-img, .li-av-placeholder");
+            if (old) old.remove();
 
-        if (base64Data) {
-            const img = document.createElement("img");
-            img.className = "li-av-img";
-            img.src = `data:image/webp;base64,${base64Data}`;
-            img.onerror = () => {
-                img.replaceWith(makePlaceholder(clientId));
-            };
-            wrap.appendChild(img);
-        } else {
-            wrap.appendChild(makePlaceholder(clientId));
-        }
+            if (base64Data) {
+                const img = document.createElement("img");
+                img.className = "li-av-img";
+                img.src = `data:image/webp;base64,${base64Data}`;
+                img.onerror = () => {
+                    img.replaceWith(makePlaceholder(clientId));
+                };
+                wrap.appendChild(img);
+            } else {
+                wrap.appendChild(makePlaceholder(clientId));
+            }
+        });
     }
 
     function makePlaceholder(clientId) {
@@ -263,9 +520,11 @@
         if (!wrap) return;
         wrap.classList.add("removing");
         setTimeout(() => {
-            wrap.remove();
-            islandAvatars.delete(clientId);
-        }, 210);
+            animateInnerWidth(() => {
+                wrap.remove();
+                islandAvatars.delete(clientId);
+            });
+        }, 230);
     }
 
     // ─── Send avatar from URL ────────────────────────────────────────────
@@ -380,7 +639,6 @@
             startTimelineObserver();
             sendAvatarFromUrl();
 
-            // Если сервер не пришлёт состояние — снимаем блокировку через 5с
             clearTimeout(initTimeout);
             initTimeout = setTimeout(liftInitializing, 5000);
         };
@@ -397,28 +655,21 @@
 
             if (msg.type === "navigate") {
                 if (msg.clientId) setActiveSender(msg.clientId);
-                // Если мы сами отправили этот navigate (clientId совпадает) — игнорируем
                 if (msg.clientId === CLIENT_ID) return;
-                // Чужой navigate — снимаем мастерство, применяем
                 isMaster = false;
                 lastReceivedPath = msg.path;
                 pendingPath = msg.path;
                 if (!isNavigating) processNext();
             } else if (msg.type === "playstate") {
                 if (msg.clientId) setActiveSender(msg.clientId);
-                // Мастер не применяет чужой playstate
                 if (isMaster) return;
                 applyPlayState(msg.href);
-                // После получения playstate от сервера при инициализации
-                // ждём timeline и потом снимаем блокировку
                 if (isInitializing) {
-                    // timeline может не прийти, поэтому страхуемся таймаутом
                     clearTimeout(initTimeout);
                     initTimeout = setTimeout(liftInitializing, 3000);
                 }
             } else if (msg.type === "timeline") {
                 if (msg.seek && msg.clientId) setActiveSender(msg.clientId);
-                // Мастер не применяет чужой timeline — его позиция и есть эталон
                 if (isMaster && !isInitializing) return;
                 if (isSeekingTimeline || isNavigating) return;
                 const slider = getSlider();
@@ -430,13 +681,11 @@
                     );
                     isSeekingTimeline = true;
                     seekTo(msg.value);
-                    // Синхронизируем lastSentTimeline чтобы interval не отправил это значение наружу
                     lastSentTimeline = msg.value;
                     setTimeout(() => {
                         isSeekingTimeline = false;
                     }, 2000);
                 }
-                // Timeline — последнее из трёх сообщений инициализации
                 if (isInitializing) {
                     clearTimeout(initTimeout);
                     initTimeout = setTimeout(liftInitializing, 1500);
@@ -456,7 +705,7 @@
         ws.onclose = (e) => {
             islandSetDisconnected();
             clearTimeout(initTimeout);
-            isInitializing = true; // сбрасываем при переподключении
+            isInitializing = true;
             isMaster = false;
             if (e.code === 4001) {
                 console.error(`🚫 Room [${ROOM_ID}] not found on server`);
@@ -500,7 +749,6 @@
             }
             const urlMatch = window.location.pathname === expectedPath;
 
-            // Если PlayerBar уже играет именно этот трек — навигация завершена, ничего не кликаем
             const playerBarPath = getAlbumPath();
             const currentHref = getPlayIconHref() || "";
             const alreadyPlayingRight =
@@ -523,7 +771,6 @@
             if (urlMatch && btn) {
                 clearInterval(wait);
                 setTimeout(() => {
-                    // Ещё раз проверяем — вдруг за эти 300мс трек уже запустился
                     const href = getPlayIconHref() || "";
                     const pbPath = getAlbumPath();
                     const playing =
@@ -571,9 +818,6 @@
         }, 500);
     }
 
-    // OPTIMISATION A: Play state observer — use only MutationObserver,
-    // drop the redundant setInterval polling.
-    // Narrow the observe scope to the player bar instead of entire body.
     function startPlayStateObserver() {
         let lastHref = null;
         function check() {
@@ -584,8 +828,6 @@
             sendPlayState(href);
         }
 
-        // OPTIMISATION: watch only the player bar subtree, not full body.
-        // Falls back to body if bar not yet mounted.
         function attachObserver() {
             const target =
                 document.querySelector('[class*="PlayerBar_root"]') ||
@@ -598,7 +840,6 @@
             });
         }
 
-        // Wait for player bar to exist before attaching
         if (document.querySelector('[class*="PlayerBar_root"]')) {
             attachObserver();
         } else {
@@ -614,15 +855,12 @@
 
     // ─── Timeline sync ───────────────────────────────────────────────────
 
-    // OPTIMISATION B: Only send timeline if value actually changed.
-    // Keep 1s interval but skip if same as last sent value.
     function startTimelineObserver() {
         setInterval(() => {
             if (isInitializing || isNavigating || isSeekingTimeline) return;
             const slider = getSlider();
             if (!slider) return;
             const val = parseInt(slider.value);
-            // Skip if unchanged (saves majority of sends during paused state)
             if (val === lastSentTimeline) return;
             lastSentTimeline = val;
             if (ws && ws.readyState === WebSocket.OPEN)
@@ -635,7 +873,6 @@
                 );
         }, 1000);
 
-        // Manual seek — broadcast immediately with seek:true flag
         function onSeekEnd(e) {
             if (isInitializing || isSeekingTimeline || isNavigating) return;
             const slider = getSlider();
@@ -680,13 +917,11 @@
             ws.send(
                 JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
             );
-            isMaster = true; // мы сменили трек — игнорируем чужие timeline/playstate
+            isMaster = true;
             setActiveSender(CLIENT_ID);
         }
     }
 
-    // OPTIMISATION C: Path observer — scope MutationObserver to PlayerBar,
-    // avoiding full-document subtree scans on every DOM mutation.
     function startObserver() {
         if (observerStarted) return;
         observerStarted = true;
@@ -713,7 +948,6 @@
             });
         }
 
-        // Watch for link changes inside player bar only
         function attachBarObserver(bar) {
             new MutationObserver(() => {
                 const p = getAlbumPath();
@@ -727,7 +961,6 @@
         if (bar) {
             attachBarObserver(bar);
         } else {
-            // Player bar not mounted yet — wait for it with a single body observer
             const waitObs = new MutationObserver(() => {
                 const b = document.querySelector('[class*="PlayerBar_root"]');
                 if (b) {

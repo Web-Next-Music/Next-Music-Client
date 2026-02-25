@@ -133,6 +133,7 @@ function createWindow() {
     const listenAlong = config?.experimental?.listenAlong;
     if (listenAlong?.enable) {
         const params = new URLSearchParams({
+            __blackIsland: listenAlong.blackIsland || null,
             __ws: listenAlong.host
                 ? `${listenAlong.host}:${listenAlong.port || null}`
                 : "",
