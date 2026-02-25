@@ -14,7 +14,6 @@
     let serverName = null;
     let observerStarted = false;
     let lastSentPath = null;
-    let lastReceivedPath = null;
     let isNavigating = false;
     let pendingPath = null;
     let isApplyingState = false;
