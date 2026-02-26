@@ -19,6 +19,18 @@
         // Кнопка play в модалке трека
         trackModalPlayBtn:
             '[class*="TrackModal_modalContent"] * [class*="TrackModalControls_controlsContainer"] > button',
+        // Элементы, клик/drag по которым считается перемоткой и отправляется seek
+        seekSources: [
+            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
+            'input[class*="FullscreenPlayerDesktopContent_slider"]',
+            '[class*="SyncLyricsLine_root"]',
+        ],
+        // Дополнительные элементы управления, взаимодействие с которыми
+        // сигнализирует об активности пользователя (play/pause/next/prev и т.п.)
+        actionSources: [
+            '[class*="BaseSonataControlsDesktop_sonataButton"]',
+            '[class*="SonataFullscreenControlsDesktop_sonataButton"]',
+        ],
     };
 
     const _qs = new URLSearchParams(location.search);
@@ -34,10 +46,12 @@
 
     let wss = null;
     let serverName = null;
+    let _currentServerLabel = "";
     let observerStarted = false;
     let lastSentPath = null;
     let isNavigating = false;
     let pendingPath = null;
+    let _pendingSyncAfterNav = false; // применить serverState после завершения навигации
     let isApplyingState = false;
     let lastSentPlayHref = null;
     let isSeekingTimeline = false;
@@ -46,6 +60,12 @@
     let initTimeout = null;
     // Серверный эталон, полученный последним state_sync
     let serverState = null; // { path, playing, position, serverTime }
+    // isSyncPaused: true когда у albumLink нет href — клиент получает данные,
+    // но не применяет синхронизацию. Желтая точка. Клик по точке — ресинк.
+    let isSyncPaused = false;
+    // _userPausedSync: пользователь сам выключил синхронизацию кликом по зелёной точке.
+    // В этом режиме авто-возобновление не срабатывает — только клик по точке.
+    let _userPausedSync = false;
     // Путь, на который сервер велел навигировать — подавляем обратную отправку
     let _suppressSend = null;
     // Флаг: сервер сам применяет seek — не отправлять обратно
@@ -97,6 +117,10 @@
             position: fixed;
             top: 20px;
             left: 50%;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transform-origin: center top;
             z-index: 9999;
             pointer-events: none;
@@ -189,20 +213,45 @@
 
         /* ───────── DOT ───────── */
 
-        #__li_dot__ {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
+        #__li_dot_wrap__ {
             flex-shrink: 0;
-            transition:
-                background 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
-                opacity 0.35s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 6px;
+            height: 6px;
         }
 
-        #__li_dot__.disconnected { background: #555; }
-        #__li_dot__.connected    { background: #1db954; animation: liPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        #__li_dot__.switching    { transform: scale(0); opacity: 0; }
+        #__li_dot__ {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: background 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.4s ease;
+        }
+
+        /* wrap states */
+        #__li_dot_wrap__.disconnected { }
+        #__li_dot_wrap__.connected    { cursor: pointer; }
+        #__li_dot_wrap__.sync-paused  { cursor: pointer; }
+
+        /* inner states */
+        #__li_dot_wrap__.disconnected #__li_dot__ {
+            background: #555;
+            opacity: 1;
+        }
+
+        #__li_dot_wrap__.connected #__li_dot__ {
+            background: #1db954;
+            opacity: 1;
+            animation: liPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        #__li_dot_wrap__.sync-paused #__li_dot__ {
+            background: #f5a623;
+            opacity: 1;
+        }
 
         /* ───────── STATUS TEXT ───────── */
 
@@ -284,8 +333,8 @@
         /* ───────── ANIMATIONS ───────── */
 
         @keyframes liPulse {
-            0%, 100% { opacity: 1;  transform: scale(1); }
-            50%      { opacity: 0.4; transform: scale(0.7); }
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.3; }
         }
 
         @keyframes liAvatarIn {
@@ -313,19 +362,23 @@
         const inner = document.createElement("div");
         inner.id = "__li_inner__";
 
+        const dotWrap = document.createElement("span");
+        dotWrap.id = "__li_dot_wrap__";
+        dotWrap.className = "disconnected";
+        dotWrap.title = "Disconnected";
+
         const dot = document.createElement("span");
         dot.id = "__li_dot__";
-        dot.className = "disconnected";
 
         const status = document.createElement("span");
         status.id = "__li_status__";
-        status.textContent = "No server configured";
-        status.style.color = "#888";
+        status.className = "hidden";
 
         const avatarRow = document.createElement("div");
         avatarRow.id = "__li_avatars__";
 
-        inner.appendChild(dot);
+        dotWrap.appendChild(dot);
+        inner.appendChild(dotWrap);
         inner.appendChild(status);
         inner.appendChild(avatarRow);
         island.appendChild(inner);
@@ -333,6 +386,66 @@
     }
 
     buildIsland();
+
+    // ─── Dot state helper ───────────────────────────────────────────────
+
+    function setDotState(state, titleText) {
+        const wrap = document.getElementById("__li_dot_wrap__");
+        if (!wrap) return;
+        wrap.className = state;
+        wrap.title = titleText || "";
+    }
+
+    document.addEventListener("click", (e) => {
+        const wrap = document.getElementById("__li_dot_wrap__");
+        if (!wrap || (!wrap.contains(e.target) && e.target !== wrap)) return;
+
+        if (wrap.classList.contains("sync-paused")) {
+            resumeSync();
+        } else if (wrap.classList.contains("connected")) {
+            pauseSyncByUser();
+        }
+    });
+
+    function pauseSyncByUser() {
+        isSyncPaused = true;
+        _userPausedSync = true;
+        _pendingSyncAfterNav = false;
+        console.log("⏸️ Sync manually paused by user");
+        setDotState("sync-paused", "Synchronize");
+        clearTimeout(statusHideTimer);
+        animateInnerWidth(() => {
+            const status = document.getElementById("__li_status__");
+            if (status) status.classList.add("hidden");
+        });
+    }
+
+    function resumeSync() {
+        if (!isSyncPaused) return;
+        isSyncPaused = false;
+        _userPausedSync = false;
+        console.log("▶️ Sync resumed by user click on dot");
+        setDotState("connected", _currentServerLabel);
+        // Прячем статус сразу, показываем только аватары
+        clearTimeout(statusHideTimer);
+        animateInnerWidth(() => {
+            const status = document.getElementById("__li_status__");
+            if (status) status.classList.add("hidden");
+            const avRow = document.getElementById("__li_avatars__");
+            if (avRow) avRow.className = "visible";
+        });
+        // Применяем последнее серверное состояние принудительно
+        if (serverState) {
+            const currentPath = getAlbumPath();
+            const needsNav =
+                serverState.path && serverState.path !== currentPath;
+            if (needsNav) {
+                // Навигация займёт время — применим state после её завершения
+                _pendingSyncAfterNav = true;
+            }
+            applySyncState(serverState, true);
+        }
+    }
 
     // ─── Island show / hide ─────────────────────────────────────────────
 
@@ -425,74 +538,44 @@
 
     let statusHideTimer = null;
 
-    function islandSetDisconnected() {
+    function islandSetDisconnected(autoHide = true) {
         clearTimeout(statusHideTimer);
-        const island = document.getElementById("__li_island__");
-        const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
         const avRow = document.getElementById("__li_avatars__");
 
-        // Анимируем смену dot
-        if (dot) {
-            dot.classList.add("switching");
-            setTimeout(() => {
-                dot.className = "disconnected";
-            }, 300);
-        }
+        setDotState("disconnected", "Disconnected");
 
         if (status) {
-            // Плавно меняем текст
-            status.style.opacity = "0";
-            status.style.transform = "translateY(4px)";
-            setTimeout(() => {
-                status.className = "";
-                status.style.color = "#888";
-                status.textContent = "Disconnected";
-                status.style.opacity = "";
-                status.style.transform = "";
-                status.classList.add("appearing");
-                setTimeout(() => status.classList.remove("appearing"), 400);
-            }, 250);
+            status.classList.remove("hidden");
+            status.style.color = "#888";
+            status.textContent = "Disconnected";
         }
 
         if (avRow) avRow.className = "";
 
-        if (_islandVisible) {
-            hideIslandAfter(3000);
-        }
+        showIsland();
+        if (autoHide) hideIslandAfter(4000);
     }
 
     function islandSetConnected(serverHost) {
         clearTimeout(statusHideTimer);
         showIsland();
+        _currentServerLabel = serverHost || "";
+        setDotState("connected", _currentServerLabel);
 
-        const dot = document.getElementById("__li_dot__");
         const status = document.getElementById("__li_status__");
 
-        // Анимируем смену dot
-        if (dot) {
-            dot.classList.add("switching");
-            setTimeout(() => {
-                dot.className = "connected";
-            }, 300);
-        }
-
         if (status) {
-            status.style.transition = "none";
-            status.classList.remove("hidden");
-            void status.offsetWidth;
-            status.style.transition = "";
-
             status.style.opacity = "0";
             status.style.transform = "translateY(4px)";
+            // Снимаем hidden чтобы показать текст, но через transition
+            status.classList.remove("hidden");
+            void status.offsetWidth;
             setTimeout(() => {
-                status.className = "";
                 status.style.color = "#1db954";
                 status.textContent = `Connected to ${serverHost}`;
                 status.style.opacity = "";
                 status.style.transform = "";
-                status.classList.add("appearing");
-                setTimeout(() => status.classList.remove("appearing"), 400);
             }, 250);
         }
 
@@ -503,6 +586,19 @@
                 if (avRow) avRow.className = "visible";
             });
         }, 3000);
+    }
+
+    function islandSetSyncPaused() {
+        clearTimeout(statusHideTimer);
+        setDotState("sync-paused", "Synchronize");
+
+        // Скрываем статус и аватары — показываем только жёлтую точку
+        animateInnerWidth(() => {
+            const status = document.getElementById("__li_status__");
+            if (status) status.classList.add("hidden");
+        });
+
+        showIsland();
     }
 
     // ─── Avatar map ─────────────────────────────────────────────────────
@@ -642,20 +738,72 @@
         console.log(`⏱️ Seek → ${value}/${slider.max}`);
     }
 
+    // ─── Apply state from server ────────────────────────────────────────
+
+    function applySyncState(msg, force = false) {
+        // 1. Навигация к нужному треку
+        const currentPath = getAlbumPath();
+        const needNav =
+            msg.path &&
+            msg.path !== currentPath &&
+            (force || msg.path !== lastSentPath) &&
+            !isNavigating;
+        if (needNav) {
+            _suppressSend = msg.path;
+            pendingPath = msg.path;
+            processNext();
+        } else if (force && msg.path && msg.path === currentPath) {
+            // Уже на нужном треке — просто включаем play и синхронизируем позицию
+            if (!isApplyingState) {
+                applyPlayState(msg.playing);
+            }
+        }
+
+        // 2. Play / Pause — только если не мы сами только что нажали (и не ждём навигации)
+        if (!needNav && !isNavigating && !isApplyingState) {
+            applyPlayState(msg.playing);
+        }
+
+        // 3. Позиция: учитываем задержку сети
+        if (!isSeekingTimeline && !isNavigating) {
+            const slider = getSlider();
+            if (slider) {
+                const networkDelay =
+                    (Date.now() - (msg.serverTime || Date.now())) / 1000;
+                const targetPos = msg.playing
+                    ? msg.position + networkDelay
+                    : msg.position;
+                const diff = Math.abs(parseInt(slider.value) - targetPos);
+                if (force || diff > SYNC_THRESHOLD_SEC) {
+                    console.log(
+                        `🔄 Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
+                    );
+                    isSeekingTimeline = true;
+                    _suppressSeekSend = true;
+                    seekTo(Math.round(targetPos));
+                    setTimeout(() => {
+                        isSeekingTimeline = false;
+                        _suppressSeekSend = false;
+                    }, 2000);
+                }
+            }
+        }
+    }
+
     // ─── WebSocket ──────────────────────────────────────────────────────
 
     function connect() {
         if (!WSS_HOST || !ROOM_ID) {
-            const dot = document.getElementById("__li_dot__");
             const status = document.getElementById("__li_status__");
-            if (dot) dot.className = "disconnected";
+            setDotState("disconnected", "Disconnected");
             if (status) {
-                status.className = "";
+                status.classList.remove("hidden");
                 status.style.color = "#e05c5c";
                 status.textContent = !WSS_HOST
                     ? "No server configured"
                     : "No room configured";
             }
+            showIsland();
             console.warn(
                 "Listen Along: missing __wss or __room param — not connecting.",
             );
@@ -706,8 +854,6 @@
                 serverState = msg;
 
                 // Подсветка: обновляем только если это ДРУГОЙ клиент управляет.
-                // Если by === CLIENT_ID — мы уже подсветили себя в момент отправки команды,
-                // повторный вызов лишний. Heartbeat/server не трогают подсветку совсем.
                 if (
                     msg.by &&
                     msg.by !== CLIENT_ID &&
@@ -718,61 +864,21 @@
                     setActiveSender(msg.by);
                 }
 
-                // 1. Навигация к нужному треку
-                // Игнорируем если: уже навигируем, уже на этом пути, или это наш собственный navigate
-                // (lastSentPath === msg.path означает что МЫ отправили эту команду).
-                const currentPath = getAlbumPath();
-                const needNav =
-                    msg.path &&
-                    msg.path !== currentPath &&
-                    msg.path !== lastSentPath && // мы сами не инициировали это
-                    !isNavigating;
-                if (needNav) {
-                    // Блокируем observer — когда router.push меняет path в PlayerBar,
-                    // трекер не должен отправлять его обратно на сервер
-                    _suppressSend = msg.path;
-                    pendingPath = msg.path;
-                    processNext();
-                }
-
-                // 2. Play / Pause — только если не мы сами только что нажали
-                if (!isNavigating && !isApplyingState) {
-                    applyPlayState(msg.playing);
-                }
-
-                // 3. Позиция: учитываем задержку сети
-                if (!isSeekingTimeline && !isNavigating) {
-                    const slider = getSlider();
-                    if (slider) {
-                        const networkDelay =
-                            (Date.now() - (msg.serverTime || Date.now())) /
-                            1000;
-                        const targetPos = msg.playing
-                            ? msg.position + networkDelay
-                            : msg.position;
-                        const diff = Math.abs(
-                            parseInt(slider.value) - targetPos,
-                        );
-                        if (diff > SYNC_THRESHOLD_SEC) {
-                            console.log(
-                                `🔄 Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
-                            );
-                            isSeekingTimeline = true;
-                            _suppressSeekSend = true; // не отправлять обратно на сервер
-                            seekTo(Math.round(targetPos));
-                            setTimeout(() => {
-                                isSeekingTimeline = false;
-                                _suppressSeekSend = false;
-                            }, 2000);
-                        }
-                    }
-                }
-
                 // Снимаем initializing после первого state_sync
                 if (isInitializing) {
                     clearTimeout(initTimeout);
                     initTimeout = setTimeout(liftInitializing, 1500);
                 }
+
+                // Если sync paused — только сохраняем состояние, не применяем
+                if (isSyncPaused) {
+                    console.log(
+                        "⏸️ Sync paused — state_sync received but not applied",
+                    );
+                    return;
+                }
+
+                applySyncState(msg);
                 return;
             }
 
@@ -803,7 +909,7 @@
     }
 
     if (!WSS_HOST) {
-        buildIsland();
+        islandSetDisconnected(false);
         console.warn(
             "Listen Along: no server configured (__wss param missing)",
         );
@@ -830,6 +936,12 @@
         isNavigating = false;
         // Не сбрасываем lastSentPath здесь — это сделает trySend/_suppressSend
         processNext();
+        // Если навигация была инициирована через resumeSync — применяем серверное состояние
+        if (_pendingSyncAfterNav && serverState) {
+            _pendingSyncAfterNav = false;
+            console.log("🔄 Applying deferred server state after navigation");
+            setTimeout(() => applySyncState(serverState, true), 300);
+        }
     }
     function waitForTrackAndPlay(expectedPath) {
         let attempts = 0;
@@ -889,7 +1001,8 @@
 
     function sendPlayState(href) {
         if (!wss || wss.readyState !== WebSocket.OPEN) return;
-        if (isInitializing) return;
+        if (isInitializing || isSyncPaused || isSeekingTimeline) return;
+        if (!getAlbumPath()) return; // нет трека — ничего не отправляем
         if (href === lastSentPlayHref) return;
         lastSentPlayHref = href;
         // Отправляем команду на сервер — он обновит эталон и разошлёт state_sync
@@ -925,7 +1038,8 @@
         _playStateObserverStarted = true;
         let lastHref = null;
         function check() {
-            if (isApplyingState || isNavigating) return;
+            if (isApplyingState || isNavigating || isSyncPaused) return;
+            if (!getAlbumPath()) return; // нет трека — не отправляем play/pause
             const href = getPlayIconHref();
             if (!href || href === lastHref) return;
             lastHref = href;
@@ -934,6 +1048,23 @@
 
         // Polling-фолбэк: на Linux SVG-атрибуты могут не триггерить MutationObserver
         setInterval(check, 1000);
+
+        // Клик по кнопкам управления (actionSources) — пользователь сам нажал,
+        // сбрасываем isApplyingState и форсируем проверку play state
+        document.addEventListener(
+            "pointerup",
+            (e) => {
+                if (isSyncPaused) return;
+                const isAction = SEL.actionSources.some(
+                    (sel) => e.target.closest?.(sel) || e.target.matches?.(sel),
+                );
+                if (!isAction) return;
+                isApplyingState = false;
+                setTimeout(check, 150);
+                setTimeout(check, 500);
+            },
+            true,
+        );
 
         function attachObserver() {
             const target =
@@ -979,11 +1110,8 @@
 
         function isSeekSource(el) {
             if (!el) return false;
-            return !!(
-                el.closest?.(SEL.timeSlider) ||
-                el.closest?.(SEL.fullscreenSlider) ||
-                el.matches?.(SEL.fullscreenSlider) ||
-                el.closest?.(SEL.lyricsLine)
+            return SEL.seekSources.some(
+                (sel) => el.closest?.(sel) || el.matches?.(sel),
             );
         }
 
@@ -1009,7 +1137,7 @@
         }
 
         function onSeekEnd(e) {
-            if (isInitializing || isNavigating) return;
+            if (isInitializing || isNavigating || isSyncPaused) return;
             if (!isSeekSource(e.target)) return;
 
             isSeekingTimeline = false;
@@ -1076,7 +1204,7 @@
         return link.getAttribute("href") || null;
     }
     function trySend(p) {
-        if (!p || isInitializing || isNavigating) return;
+        if (!p || isInitializing || isNavigating || isSyncPaused) return;
         // Если сервер сам велел нам перейти на этот path — не отправляем его обратно
         if (p === _suppressSend) {
             _suppressSend = null;
@@ -1115,11 +1243,37 @@
         let obsLink = null;
 
         let lastPolledPath = init || null;
+
+        // Если при старте уже нет href — сразу ставим paused
+        if (!init) {
+            isSyncPaused = true;
+            islandSetSyncPaused();
+            console.log("⏸️ No album href on start — sync paused");
+        }
+
         setInterval(() => {
-            if (isInitializing || isNavigating) return;
             const p = getAlbumPath();
+
+            // Href пропал — паузируем только если НЕ идёт навигация
+            // (во время навигации href естественно исчезает — это не повод для паузы)
+            if (!p && !isSyncPaused && !isNavigating) {
+                isSyncPaused = true;
+                _pendingSyncAfterNav = false;
+                islandSetSyncPaused();
+                console.log("⏸️ Album href disappeared — sync paused");
+                return;
+            }
+
+            // Href появился после паузы — автоматически возобновляем
+            // Но только если навигация уже завершена
+            if (p && isSyncPaused && !isNavigating && !_userPausedSync) {
+                console.log("✅ Album href appeared — auto-resuming sync");
+                resumeSync();
+            }
+
+            if (isInitializing || isNavigating) return;
             if (!p || p === lastPolledPath) return;
-            lastPolledPath = p; // обновляем в любом случае, чтобы не дёргать повторно
+            lastPolledPath = p;
             trySend(p);
             attachAttrObserver();
         }, 1500);
@@ -1133,7 +1287,22 @@
             obsLink = link;
             attrObs = new MutationObserver(() => {
                 const p = link.getAttribute("href");
-                if (p) trySend(p);
+                if (p) {
+                    if (isSyncPaused && !isNavigating && !_userPausedSync) {
+                        console.log(
+                            "✅ Album href appeared (observer) — auto-resuming sync",
+                        );
+                        resumeSync();
+                    } else if (!isSyncPaused) {
+                        trySend(p);
+                    }
+                } else if (!isSyncPaused && !isNavigating) {
+                    isSyncPaused = true;
+                    islandSetSyncPaused();
+                    console.log(
+                        "⏸️ Album href removed (observer) — sync paused",
+                    );
+                }
             });
             attrObs.observe(link, {
                 attributes: true,
@@ -1144,7 +1313,22 @@
         function attachBarObserver(bar) {
             new MutationObserver(() => {
                 const p = getAlbumPath();
-                if (p) trySend(p);
+                if (p) {
+                    if (isSyncPaused && !isNavigating && !_userPausedSync) {
+                        console.log(
+                            "✅ Album href appeared (bar observer) — auto-resuming sync",
+                        );
+                        resumeSync();
+                    } else if (!isSyncPaused) {
+                        trySend(p);
+                    }
+                } else if (!isSyncPaused && !isNavigating) {
+                    isSyncPaused = true;
+                    islandSetSyncPaused();
+                    console.log(
+                        "⏸️ Album href gone (bar observer) — sync paused",
+                    );
+                }
                 attachAttrObserver();
             }).observe(bar, { childList: true, subtree: true });
             attachAttrObserver();
