@@ -853,7 +853,7 @@
             if (msg.type === "state_sync") {
                 serverState = msg;
 
-                // Подсветка: обновляем только если это ДРУГОЙ клиент управляет.
+                // Подсветка активного отправителя — всегда обновляем
                 if (
                     msg.by &&
                     msg.by !== CLIENT_ID &&
@@ -870,15 +870,12 @@
                     initTimeout = setTimeout(liftInitializing, 1500);
                 }
 
-                // Если sync paused — только сохраняем состояние, не применяем
-                if (isSyncPaused) {
-                    console.log(
-                        "⏸️ Sync paused — state_sync received but not applied",
-                    );
-                    return;
+                if (!isSyncPaused) {
+                    applySyncState(msg);
+                } else {
+                    console.log("⏸️ Sync paused — playback not applied");
                 }
 
-                applySyncState(msg);
                 return;
             }
 
