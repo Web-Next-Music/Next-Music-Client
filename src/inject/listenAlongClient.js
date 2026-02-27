@@ -130,6 +130,7 @@
             backdrop-filter: blur(${islandBlur});
             border-radius: 1000px;
             border: solid 1px #fff3;
+            -webkit-app-region: no-drag;
         }
 
         #__li_island__.island-visible {

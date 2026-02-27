@@ -31,7 +31,7 @@
     align-items: center;
     justify-content: flex-end;
     -webkit-app-region: drag;
-    z-index: 2147483647;
+    z-index: 9999;
     user-select: none;
 }
 
