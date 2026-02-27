@@ -1,6 +1,6 @@
 {
     "name": "next-music",
-    "version": "2.5.3",
+    "version": "2.6.0",
     "description": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget",
     "main": "src/main.js",
     "scripts": {

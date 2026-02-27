@@ -23,7 +23,7 @@ function createTray(iconPath, mainWindow, nextMusicDirectory, configFilePath) {
 
     const contextMenu = Menu.buildFromTemplate([
         {
-            label: `💖 Next Music v${CURRENT_VERSION} ⚡`,
+            label: `💖 Next Music ${CURRENT_VERSION} ⚡`,
             enabled: false,
         },
         { type: "separator" },

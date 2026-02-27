@@ -1,0 +1,94 @@
+#nmc-titlebar.theme-dark {
+    --btn-color: rgba(255, 255, 255, 0.65);
+    --btn-hover-bg: rgba(255, 255, 255, 0.12);
+    --btn-hover-color: #ffffff;
+    --btn-close-hover-bg: #f23f42;
+    --btn-close-hover-color: #ffffff;
+    --next-text-color: rgba(255, 255, 255, 0.3);
+}
+
+#nmc-titlebar.theme-light {
+    --btn-color: rgba(0, 0, 0, 0.55);
+    --btn-hover-bg: rgba(0, 0, 0, 0.08);
+    --btn-hover-color: #000000;
+    --btn-close-hover-bg: #f23f42;
+    --btn-close-hover-color: #ffffff;
+    --next-text-color: rgba(0, 0, 0, 0.8);
+}
+
+[class*="Content_root"] {
+    margin-top: 20px;
+}
+
+#nmc-titlebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    -webkit-app-region: drag;
+    z-index: 2147483647;
+    user-select: none;
+}
+
+#nmc-titlebar .nmc-tb-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    -webkit-app-region: drag;
+}
+
+#nmc-titlebar .nextText {
+    color: var(--next-text-color);
+    font-family: "YS Text", sans-serif;
+    font-weight: 100;
+    font-size: 13px;
+    margin-right: 20px;
+    pointer-events: none;
+    white-space: nowrap;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#nmc-titlebar .nmc-tb-buttons {
+    display: flex;
+    height: 100%;
+    -webkit-app-region: no-drag;
+}
+
+#nmc-titlebar .nmc-tb-btn {
+    width: 46px;
+    height: 32px;
+    background: none;
+    border: none;
+    color: var(--btn-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background 0.15s,
+        color 0.15s;
+    -webkit-app-region: no-drag;
+    padding: 0;
+}
+
+#nmc-titlebar .nmc-tb-btn svg {
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+}
+
+#nmc-titlebar .nmc-tb-btn:hover {
+    background: var(--btn-hover-bg);
+    color: var(--btn-hover-color);
+}
+
+#nmc-titlebar .nmc-close:hover {
+    background: var(--btn-close-hover-bg);
+    color: var(--btn-close-hover-color);
+}

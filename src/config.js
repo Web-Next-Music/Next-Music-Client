@@ -5,6 +5,10 @@ let config = {
     },
 
     windowSettings: {
+        titleBar: {
+            enable: true,
+            nextText: true,
+        },
         alwaysOnTop: false,
         freeWindowResize: false,
         nextTitle: true,

@@ -1,8 +1,23 @@
-const { app, BrowserWindow, session, nativeTheme } = require("electron");
+const {
+    app,
+    BrowserWindow,
+    session,
+    nativeTheme,
+    ipcMain,
+} = require("electron");
 const path = require("path");
 const http = require("http");
 const fs = require("fs");
 let { config, injectList } = require("./config.js");
+
+// Titlebar
+ipcMain.on("nmc-minimize", () => mainWindow.minimize());
+ipcMain.on("nmc-maximize", () => {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+});
+ipcMain.on("nmc-close", () => mainWindow.hide());
+ipcMain.handle("nmc-is-maximized", () => mainWindow.isMaximized());
 
 // Иконка
 const appIcon = path.join(__dirname, "assets/icon-256.png");
@@ -103,12 +118,10 @@ function createLoaderWindow() {
 function createWindow() {
     const showWindow = !config.launchSettings.startMinimized;
 
-    // Если включен loader, создаём его перед основным окном
     if (config.launchSettings.loaderWindow && showWindow) {
         createLoaderWindow();
     }
 
-    // Основное окно приложения
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
@@ -120,10 +133,15 @@ function createWindow() {
             ? "#0D0D0D"
             : "#E6E6E6",
         icon: appIcon,
+        frame: !config.windowSettings?.titleBar?.enable,
+        roundedCorners: true,
         webPreferences: {
             webSecurity: false, // для обхода CORS, но CSP всё равно надо менять
             nodeIntegration: false,
             contextIsolation: true,
+            preload: config.windowSettings?.titleBar?.enable
+                ? path.join(__dirname, "preload.js")
+                : undefined,
         },
         show: false,
     });
@@ -131,12 +149,20 @@ function createWindow() {
     // Убираем CSP для обхода блокировок
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
         const headers = details.responseHeaders || {};
-
         delete headers["content-security-policy"];
         delete headers["Content-Security-Policy"];
-
         callback({ responseHeaders: headers });
     });
+
+    // Уведомляем рендерер при смене состояния окна
+    if (config.windowSettings?.titleBar?.enable) {
+        mainWindow.on("maximize", () =>
+            mainWindow.webContents.send("nmc-maximized"),
+        );
+        mainWindow.on("unmaximize", () =>
+            mainWindow.webContents.send("nmc-unmaximized"),
+        );
+    }
 
     // Load main app URL
     const listenAlong = config?.experimental?.listenAlong;
@@ -162,9 +188,32 @@ function createWindow() {
         }
     });
 
-    // Когда страница основного окна загрузилась
     mainWindow.webContents.on("did-finish-load", () => {
-        // Inject all scripts
+        // Inject titlebar
+        if (config.windowSettings?.titleBar?.enable) {
+            const css = fs.readFileSync(
+                path.join(__dirname, "renderer/titlebar/titlebar.css"),
+                "utf-8",
+            );
+            const js = fs.readFileSync(
+                path.join(__dirname, "renderer/titlebar/titlebar.js"),
+                "utf-8",
+            );
+            // Передаём конфиг тайтлбара в рендерер до запуска скрипта
+            const titleBarConfig = {
+                showNextText:
+                    config.windowSettings?.titleBar?.nextText === true,
+                version: app.getVersion(),
+            };
+            mainWindow.webContents
+                .executeJavaScript(
+                    `window.__nmcTitleBarConfig = ${JSON.stringify(titleBarConfig)};`,
+                )
+                .catch(console.error);
+            mainWindow.webContents.insertCSS(css).catch(console.error);
+            mainWindow.webContents.executeJavaScript(js).catch(console.error);
+        }
+
         injector(mainWindow, config);
 
         // Inject addons
@@ -201,14 +250,12 @@ function createWindow() {
         },
     );
 
-    // Логика на старте: если стартуем свернутым
     if (config.launchSettings.startMinimized) {
         mainWindow.hide();
     } else if (!config.launchSettings.loaderWindow) {
         mainWindow.show();
     }
 
-    // При закрытии окна — просто скрываем
     mainWindow.on("close", (event) => {
         event.preventDefault();
         mainWindow.hide();
