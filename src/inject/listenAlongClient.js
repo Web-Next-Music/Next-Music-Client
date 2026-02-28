@@ -50,25 +50,19 @@
     let observerStarted = false;
     let lastSentPath = null;
     let isNavigating = false;
+    // Путь, к которому сейчас идёт навигация — для дедупликации
+    let _navigatingToPath = null;
     let pendingPath = null;
-    let _pendingSyncAfterNav = false; // применить serverState после завершения навигации
+    let _pendingSyncAfterNav = false;
     let isApplyingState = false;
     let lastSentPlayHref = null;
     let isSeekingTimeline = false;
-    // isInitializing: пока true — не отправляем события (ждём state_sync от сервера)
     let isInitializing = true;
     let initTimeout = null;
-    // Серверный эталон, полученный последним state_sync
-    let serverState = null; // { path, playing, position, serverTime }
-    // isSyncPaused: true когда у albumLink нет href — клиент получает данные,
-    // но не применяет синхронизацию. Желтая точка. Клик по точке — ресинк.
+    let serverState = null;
     let isSyncPaused = false;
-    // _userPausedSync: пользователь сам выключил синхронизацию кликом по зелёной точке.
-    // В этом режиме авто-возобновление не срабатывает — только клик по точке.
     let _userPausedSync = false;
-    // Путь, на который сервер велел навигировать — подавляем обратную отправку
     let _suppressSend = null;
-    // Флаг: сервер сам применяет seek — не отправлять обратно
     let _suppressSeekSend = false;
 
     function liftInitializing() {
@@ -76,9 +70,6 @@
         isInitializing = false;
         const href = getPlayIconHref();
         if (href) lastSentPlayHref = href;
-        // Запоминаем серверный path как "уже отправленный" — чтобы при первом
-        // тике poll не отправить свой локальный трек поверх серверного.
-        // Локальный трек будет отправлен только если он ИЗМЕНИТСЯ после этой точки.
         if (serverState && serverState.path) {
             lastSentPath = serverState.path;
         } else {
@@ -89,8 +80,6 @@
     }
 
     const XLINK = "http://www.w3.org/1999/xlink";
-
-    // ─── Inject styles ──────────────────────────────────────────────────
 
     const isBlackIsland = blackIsland === true || blackIsland === "true";
 
@@ -110,8 +99,6 @@
         s.id = "__li_styles__";
         s.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
-
-        /* ───────── OUTER SHELL ───────── */
 
         #__li_island__ {
             position: fixed;
@@ -153,8 +140,6 @@
             100% { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
         }
 
-        /* ───────── INNER ───────── */
-
         #__li_inner__ {
             position: relative;
             display: flex;
@@ -175,23 +160,17 @@
             will-change: transform, opacity;
         }
 
-        /* ───────── CONTENT FADE (НОВОЕ) ───────── */
-
-        /* плавное исчезновение старого контента */
         #__li_inner__.li-content-fade-out {
             opacity: 0;
             transform: translateY(4px) scale(0.98);
             transition: opacity 0.18s ease, transform 0.18s ease;
         }
 
-        /* появление нового контента */
         #__li_inner__.li-content-fade-in {
             opacity: 1;
             transform: translateY(0) scale(1);
             transition: opacity 0.22s ease, transform 0.22s ease;
         }
-
-        /* ───────── SHRINK / EXPAND ───────── */
 
         #__li_island__.island-hiding #__li_inner__ {
             animation: liInnerShrink 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -212,8 +191,6 @@
             100% { transform: scaleX(1); }
         }
 
-        /* ───────── DOT ───────── */
-
         #__li_dot_wrap__ {
             flex-shrink: 0;
             display: flex;
@@ -232,12 +209,10 @@
                         opacity 0.4s ease;
         }
 
-        /* wrap states */
         #__li_dot_wrap__.disconnected { }
         #__li_dot_wrap__.connected    { cursor: pointer; }
         #__li_dot_wrap__.sync-paused  { cursor: pointer; }
 
-        /* inner states */
         #__li_dot_wrap__.disconnected #__li_dot__ {
             background: #555;
             opacity: 1;
@@ -253,8 +228,6 @@
             background: #f5a623;
             opacity: 1;
         }
-
-        /* ───────── STATUS TEXT ───────── */
 
         #__li_status__ {
             font-size: 12px;
@@ -275,8 +248,6 @@
             transform: translateY(3px);
         }
 
-        /* ───────── AVATARS ───────── */
-
         #__li_avatars__ {
             display: flex;
             align-items: center;
@@ -293,8 +264,6 @@
             max-width: 400px;
             opacity: 1;
         }
-
-        /* ───────── AVATAR ───────── */
 
         .li-av-wrap {
             position: relative;
@@ -330,8 +299,6 @@
         .li-av-wrap.active-sender .li-av-placeholder {
             border-color: #1db954;
         }
-
-        /* ───────── ANIMATIONS ───────── */
 
         @keyframes liPulse {
             0%, 100% { opacity: 1; }
@@ -427,7 +394,6 @@
         _userPausedSync = false;
         console.log("▶️ Sync resumed by user click on dot");
         setDotState("connected", _currentServerLabel);
-        // Прячем статус сразу, показываем только аватары
         clearTimeout(statusHideTimer);
         animateInnerWidth(() => {
             const status = document.getElementById("__li_status__");
@@ -435,13 +401,11 @@
             const avRow = document.getElementById("__li_avatars__");
             if (avRow) avRow.className = "visible";
         });
-        // Применяем последнее серверное состояние принудительно
         if (serverState) {
             const currentPath = getAlbumPath();
             const needsNav =
                 serverState.path && serverState.path !== currentPath;
             if (needsNav) {
-                // Навигация займёт время — применим state после её завершения
                 _pendingSyncAfterNav = true;
             }
             applySyncState(serverState, true);
@@ -479,7 +443,6 @@
         hideIslandTimer = setTimeout(hideIsland, ms);
     }
 
-    // Плавно анимирует ширину #__li_inner__ при изменении содержимого
     function animateInnerWidth(changeFn) {
         const inner = document.getElementById("__li_inner__");
         if (!inner) {
@@ -488,17 +451,11 @@
         }
 
         const fromW = inner.getBoundingClientRect().width;
-
-        // Фиксируем текущую ширину
         inner.style.width = fromW + "px";
-
-        // Временно отключаем transition
         inner.style.transition = "none";
 
-        // 👉 ВАЖНО: применяем изменения полностью
         changeFn();
 
-        // 👉 Принудительно раскрываем аватар-row БЕЗ анимации
         const avRow = document.getElementById("__li_avatars__");
         if (avRow && avRow.classList.contains("visible")) {
             avRow.style.transition = "none";
@@ -506,15 +463,11 @@
             avRow.style.opacity = "1";
         }
 
-        // Получаем финальную ширину
         inner.style.width = "";
         const toW = inner.getBoundingClientRect().width;
-
-        // Возвращаем исходную ширину
         inner.style.width = fromW + "px";
         void inner.offsetWidth;
 
-        // Включаем анимацию
         inner.style.transition = "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
         inner.style.width = toW + "px";
 
@@ -524,7 +477,6 @@
             inner.style.transition = "";
             inner.style.width = "";
 
-            // Возвращаем transition аватарам
             if (avRow) {
                 avRow.style.transition = "";
                 avRow.style.maxWidth = "";
@@ -569,7 +521,6 @@
         if (status) {
             status.style.opacity = "0";
             status.style.transform = "translateY(4px)";
-            // Снимаем hidden чтобы показать текст, но через transition
             status.classList.remove("hidden");
             void status.offsetWidth;
             setTimeout(() => {
@@ -593,7 +544,6 @@
         clearTimeout(statusHideTimer);
         setDotState("sync-paused", "Synchronize");
 
-        // Скрываем статус и аватары — показываем только жёлтую точку
         animateInnerWidth(() => {
             const status = document.getElementById("__li_status__");
             if (status) status.classList.add("hidden");
@@ -720,6 +670,8 @@
         return document.querySelector(SEL.timeSlider);
     }
 
+    let _isSyntheticSeek = false;
+
     function seekTo(value) {
         const slider = getSlider();
         if (!slider) return;
@@ -729,12 +681,14 @@
         ).set;
         setter.call(slider, value);
         slider.dispatchEvent(new Event("input", { bubbles: true }));
+        _isSyntheticSeek = true;
         slider.dispatchEvent(
             new PointerEvent("pointerup", { bubbles: true, cancelable: true }),
         );
         slider.dispatchEvent(
             new MouseEvent("mouseup", { bubbles: true, cancelable: true }),
         );
+        _isSyntheticSeek = false;
         slider.dispatchEvent(new Event("change", { bubbles: true }));
         console.log(`⏱️ Seek → ${value}/${slider.max}`);
     }
@@ -742,38 +696,56 @@
     // ─── Apply state from server ────────────────────────────────────────
 
     function applySyncState(msg, force = false) {
+        // Снимаем snapshot, чтобы гонки с новыми state_sync не влияли
+        // на уже начавшуюся навигацию
+        const targetPath = msg.path;
+        const targetPlaying = msg.playing;
+        const targetPosition = msg.position;
+        const targetServerTime = msg.serverTime;
+
         // 1. Навигация к нужному треку
         const currentPath = getAlbumPath();
         const needNav =
-            msg.path &&
-            msg.path !== currentPath &&
-            (force || msg.path !== lastSentPath) &&
+            targetPath &&
+            targetPath !== currentPath &&
+            (force || targetPath !== lastSentPath) &&
             !isNavigating;
+
         if (needNav) {
-            _suppressSend = msg.path;
-            pendingPath = msg.path;
+            // Дополнительная проверка: убеждаемся что serverState на момент
+            // запуска навигации всё ещё указывает на тот же path.
+            // Это защита от устаревших state_sync-ов в очереди.
+            if (serverState && serverState.path !== targetPath) {
+                console.warn(
+                    `🚫 Nav cancelled: msg.path="${targetPath}" != serverState.path="${serverState.path}"`,
+                );
+                // Применяем актуальный serverState вместо устаревшего
+                applySyncState(serverState, force);
+                return;
+            }
+            _suppressSend = targetPath;
+            pendingPath = targetPath;
             processNext();
-        } else if (force && msg.path && msg.path === currentPath) {
-            // Уже на нужном треке — просто включаем play и синхронизируем позицию
+        } else if (force && targetPath && targetPath === currentPath) {
             if (!isApplyingState) {
-                applyPlayState(msg.playing);
+                applyPlayState(targetPlaying);
             }
         }
 
-        // 2. Play / Pause — только если не мы сами только что нажали (и не ждём навигации)
+        // 2. Play / Pause
         if (!needNav && !isNavigating && !isApplyingState) {
-            applyPlayState(msg.playing);
+            applyPlayState(targetPlaying);
         }
 
-        // 3. Позиция: учитываем задержку сети
+        // 3. Позиция
         if (!isSeekingTimeline && !isNavigating) {
             const slider = getSlider();
             if (slider) {
                 const networkDelay =
-                    (Date.now() - (msg.serverTime || Date.now())) / 1000;
-                const targetPos = msg.playing
-                    ? msg.position + networkDelay
-                    : msg.position;
+                    (Date.now() - (targetServerTime || Date.now())) / 1000;
+                const targetPos = targetPlaying
+                    ? targetPosition + networkDelay
+                    : targetPosition;
                 const diff = Math.abs(parseInt(slider.value) - targetPos);
                 if (force || diff > SYNC_THRESHOLD_SEC) {
                     console.log(
@@ -784,8 +756,7 @@
                     seekTo(Math.round(targetPos));
                     setTimeout(() => {
                         isSeekingTimeline = false;
-                        _suppressSeekSend = false;
-                    }, 2000);
+                    }, 1000);
                 }
             }
         }
@@ -847,14 +818,9 @@
                 return;
             }
 
-            // ── state_sync — единственный источник истины ────────────────
-            // Сервер присылает это после любой команды и каждые 5 секунд.
-            // Клиент синхронизируется с сервером безусловно (кроме
-            // момента, когда сам перематывает — isSeekingTimeline).
             if (msg.type === "state_sync") {
                 serverState = msg;
 
-                // Подсветка активного отправителя — всегда обновляем
                 if (
                     msg.by &&
                     msg.by !== CLIENT_ID &&
@@ -865,7 +831,6 @@
                     setActiveSender(msg.by);
                 }
 
-                // Снимаем initializing после первого state_sync
                 if (isInitializing) {
                     clearTimeout(initTimeout);
                     initTimeout = setTimeout(liftInitializing, 1500);
@@ -924,40 +889,100 @@
         pendingPath = null;
         navigateAndPlay(p);
     }
+
     function navigateAndPlay(p) {
+        // ── ПРОВЕРКА 1: не дублировать навигацию к тому же пути ──────────
+        if (_navigatingToPath === p) {
+            console.log(`⏭️ Already navigating to "${p}", skip duplicate`);
+            return;
+        }
+
+        // ── ПРОВЕРКА 2: актуальность — сервер всё ещё хочет этот трек ───
+        // serverState мог обновиться пока мы ждали дебаунс/processNext.
+        // Если сервер уже переключился на другой трек — не идём на старый.
+        if (serverState && serverState.path && serverState.path !== p) {
+            console.warn(
+                `🚫 Nav to "${p}" aborted — server now wants "${serverState.path}"`,
+            );
+            // Запускаем навигацию к актуальному пути
+            pendingPath = serverState.path;
+            processNext();
+            return;
+        }
+
+        // ── ПРОВЕРКА 3: вдруг мы уже на нужном треке ────────────────────
+        const currentPath = getAlbumPath();
+        if (currentPath === p) {
+            console.log(`✅ Already on "${p}", skip navigation`);
+            _suppressSend = p;
+            lastSentPath = p;
+            // Просто применяем play/seek если нужно
+            if (serverState) {
+                setTimeout(() => applySyncState(serverState, true), 200);
+            }
+            return;
+        }
+
+        _navigatingToPath = p;
         isNavigating = true;
         console.log("🔗 Navigate:", p);
         if (window.location.pathname !== p) window.next.router.push(p);
         waitForTrackAndPlay(p);
     }
+
     function finishNavigation() {
+        _navigatingToPath = null;
         isNavigating = false;
-        // Не сбрасываем lastSentPath здесь — это сделает trySend/_suppressSend
         processNext();
-        // Если навигация была инициирована через resumeSync — применяем серверное состояние
         if (_pendingSyncAfterNav && serverState) {
             _pendingSyncAfterNav = false;
             console.log("🔄 Applying deferred server state after navigation");
             setTimeout(() => applySyncState(serverState, true), 300);
         }
     }
+
     function waitForTrackAndPlay(expectedPath) {
         let attempts = 0;
         const wait = setInterval(() => {
-            if (pendingPath) {
+            // ── ПРОВЕРКА A: пришёл новый pendingPath — прерываем текущий wait ──
+            if (pendingPath && pendingPath !== expectedPath) {
                 clearInterval(wait);
+                console.warn(
+                    `🔀 Nav interrupted: new path "${pendingPath}" overrides "${expectedPath}"`,
+                );
                 isNavigating = false;
+                _navigatingToPath = null;
                 processNext();
                 return;
             }
-            const urlMatch = window.location.pathname === expectedPath;
 
+            // ── ПРОВЕРКА B: serverState изменился пока мы ждали ────────────
+            // Если сервер переключился на другой трек — прерываем и идём туда
+            if (
+                serverState &&
+                serverState.path &&
+                serverState.path !== expectedPath
+            ) {
+                clearInterval(wait);
+                console.warn(
+                    `🚫 waitForTrackAndPlay: server switched to "${serverState.path}" while waiting for "${expectedPath}"`,
+                );
+                isNavigating = false;
+                _navigatingToPath = null;
+                pendingPath = serverState.path;
+                processNext();
+                return;
+            }
+
+            const urlMatch = window.location.pathname === expectedPath;
             const playerBarPath = getAlbumPath();
             const currentHref = getPlayIconHref() || "";
+
             const alreadyPlayingRight =
                 playerBarPath === expectedPath &&
                 (currentHref.includes("pause") ||
                     currentHref.includes("Pause"));
+
             if (alreadyPlayingRight) {
                 clearInterval(wait);
                 console.log("▶️ Already playing right track:", expectedPath);
@@ -971,26 +996,57 @@
             if (urlMatch && btn) {
                 clearInterval(wait);
                 setTimeout(() => {
+                    // ── ПРОВЕРКА C: финальная проверка перед кликом ──────────
+                    // serverState мог измениться пока мы ждали 300мс до клика
+                    if (
+                        serverState &&
+                        serverState.path &&
+                        serverState.path !== expectedPath
+                    ) {
+                        console.warn(
+                            `🚫 Pre-click check failed: server now wants "${serverState.path}", not "${expectedPath}"`,
+                        );
+                        isNavigating = false;
+                        _navigatingToPath = null;
+                        pendingPath = serverState.path;
+                        processNext();
+                        return;
+                    }
+
                     const href = getPlayIconHref() || "";
                     const pbPath = getAlbumPath();
                     const playing =
                         href.includes("pause") || href.includes("Pause");
+
                     if (playing && pbPath === expectedPath) {
                         console.log("▶️ Track already playing:", expectedPath);
                     } else {
                         btn.click();
                         console.log("▶️ Track started:", expectedPath);
                     }
+
                     setTimeout(() => {
+                        // ── ПРОВЕРКА D: после клика — убеждаемся что путь совпал ──
+                        const finalPath = getAlbumPath();
+                        if (finalPath && finalPath !== expectedPath) {
+                            console.warn(
+                                `⚠️ Post-click path mismatch: got "${finalPath}", expected "${expectedPath}"`,
+                            );
+                            // Не паникуем — finishNavigation запустит processNext
+                            // который подхватит serverState.path если он есть
+                        }
                         finishNavigation();
                     }, 1000);
                 }, 300);
                 return;
             }
+
             if (++attempts >= 40) {
                 clearInterval(wait);
+                console.warn(
+                    `⚠️ Timed out waiting for track "${expectedPath}"`,
+                );
                 finishNavigation();
-                console.warn("⚠️ Timed out waiting for track");
             }
         }, 500);
     }
@@ -1000,16 +1056,14 @@
     function sendPlayState(href) {
         if (!wss || wss.readyState !== WebSocket.OPEN) return;
         if (isInitializing || isSyncPaused || isSeekingTimeline) return;
-        if (!getAlbumPath()) return; // нет трека — ничего не отправляем
+        if (!getAlbumPath()) return;
         if (href === lastSentPlayHref) return;
         lastSentPlayHref = href;
-        // Отправляем команду на сервер — он обновит эталон и разошлёт state_sync
         wss.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
-        setActiveSender(CLIENT_ID); // пользователь сам нажал
-        console.log("📤 playstate →server:", href);
+        setActiveSender(CLIENT_ID);
+        console.log("📤 playstate →server (instant):", href);
     }
 
-    /** Применить play/pause из серверного state_sync */
     function applyPlayState(wantPlay) {
         const myHref = getPlayIconHref();
         if (!myHref) return;
@@ -1017,12 +1071,8 @@
             myHref.includes("pause") || myHref.includes("Pause");
         if (currentlyPlaying === wantPlay) return;
         isApplyingState = true;
-        // Превентивно блокируем observer: запоминаем текущий href,
-        // чтобы он не отправил изменение обратно на сервер.
-        // После клика href изменится — тогда lastSentPlayHref тоже обновим.
         lastSentPlayHref = myHref;
         clickPlayIcon();
-        // После клика обновляем lastSentPlayHref на новое значение
         setTimeout(() => {
             const newHref = getPlayIconHref();
             if (newHref) lastSentPlayHref = newHref;
@@ -1037,18 +1087,15 @@
         let lastHref = null;
         function check() {
             if (isApplyingState || isNavigating || isSyncPaused) return;
-            if (!getAlbumPath()) return; // нет трека — не отправляем play/pause
+            if (!getAlbumPath()) return;
             const href = getPlayIconHref();
             if (!href || href === lastHref) return;
             lastHref = href;
             sendPlayState(href);
         }
 
-        // Polling-фолбэк: на Linux SVG-атрибуты могут не триггерить MutationObserver
         setInterval(check, 1000);
 
-        // Клик по кнопкам управления (actionSources) — пользователь сам нажал,
-        // сбрасываем isApplyingState и форсируем проверку play state
         document.addEventListener(
             "pointerup",
             (e) => {
@@ -1088,22 +1135,14 @@
         }
     }
 
-    // ─── Timeline sync (seek-only — периодику делает сервер) ────────────
+    // ─── Timeline sync ──────────────────────────────────────────────────
 
     let _timelineObserverStarted = false;
     function startTimelineObserver() {
         if (_timelineObserverStarted) return;
         _timelineObserverStarted = true;
 
-        // Три источника перемотки:
-        //   1. input[aria-label="Manage time code"]          — основной слайдер в PlayerBar
-        //   2. input.FullscreenPlayerDesktopContent_slider__* — слайдер в полноэкранном режиме
-        //   3. [class*="SyncLyricsLine_root__"]               — клик по строке текста
-
-        // Timestamp последнего реального down на любом из источников.
-        // onSeekEnd отправляет только если up пришёл в течение 500мс.
         let _sliderDownAt = 0;
-        // Позиция, заготовленная при клике по строке текста (секунды)
         let _lyricsSeekPos = null;
 
         function isSeekSource(el) {
@@ -1118,11 +1157,8 @@
             _sliderDownAt = Date.now();
             _lyricsSeekPos = null;
 
-            // Для строки текста — читаем позицию прямо при нажатии,
-            // т.к. после клика таймлайн может ещё не обновиться
             const lyricLine = e.target.closest?.(SEL.lyricsLine);
             if (lyricLine) {
-                // data-start-time или аналог; пробуем несколько атрибутов
                 const t = parseFloat(
                     lyricLine.dataset.startTime ??
                         lyricLine.dataset.time ??
@@ -1135,18 +1171,19 @@
         }
 
         function onSeekEnd(e) {
+            if (_isSyntheticSeek) return;
+
             if (isInitializing || isNavigating || isSyncPaused) return;
             if (!isSeekSource(e.target)) return;
 
-            isSeekingTimeline = false;
-
-            // Если seek запустил сам клиент в ответ на state_sync — не отправляем обратно
             if (_suppressSeekSend) {
                 _suppressSeekSend = false;
+                isSeekingTimeline = false;
                 return;
             }
 
-            // Отправляем только если был реальный клик (не автодвижение таймлайна)
+            isSeekingTimeline = false;
+
             const timeSinceDown = Date.now() - _sliderDownAt;
             if (timeSinceDown > 500) {
                 console.log(
@@ -1155,14 +1192,11 @@
                 return;
             }
 
-            // Определяем позицию
             let val;
             if (_lyricsSeekPos !== null) {
-                // Клик по строке текста — используем заготовленную позицию
                 val = Math.round(_lyricsSeekPos);
                 _lyricsSeekPos = null;
             } else {
-                // Слайдер — берём текущее value (основной или fullscreen)
                 const fsSlider =
                     e.target.closest?.(SEL.fullscreenSlider) ||
                     (e.target.matches?.(SEL.fullscreenSlider)
@@ -1182,7 +1216,7 @@
                     }),
                 );
                 setActiveSender(CLIENT_ID);
-                console.log("📤 seek →server:", val);
+                console.log("📤 seek →server (instant):", val);
             }
         }
 
@@ -1201,48 +1235,50 @@
         if (!link) return null;
         return link.getAttribute("href") || null;
     }
+
+    // ─── Send debounce ───────────────────────────────────────────────────
+
+    const SEND_DELAY_MS = 1000;
+    let _navigateTimer = null;
+
+    function debouncedNavigate(p) {
+        clearTimeout(_navigateTimer);
+        _navigateTimer = setTimeout(() => {
+            if (!wss || wss.readyState !== WebSocket.OPEN) return;
+            lastSentPath = p;
+            wss.send(
+                JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
+            );
+            setActiveSender(CLIENT_ID);
+            console.log("📤 navigate →server (debounced):", p);
+        }, SEND_DELAY_MS);
+    }
+
     function trySend(p) {
         if (!p || isInitializing || isNavigating || isSyncPaused) return;
-        // Если сервер сам велел нам перейти на этот path — не отправляем его обратно
         if (p === _suppressSend) {
             _suppressSend = null;
             lastSentPath = p;
             return;
         }
-        // Не отправляем если:
-        //   - это тот же путь что мы последний раз отправляли (дедупликация)
-        //   - ИЛИ сервер уже стоит на этом пути (незачем дублировать)
         const serverPath = serverState ? serverState.path : null;
         if (p === lastSentPath) return;
         if (p === serverPath) {
-            // Сервер уже на этом треке — просто обновляем lastSentPath
-            // чтобы не отправить его повторно позже
             lastSentPath = p;
             return;
         }
-        lastSentPath = p;
-        if (wss && wss.readyState === WebSocket.OPEN) {
-            wss.send(
-                JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
-            );
-            setActiveSender(CLIENT_ID);
-        }
+        debouncedNavigate(p);
     }
 
     function startObserver() {
         if (observerStarted) return;
         observerStarted = true;
-        // Не отправляем трек при старте — ждём state_sync от сервера.
-        // lastPolledPath инициализируем текущим значением, чтобы первый тик
-        // poll не считал это "изменением".
         const init = getAlbumPath();
 
         let attrObs = null;
         let obsLink = null;
-
         let lastPolledPath = init || null;
 
-        // Если при старте уже нет href — сразу ставим paused
         if (!init) {
             isSyncPaused = true;
             islandSetSyncPaused();
@@ -1252,8 +1288,6 @@
         setInterval(() => {
             const p = getAlbumPath();
 
-            // Href пропал — паузируем только если НЕ идёт навигация
-            // (во время навигации href естественно исчезает — это не повод для паузы)
             if (!p && !isSyncPaused && !isNavigating) {
                 isSyncPaused = true;
                 _pendingSyncAfterNav = false;
@@ -1262,8 +1296,6 @@
                 return;
             }
 
-            // Href появился после паузы — автоматически возобновляем
-            // Но только если навигация уже завершена
             if (p && isSyncPaused && !isNavigating && !_userPausedSync) {
                 console.log("✅ Album href appeared — auto-resuming sync");
                 resumeSync();
@@ -1274,7 +1306,7 @@
             lastPolledPath = p;
             trySend(p);
             attachAttrObserver();
-        }, 1500);
+        }, 1000);
 
         function attachAttrObserver() {
             const bar = document.querySelector(SEL.playerBar);
