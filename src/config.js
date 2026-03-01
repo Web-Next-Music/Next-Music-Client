@@ -15,6 +15,7 @@ let config = {
     },
 
     programSettings: {
+        checkUpdates: true,
         richPresence: {
             enabled: true,
             rpcTitle: "Next Music",
@@ -29,7 +30,7 @@ let config = {
         },
         obsWidget: false,
         alwaysExpandedPlayer: false,
-        checkUpdates: true,
+        disableAutoZoom: false,
     },
 
     experimental: {
@@ -59,6 +60,10 @@ const injectList = [
     {
         file: "nextTitle.js",
         condition: (config) => config?.windowSettings?.nextTitle,
+    },
+    {
+        file: "noAutoZoom.css",
+        condition: (config) => config?.programSettings?.disableAutoZoom,
     },
     {
         file: "obsWidget.js",
