@@ -1,94 +1,70 @@
-#nmc-titlebar.theme-dark {
-    --btn-color: rgba(255, 255, 255, 0.65);
-    --btn-hover-bg: rgba(255, 255, 255, 0.12);
-    --btn-hover-color: #ffffff;
-    --btn-close-hover-bg: #f23f42;
-    --btn-close-hover-color: #ffffff;
-    --next-text-color: rgba(255, 255, 255, 0.3);
+.TitleBar_root {
+    --nm-spacer-size-xxxl: var(--ym-spacer-size-xxxl);
+    --nm-line-height: var(--ym-font-line-height-label-s);
+    --nm-btn-color: var(--ym-controls-color-primary-text-enabled_variant);
+    --nm-btn-hover-bg: var(--ym-controls-color-secondary-default-hovered);
+    --nm-btn-close-hover-bg: #f23f42;
+    --next-text-color: var(--text-enabled-color);
 }
 
-#nmc-titlebar.theme-light {
-    --btn-color: rgba(0, 0, 0, 0.55);
-    --btn-hover-bg: rgba(0, 0, 0, 0.08);
-    --btn-hover-color: #000000;
-    --btn-close-hover-bg: #f23f42;
-    --btn-close-hover-color: #ffffff;
-    --next-text-color: rgba(0, 0, 0, 0.8);
+[class*="CommonLayout_root"] {
+    padding-block-start: var(--ym-spacer-size-xxxl) !important;
 }
 
-[class*="Content_root"] {
-    margin-top: 20px;
+[class*="Navbar_root"] {
+    margin-block-start: calc(var(--ym-spacer-size-l) * -1);
 }
 
-#nmc-titlebar {
+.TitleBar_root {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: 32px;
+    height: var(--nm-spacer-size-xxxl);
     background: transparent;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     -webkit-app-region: drag;
-    z-index: 9999;
+    z-index: 99999;
     user-select: none;
 }
 
-#nmc-titlebar .nmc-tb-right {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    -webkit-app-region: drag;
-}
-
-#nmc-titlebar .nextText {
+.TitleBar_root .TitleBar_nextText {
     color: var(--next-text-color);
     font-family: "YS Text", sans-serif;
-    font-weight: 100;
-    font-size: 13px;
+    font-weight: 500;
+    line-height: var(--nm-line-height);
     margin-right: 20px;
-    pointer-events: none;
     white-space: nowrap;
-    justify-content: center;
     pointer-events: none;
+    margin-top: 2px;
 }
 
-#nmc-titlebar .nmc-tb-buttons {
-    display: flex;
-    height: 100%;
-    -webkit-app-region: no-drag;
-}
-
-#nmc-titlebar .nmc-tb-btn {
-    width: 46px;
-    height: 32px;
+.TitleBar_root .TitleBar_button {
+    width: 2.875rem;
+    height: var(--nm-spacer-size-xxxl);
     background: none;
     border: none;
-    color: var(--btn-color);
+    color: var(--nm-btn-color);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition:
-        background 0.15s,
-        color 0.15s;
     -webkit-app-region: no-drag;
     padding: 0;
 }
 
-#nmc-titlebar .nmc-tb-btn svg {
+.TitleBar_root .TitleBar_button svg {
     width: 10px;
     height: 10px;
     pointer-events: none;
 }
 
-#nmc-titlebar .nmc-tb-btn:hover {
-    background: var(--btn-hover-bg);
-    color: var(--btn-hover-color);
+.TitleBar_root .TitleBar_button:hover {
+    background: var(--nm-btn-hover-bg);
 }
 
-#nmc-titlebar .nmc-close:hover {
-    background: var(--btn-close-hover-bg);
-    color: var(--btn-close-hover-color);
+.TitleBar_root .TitleBar_closeButton:hover {
+    background: var(--nm-btn-close-hover-bg);
 }
