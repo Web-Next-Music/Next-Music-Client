@@ -26,9 +26,9 @@ const appIcon = path.join(__dirname, "assets/icon-256.png");
 const loaderPath = path.join(__dirname, "renderer/loader/loader.html");
 
 // Получаем папку для хранения данных приложения
-const nextMusicDirectory = path.join(app.getPath("userData"), "Next Music");
+const nextMusicDirectory = app.getPath("userData");
 const addonsDirectory = path.join(nextMusicDirectory, "Addons");
-const configFilePath = path.join(nextMusicDirectory, "config.json");
+const configFilePath = path.join(nextMusicDirectory, "Config.json");
 
 // Libs
 const { createTray } = require("./tray/tray.js");
@@ -337,7 +337,7 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
             JSON.stringify(config, null, 2),
             "utf-8",
         );
-        console.log("⚙️ config.json created");
+        console.log("⚙️ Config.json created");
     } else {
         try {
             const raw = fs.readFileSync(configFilePath, "utf-8");
@@ -357,14 +357,14 @@ function loadConfig(nextMusicDirectory, defaultConfig) {
                     "utf-8",
                 );
                 console.log(
-                    "⚙️ config.json fixed (invalid or missing options)",
+                    "⚙️ Config.json fixed (invalid or missing options)",
                 );
             } else {
                 console.log("⚙️ Config loaded successfully");
             }
         } catch (err) {
             console.error(
-                "❌ Error reading config.json, reset to default",
+                "❌ Error reading Config.json, reset to default",
                 err,
             );
             config = structuredClone(defaultConfig);
