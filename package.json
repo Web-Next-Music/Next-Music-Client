@@ -38,12 +38,22 @@
             "artifactName": "${name}_${version}_${arch}.${ext}",
             "target": [
                 "AppImage",
-                "deb"
+                "deb",
+                "pacman"
             ],
             "category": "Audio",
             "maintainer": "Diramix <39developer@diram1x.ru>",
             "icon": "src/assets/icon-256.png",
             "executableName": "Next Music"
+        },
+        "pacman": {
+            "depends": [
+                "gtk3",
+                "libnotify",
+                "nss",
+                "libxss",
+                "glibc"
+            ]
         }
     },
     "repository": {
