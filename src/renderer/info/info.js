@@ -14,7 +14,7 @@ document.querySelector(".nm_title").textContent = title;
 // Buttons
 const buttonActions = {
     women: () => {
-        const nya = new Audio("../../assets/nya.mp3");
+        const nya = new Audio("../../assets/info-page/nya.mp3");
         nya.play();
         shell.openExternal("https://diram1x.ru");
     },

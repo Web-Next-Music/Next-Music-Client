@@ -3,8 +3,8 @@ const { app } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
-const appIcon = path.join(__dirname, "assets/icon-256.png");
-const trayIconPath = path.join(__dirname, "assets/nm-tray.png");
+const appIcon = path.join(__dirname, "assets/nm-icons/icon-256.png");
+const trayIconPath = path.join(__dirname, "assets/nm-icons/nm-tray.png");
 
 // Default configuration
 const defaultConfig = {
