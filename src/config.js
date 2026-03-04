@@ -11,6 +11,7 @@ const defaultConfig = {
     launchSettings: {
         loaderWindow: true,
         startMinimized: false,
+        splashScreen: true,
     },
 
     windowSettings: {

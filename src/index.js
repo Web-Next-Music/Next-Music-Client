@@ -10,6 +10,7 @@ const { createTray } = require("./lib/tray.js");
 const { checkForUpdates } = require("./lib/updater.js");
 const { presenceService } = require("./lib/richPresence.js");
 const { createWindow } = require("./lib/window/mainWindow/createWindow.js");
+const { setupSplashScreen } = require("./lib/splashScreen.js");
 const obsWidgetService = require("./lib/obsWidget/obsWidget.js");
 
 // IPC
@@ -72,6 +73,33 @@ app.whenReady().then(() => {
     const config = loadConfig();
 
     mainWindow = createWindow(config);
+
+    const listenAlong = config?.experimental?.listenAlong;
+    let targetUrl = "https://music.yandex.ru/";
+
+    if (listenAlong?.enable) {
+        const params = new URLSearchParams({
+            __blackIsland: listenAlong.blackIsland || null,
+            __wss: listenAlong.host
+                ? `${listenAlong.host}:${listenAlong.port || null}`
+                : "",
+            __room: listenAlong.roomId || "",
+            __clientId: listenAlong.clientId || "",
+            __avatarUrl: listenAlong.avatarUrl || "",
+        });
+        targetUrl = "https://music.yandex.ru/?" + params.toString();
+    }
+
+    if (
+        config.launchSettings?.splashScreen &&
+        !config.launchSettings?.startMinimized &&
+        !config.launchSettings?.loaderWindow
+    ) {
+        setupSplashScreen(mainWindow, targetUrl);
+    } else {
+        mainWindow.loadURL(targetUrl);
+    }
+
     setupIpcEvents(mainWindow);
 
     createTray(
