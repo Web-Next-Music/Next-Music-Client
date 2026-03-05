@@ -7,6 +7,7 @@ const path = require("path");
 const fs = require("fs");
 
 const titlebarFolder = path.resolve(__dirname, "..", "..", "titlebar");
+const apiFile = path.resolve(__dirname, "..", "..", "api.js");
 
 function createWindow(config) {
     const startMinimized = config?.launchSettings?.startMinimized;
@@ -93,6 +94,7 @@ function createWindow(config) {
 
     function onFinishLoad() {
         if (titleBarEnabled) injectTitleBar();
+        injectApi();
         injector(mainWindow, config);
         if (config.programSettings.addons.enable) {
             applyAddons(config);
@@ -101,6 +103,11 @@ function createWindow(config) {
         }
         closeLoaderWindow();
         if (!startMinimized) mainWindow.show();
+    }
+
+    function injectApi() {
+        const js = fs.readFileSync(apiFile, "utf-8");
+        mainWindow.webContents.executeJavaScript(js).catch(console.error);
     }
 
     function injectTitleBar() {
