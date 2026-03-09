@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Next Music Store</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/public/style.css" />
+    </head>
+    <body>
+        <header>
+            <div class="logo-icon"></div>
+            <div class="header-text">
+                <h1>Next Music <span>Store</span></h1>
+                <p>WEB-NEXT-MUSIC / EXTENSIONS</p>
+            </div>
+            <button class="store-close-btn" onclick="window.parent.postMessage('nextStore:close', '*')" title="Close">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                    <path d="M3 3l10 10M13 3L3 13" />
+                </svg>
+            </button>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('addons', this)">
+                <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <rect x="2" y="7" width="5" height="5" rx="1" />
+                    <rect x="13" y="7" width="5" height="5" rx="1" />
+                    <rect x="7.5" y="2" width="5" height="5" rx="1" />
+                    <rect x="7.5" y="13" width="5" height="5" rx="1" />
+                    <path d="M7 9.5H7.5M12.5 9.5H13M10 7V7.5M10 12.5V13" />
+                </svg>
+                Addons<span class="tc" id="tc-addons">…</span>
+            </button>
+            <button class="tab" onclick="switchTab('themes', this)">
+                <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="10" cy="10" r="7" />
+                    <path d="M10 3v14M3 10h14" stroke-dasharray="2 2" />
+                    <circle
+                        cx="10"
+                        cy="10"
+                        r="3"
+                        fill="currentColor"
+                        stroke="none"
+                        opacity=".4"
+                    />
+                </svg>
+                Themes<span class="tc" id="tc-themes">…</span>
+            </button>
+            <button
+                class="tab"
+                id="tab-installed"
+                onclick="switchTab('installed', this)"
+            >
+                <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M4 16h12M10 3v9M6 8l4 4 4-4" />
+                </svg>
+                Installed<span class="tc" id="tc-installed">…</span>
+            </button>
+        </div>
+
+        <div class="search-wrap">
+            <span class="search-icon">
+                <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                >
+                    <circle cx="6.5" cy="6.5" r="4" />
+                    <path d="M11 11l3 3" />
+                </svg>
+            </span>
+            <input
+                class="search-box"
+                id="search-box"
+                type="text"
+                placeholder="Search extensions…"
+                oninput="onSearch(this.value)"
+            />
+        </div>
+
+        <main>
+            <div class="panel active" id="panel-addons">
+                <div class="sec-label">Addons</div>
+                <div class="grid" id="grid-addons">SKELS_ADDONS</div>
+            </div>
+            <div class="panel" id="panel-themes">
+                <div class="sec-label">Themes</div>
+                <div class="grid" id="grid-themes">SKELS_THEMES</div>
+            </div>
+            </div>
+            <div class="panel" id="panel-installed">
+                <div class="sec-label">
+                    Installed
+                </div>
+                <div class="grid" id="grid-installed">
+                    <div class="empty">Loading…</div>
+                </div>
+            </div>
+        </main>
+
+        <div
+            class="modal-bg hidden"
+            id="modal-bg"
+            onclick="if (event.target === this) closeModal();"
+        >
+            <div class="modal">
+                <div class="modal-head">
+                    <span class="modal-title" id="modal-title">README</span>
+                    <button class="modal-close" onclick="closeModal()">
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                        >
+                            <path d="M3 3l10 10M13 3L3 13" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <div class="modal-loading">Loading…</div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/public/script.js"></script>
+    </body>
+</html>

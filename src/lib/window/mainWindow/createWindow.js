@@ -54,6 +54,7 @@ function createWindow(config) {
     });
 
     return mainWindow;
+
     // Remove CSP headers to avoid content blocking
     function setupCSP() {
         session.defaultSession.webRequest.onHeadersReceived(
@@ -84,23 +85,32 @@ function createWindow(config) {
     }
 
     function setupLoadHandlers() {
+        // Самый ранний инджект — сразу после построения DOM, не дожидаясь всех ресурсов
+        mainWindow.webContents.on("dom-ready", () => {
+            const url = mainWindow.webContents.getURL();
+            if (!url.includes("music.yandex.ru")) return;
+
+            injector(mainWindow, config);
+            if (config.programSettings.addons.enable) {
+                applyAddons(config);
+            } else {
+                console.log("Addons are disabled");
+            }
+        });
+
         mainWindow.webContents.on("did-finish-load", () => {
             const url = mainWindow.webContents.getURL();
             if (!url.includes("music.yandex.ru")) return;
             onFinishLoad();
         });
+
         mainWindow.webContents.on("did-fail-load", onFailLoad);
     }
 
     function onFinishLoad() {
         if (titleBarEnabled) injectTitleBar();
         injectApi();
-        injector(mainWindow, config);
-        if (config.programSettings.addons.enable) {
-            applyAddons(config);
-        } else {
-            console.log("Addons are disabled");
-        }
+        // injector и addons вызываются раньше в dom-ready
         closeLoaderWindow();
         if (!startMinimized) mainWindow.show();
     }
@@ -152,7 +162,10 @@ function createWindow(config) {
     ) {
         if (isMainFrame) {
             mainWindow.loadFile(
-                path.join(__dirname, "renderer/fallback/fallback.html"),
+                path.join(
+                    __dirname,
+                    "../../../renderer/fallback/fallback.html",
+                ),
             );
         }
     }

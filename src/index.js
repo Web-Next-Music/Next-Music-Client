@@ -11,6 +11,7 @@ const { checkForUpdates } = require("./lib/updater.js");
 const { presenceService } = require("./lib/richPresence.js");
 const { createWindow } = require("./lib/window/mainWindow/createWindow.js");
 const { setupSplashScreen } = require("./lib/splashScreen.js");
+const { setupStorePage } = require("./lib/storePage/storePage.js");
 const obsWidgetService = require("./lib/obsWidget/obsWidget.js");
 
 // IPC
@@ -98,6 +99,10 @@ app.whenReady().then(() => {
         setupSplashScreen(mainWindow, targetUrl);
     } else {
         mainWindow.loadURL(targetUrl);
+    }
+
+    if (config.programSettings?.addons?.enable) {
+        setupStorePage();
     }
 
     setupIpcEvents(mainWindow);

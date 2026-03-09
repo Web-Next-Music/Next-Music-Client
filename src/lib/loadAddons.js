@@ -15,6 +15,9 @@ function applyAddons() {
 
     console.log("Loading addons:");
 
+    // Запускаем сервер ассетов один раз перед загрузкой аддонов
+    startAssetServer();
+
     // --- Local CSS ---
     loadFilesFromDirectory(addonsDirectory, ".css", (cssContent, filePath) => {
         console.log(`Load CSS: ${path.relative(addonsDirectory, filePath)}`);
@@ -78,7 +81,8 @@ function applyAddons() {
 }
 
 // Setup assets server
-const ASSETS = [];
+// Маппинг: имя аддона (папки) → абсолютный путь к папке аддона
+const ADDON_DIRS = new Map();
 let serverStarted = false;
 
 function startAssetServer() {
@@ -114,9 +118,14 @@ function startAssetServer() {
                 return res.end("Missing name");
             }
 
-            name = decodeURIComponent(name.replace(/\+/g, " "));
+            // Ищем реальный путь к папке аддона по имени
+            const addonDir = ADDON_DIRS.get(name);
+            if (!addonDir) {
+                res.writeHead(404);
+                return res.end("Addon not found");
+            }
 
-            const assetsRoot = path.join(addonsDirectory, name, "assets");
+            const assetsRoot = path.join(addonDir, "assets");
 
             if (!fs.existsSync(assetsRoot)) {
                 res.writeHead(404);
@@ -157,58 +166,14 @@ function startAssetServer() {
                 return res.end("Missing name");
             }
 
-            // декодируем имя
-            name = decodeURIComponent(name.replace(/\+/g, " "));
-
-            // путь к handleEvents.json в папке родителя
-            const handleFile = path.join(
-                addonsDirectory,
-                name,
-                "handleEvents.json",
-            );
-
-            if (!fs.existsSync(handleFile)) {
-                console.error("[get_handle] File not found:", handleFile);
+            // Ищем реальный путь к папке аддона по имени
+            const addonDir = ADDON_DIRS.get(name);
+            if (!addonDir) {
                 res.writeHead(404);
-                return res.end("handleEvents.json not found");
+                return res.end("Addon not found");
             }
 
-            // читаем файл и сразу оборачиваем в { data: ... }
-            fs.readFile(handleFile, "utf8", (err, fileContent) => {
-                if (err) {
-                    res.writeHead(500);
-                    return res.end("Server error");
-                }
-
-                try {
-                    const parsed = JSON.parse(fileContent); // проверяем JSON
-                    const wrapped = { data: parsed }; // оборачиваем
-                    res.writeHead(200, { "Content-Type": "application/json" });
-                    res.end(JSON.stringify(wrapped));
-                } catch (e) {
-                    console.error("[get_handle] Invalid JSON:", e);
-                    res.writeHead(500);
-                    res.end("Invalid JSON in handleEvents.json");
-                }
-            });
-
-            return;
-        }
-        if (pathname === "/get_handle") {
-            if (!name) {
-                res.writeHead(400);
-                return res.end("Missing name");
-            }
-
-            // декодируем имя
-            name = decodeURIComponent(name.replace(/\+/g, " "));
-
-            // путь к handleEvents.json в папке родителя
-            const handleFile = path.join(
-                addonsDirectory,
-                name,
-                "handleEvents.json",
-            );
+            const handleFile = path.join(addonDir, "handleEvents.json");
 
             if (!fs.existsSync(handleFile)) {
                 console.error("[get_handle] File not found:", handleFile);
@@ -254,14 +219,15 @@ function loadFilesFromDirectory(directory, extension, callback) {
         for (const entry of entries) {
             const fullPath = path.join(directory, entry.name);
 
-            // нашли assets
+            // нашли assets — регистрируем папку аддона по её имени
             if (entry.isDirectory() && entry.name === "assets") {
-                ASSETS.push({
-                    path: fullPath,
-                    parent: path.basename(directory),
-                });
-
-                startAssetServer();
+                const addonName = path.basename(directory);
+                if (!ADDON_DIRS.has(addonName)) {
+                    ADDON_DIRS.set(addonName, directory);
+                    console.log(
+                        `[Assets] Registered addon: ${addonName} → ${directory}`,
+                    );
+                }
                 continue;
             }
 

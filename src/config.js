@@ -68,6 +68,10 @@ const injectList = [
         condition: (config) => config?.experimental?.listenAlong?.enable,
     },
     {
+        file: "nextStore.js",
+        condition: (config) => config?.programSettings?.addons?.enable,
+    },
+    {
         file: "nextTitle.js",
         condition: (config) => config?.windowSettings?.nextTitle,
     },
