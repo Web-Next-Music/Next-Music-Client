@@ -242,21 +242,15 @@ function loadFilesFromDirectory(directory, extension, callback) {
             const isDirectory = stat.isDirectory();
             const isFile = stat.isFile();
 
-            // нашли assets — регистрируем папку аддона по её имени
-            if (isDirectory && entry.name === "assets") {
-                const addonName = path.basename(directory);
-                if (!ADDON_DIRS.has(addonName)) {
-                    ADDON_DIRS.set(addonName, directory);
-                    console.log(
-                        `[Assets] Registered addon: ${addonName} → ${directory}`,
-                    );
-                }
-                continue;
-            }
-
-            // пропускаем папки с "!"
             if (isDirectory) {
                 if (!entry.name.startsWith("!")) {
+                    // Регистрируем папку аддона при входе в неё (независимо от наличия assets)
+                    if (!ADDON_DIRS.has(entry.name)) {
+                        ADDON_DIRS.set(entry.name, fullPath);
+                        console.log(
+                            `[Assets] Registered addon: ${entry.name} → ${fullPath}`,
+                        );
+                    }
                     loadFilesFromDirectory(fullPath, extension, callback);
                 }
                 continue;
