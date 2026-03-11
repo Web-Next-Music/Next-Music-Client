@@ -1,5 +1,5 @@
 (() => {
-    const LOCAL_URL = "http://127.0.0.1:5037/";
+    const STORE_HTML = window.__nextStoreHtml;
     const ICON_HREF = "/icons/sprite.svg#search_m";
 
     function getPlusLink() {
@@ -10,7 +10,6 @@
     }
 
     function patchLink(a) {
-        // Текст
         const div = Array.from(a.querySelectorAll("div")).find((d) =>
             d.textContent.trim(),
         );
@@ -18,14 +17,12 @@
             div.textContent = "Next Store";
         }
 
-        // Иконка
         const use = a.querySelector("use");
         if (use && use.getAttribute("href") !== ICON_HREF) {
             use.setAttribute("xlink:href", ICON_HREF);
             use.setAttribute("href", ICON_HREF);
         }
 
-        // Клик (только один раз)
         if (!a.dataset.nextStore) {
             a.dataset.nextStore = "true";
             a.addEventListener("click", (e) => {
@@ -65,7 +62,7 @@
                 `;
 
                 const iframe = document.createElement("iframe");
-                iframe.src = LOCAL_URL;
+                iframe.srcdoc = STORE_HTML;
                 iframe.style.cssText = `
                     width:100%;
                     height:100%;
@@ -110,7 +107,6 @@
     function watchLink(a) {
         patchLink(a);
 
-        // Наблюдаем только за конкретными элементами: div с текстом и use с иконкой
         const targets = [];
 
         const div = Array.from(a.querySelectorAll("div")).find((d) =>
@@ -132,7 +128,6 @@
         });
     }
 
-    // Ждём появления plus-ссылки
     const bodyObserver = new MutationObserver(() => {
         const a = getPlusLink();
         if (a && !a.dataset.nextStore) {
@@ -142,7 +137,6 @@
 
     bodyObserver.observe(document.body, { childList: true, subtree: true });
 
-    // Проверяем сразу, вдруг уже есть
     const a = getPlusLink();
     if (a) watchLink(a);
 })();

@@ -1,10 +1,8 @@
-const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, shell } = require("electron");
+const { BrowserWindow, shell, protocol, net } = require("electron");
 
-const PORT = 5037;
 const GITHUB_OWNER = "Web-Next-Music";
 const GITHUB_REPO = "Next-Music-Extensions";
 
@@ -108,7 +106,6 @@ async function loadGitmodules(owner, repo) {
     return {};
 }
 
-// Limit concurrent GitHub API requests to avoid rate limiting
 async function pLimit(tasks, limit = 3) {
     const results = [];
     let i = 0;
@@ -123,7 +120,6 @@ async function pLimit(tasks, limit = 3) {
     return results;
 }
 
-// Cache for getFolderMeta results
 const metaCache = new Map();
 
 async function downloadTree(contentPath, destDir, owner, repo, gitmodules) {
@@ -172,7 +168,6 @@ async function getSection(section) {
     const result = [];
     const seenNames = new Set();
 
-    // 1. Submodules from .gitmodules
     for (const [modPath, modUrl] of Object.entries(gitmodules)) {
         if (!modPath.startsWith(prefix)) continue;
         const name = modPath.slice(prefix.length);
@@ -186,7 +181,6 @@ async function getSection(section) {
         });
     }
 
-    // 2. Regular dirs from GitHub Contents API
     try {
         const items = await ghContents(GITHUB_OWNER, GITHUB_REPO, section);
         for (const item of items) {
@@ -225,7 +219,6 @@ async function getFolderMeta(f) {
         }
         const items = await ghContents(owner, repo, p);
 
-        // Pick best image from a list: image.* > icon.* > any image file
         function pickImg(list) {
             const isImg = (n) => /\.(png|jpe?g|gif|webp|svg)$/i.test(n);
             return (
@@ -246,10 +239,8 @@ async function getFolderMeta(f) {
             );
         }
 
-        // 1. Try root first
         let img = pickImg(items);
 
-        // 2. If not found, look inside subdirs that contain .css or .js files
         if (!img) {
             const subdirs = items.filter((i) => i.type === "dir");
             for (const sub of subdirs) {
@@ -266,7 +257,7 @@ async function getFolderMeta(f) {
                         }
                     }
                 } catch {
-                    /* skip inaccessible subdir */
+                    // skip inaccessible subdir
                 }
             }
         }
@@ -311,16 +302,14 @@ function getLocalCommitHash(addonName) {
                 ) || addonName;
         const headFile = path.join(addonsDirectory, raw, ".git", "HEAD");
         if (!fs.existsSync(headFile)) {
-            // Try packed-refs or ORIG_HEAD for non-full clones
             const commitFile = path.join(addonsDirectory, raw, ".git-commit");
             if (fs.existsSync(commitFile))
                 return fs.readFileSync(commitFile, "utf8").trim();
             return null;
         }
         const head = fs.readFileSync(headFile, "utf8").trim();
-        // Detached HEAD — directly contains the commit SHA
         if (!head.startsWith("ref:")) return head.length >= 40 ? head : null;
-        const refPath = head.slice(5).trim(); // e.g. refs/heads/main
+        const refPath = head.slice(5).trim();
         const refFile = path.join(
             addonsDirectory,
             raw,
@@ -329,7 +318,6 @@ function getLocalCommitHash(addonName) {
         );
         if (fs.existsSync(refFile))
             return fs.readFileSync(refFile, "utf8").trim();
-        // Try packed-refs
         const packedRefs = path.join(
             addonsDirectory,
             raw,
@@ -406,7 +394,6 @@ function getCustomEntries(knownNames) {
                 if (isDir) {
                     const files = fs.readdirSync(fullPath);
 
-                    // Pick best image: image.* > icon.* > any image
                     const isImgFile = (f) =>
                         /\.(png|jpe?g|gif|webp|svg)$/i.test(f);
                     function pickImgFile(list) {
@@ -422,10 +409,8 @@ function getCustomEntries(knownNames) {
                         );
                     }
 
-                    // 1. Try root
                     let imgFile = pickImgFile(files);
 
-                    // 2. Search inside subdirs that contain .css or .js
                     if (!imgFile) {
                         const subdirs = files.filter((f) => {
                             try {
@@ -446,22 +431,22 @@ function getCustomEntries(knownNames) {
                                 if (hasScript) {
                                     const found = pickImgFile(subFiles);
                                     if (found) {
-                                        logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;
+                                        logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;
                                         break;
                                     }
                                 }
                             } catch {
-                                /* skip */
+                                // skip
                             }
                         }
                     }
 
                     if (imgFile && !logo)
-                        logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(imgFile)}`;
+                        logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(imgFile)}`;
 
                     const rmFile = files.find((f) => /^readme\.md$/i.test(f));
                     if (rmFile)
-                        readme = `/api/local-readme?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rmFile)}`;
+                        readme = `nextstore://app/api/local-readme?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rmFile)}`;
                 }
                 return { name: clean, raw: n, enabled, isDir, logo, readme };
             });
@@ -492,6 +477,7 @@ function SKELS(n) {
 // ─── README cache ─────────────────────────────────────────────────────────────
 
 const readmeCache = new Map();
+
 async function fetchReadme(url) {
     if (readmeCache.has(url)) return readmeCache.get(url);
     const r = await httpsGet(url);
@@ -517,25 +503,32 @@ const IMG_MIME = {
     ".svg": "image/svg+xml",
 };
 
-// ─── Server ───────────────────────────────────────────────────────────────────
+// ─── Request handler (shared logic, replaces HTTP server) ─────────────────────
 
-const server = http.createServer(async (req, res) => {
-    const urlPath = req.url.split("?")[0];
-    const qp = Object.fromEntries(new URL("http://x" + req.url).searchParams);
+async function handleRequest(method, urlPath, qp, getBody) {
+    const json = (d, status = 200) => ({
+        status,
+        headers: { "Content-Type": "application/json" },
+        body: Buffer.from(JSON.stringify(d)),
+    });
+    const text = (t, ct = "text/plain; charset=utf-8") => ({
+        status: 200,
+        headers: { "Content-Type": ct },
+        body: Buffer.from(t, "utf8"),
+    });
+    const binary = (buf, ct) => ({
+        status: 200,
+        headers: { "Content-Type": ct },
+        body: buf,
+    });
+    const notFound = () => ({
+        status: 404,
+        headers: {},
+        body: Buffer.alloc(0),
+    });
 
-    const send = (d, code = 200, ct = "application/json") => {
-        res.writeHead(code, { "Content-Type": ct });
-        res.end(typeof d === "string" ? d : JSON.stringify(d));
-    };
-    const body = () =>
-        new Promise((ok) => {
-            let b = "";
-            req.on("data", (c) => (b += c));
-            req.on("end", () => ok(b));
-        });
-
-    // ── Serve static files from /public ──
-    if (req.method === "GET" && urlPath.startsWith("/public/")) {
+    // ── Static files ──
+    if (method === "GET" && urlPath.startsWith("/public/")) {
         const filePath = path.join(
             PUBLIC_DIR,
             urlPath.slice("/public/".length),
@@ -543,47 +536,27 @@ const server = http.createServer(async (req, res) => {
         if (fs.existsSync(filePath)) {
             const ext = path.extname(filePath).toLowerCase();
             const ct = MIME[ext] || "application/octet-stream";
-            res.writeHead(200, { "Content-Type": ct });
-            return res.end(fs.readFileSync(filePath));
+            return binary(fs.readFileSync(filePath), ct);
         }
-        res.writeHead(404);
-        return res.end("Not found");
+        return notFound();
     }
 
-    // ── Serve HTML page ──
-    if (req.method === "GET" && urlPath === "/") {
-        try {
-            const htmlPath = path.join(PUBLIC_DIR, "index.html");
-            let html = fs.readFileSync(htmlPath, "utf8");
-            html = html
-                .replace("SKELS_ADDONS", SKELS(6))
-                .replace("SKELS_THEMES", SKELS(6));
-            return send(html, 200, "text/html; charset=utf-8");
-        } catch (e) {
-            return send(
-                `<pre>Failed to load page: ${e.message}</pre>`,
-                500,
-                "text/html",
-            );
-        }
-    }
+    // ── Installed entries ──
+    if (method === "GET" && urlPath === "/api/installed")
+        return json(installedEntries());
 
-    // ── API: installed entries (sync FS — must be before any async handlers) ──
-    if (req.method === "GET" && urlPath === "/api/installed")
-        return send(installedEntries());
-
-    // ── API: custom local entries (sync FS — must be before any async handlers) ──
-    if (req.method === "GET" && urlPath === "/api/custom") {
+    // ── Custom local entries ──
+    if (method === "GET" && urlPath === "/api/custom") {
         try {
             const known = qp.known ? JSON.parse(qp.known) : [];
-            return send(getCustomEntries(known));
+            return json(getCustomEntries(known));
         } catch (e) {
-            return send({ error: e.message }, 500);
+            return json({ error: e.message }, 500);
         }
     }
 
-    // ── API: list repo section ──
-    if (req.method === "GET" && urlPath.startsWith("/api/section/")) {
+    // ── List repo section ──
+    if (method === "GET" && urlPath.startsWith("/api/section/")) {
         const section = urlPath.slice("/api/section/".length);
         try {
             const items = await getSection(section);
@@ -600,104 +573,76 @@ const server = http.createServer(async (req, res) => {
                 }),
                 3,
             );
-            return send(result);
+            return json(result);
         } catch (e) {
-            return send({ error: e.message }, 500);
+            return json({ error: e.message }, 500);
         }
     }
 
-    // ── API: proxy remote logo ──
-    if (req.method === "GET" && urlPath === "/api/logo") {
-        if (!qp.url) {
-            res.writeHead(404);
-            return res.end();
-        }
+    // ── Proxy remote logo ──
+    if (method === "GET" && urlPath === "/api/logo") {
+        if (!qp.url) return notFound();
         try {
             const r = await httpsGet(qp.url);
-            res.writeHead(200, {
-                "Content-Type": r.headers["content-type"] || "image/png",
-            });
-            return res.end(r.body);
+            return binary(r.body, r.headers["content-type"] || "image/png");
         } catch {
-            res.writeHead(404);
-            return res.end();
+            return notFound();
         }
     }
 
-    // ── API: serve local logo ──
-    if (req.method === "GET" && urlPath === "/api/local-logo") {
+    // ── Serve local logo ──
+    if (method === "GET" && urlPath === "/api/local-logo") {
         try {
             const { name, file } = qp;
-            if (!name || !file) {
-                res.writeHead(400);
-                return res.end();
-            }
+            if (!name || !file) return notFound();
             const raw =
                 fs
                     .readdirSync(addonsDirectory)
                     .find((n) => n.replace(/^!/, "") === name) || name;
             const filePath = path.join(addonsDirectory, raw, file);
-            if (!fs.existsSync(filePath)) {
-                res.writeHead(404);
-                return res.end();
-            }
-            res.writeHead(200, {
-                "Content-Type":
-                    IMG_MIME[path.extname(file).toLowerCase()] || "image/png",
-            });
-            return res.end(fs.readFileSync(filePath));
+            if (!fs.existsSync(filePath)) return notFound();
+            return binary(
+                fs.readFileSync(filePath),
+                IMG_MIME[path.extname(file).toLowerCase()] || "image/png",
+            );
         } catch {
-            res.writeHead(404);
-            return res.end();
+            return notFound();
         }
     }
 
-    // ── API: serve local README ──
-    if (req.method === "GET" && urlPath === "/api/local-readme") {
+    // ── Serve local README ──
+    if (method === "GET" && urlPath === "/api/local-readme") {
         try {
             const { name, file } = qp;
-            if (!name || !file) {
-                res.writeHead(400);
-                return res.end();
-            }
+            if (!name || !file) return notFound();
             const raw =
                 fs
                     .readdirSync(addonsDirectory)
                     .find((n) => n.replace(/^!/, "") === name) || name;
             const filePath = path.join(addonsDirectory, raw, file);
-            if (!fs.existsSync(filePath)) {
-                res.writeHead(404);
-                return res.end();
-            }
-            res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-            return res.end(fs.readFileSync(filePath, "utf8"));
+            if (!fs.existsSync(filePath)) return notFound();
+            return text(fs.readFileSync(filePath, "utf8"));
         } catch {
-            res.writeHead(404);
-            return res.end("Not found");
+            return notFound();
         }
     }
 
-    // ── API: proxy remote README ──
-    if (req.method === "GET" && urlPath === "/api/readme") {
-        if (!qp.url) {
-            res.writeHead(404);
-            return res.end();
-        }
+    // ── Proxy remote README ──
+    if (method === "GET" && urlPath === "/api/readme") {
+        if (!qp.url) return notFound();
         try {
             const md = await fetchReadme(qp.url);
-            res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-            return res.end(md);
+            return text(md);
         } catch {
-            res.writeHead(404);
-            return res.end("Not found");
+            return notFound();
         }
     }
 
-    // ── API: download addon ──
-    if (req.method === "POST" && urlPath === "/api/download") {
+    // ── Download addon ──
+    if (method === "POST" && urlPath === "/api/download") {
         try {
             const { name, folderPath, submodule, subUrl } = JSON.parse(
-                await body(),
+                await getBody(),
             );
             if (!name) throw new Error("Missing name");
             const dest = path.join(addonsDirectory, name);
@@ -712,7 +657,6 @@ const server = http.createServer(async (req, res) => {
                     throw new Error("Cannot parse submodule URL: " + subUrl);
                 const subGm = await loadGitmodules(m[1], m[2]);
                 await downloadTree("", dest, m[1], m[2], subGm);
-                // Save remote HEAD commit hash for future update checks
                 try {
                     const sha = await getRemoteHeadCommit(m[1], m[2]);
                     if (sha)
@@ -722,7 +666,7 @@ const server = http.createServer(async (req, res) => {
                             "utf8",
                         );
                 } catch {
-                    /* non-critical */
+                    // non-critical
                 }
             } else {
                 const gm = await loadGitmodules(GITHUB_OWNER, GITHUB_REPO);
@@ -734,24 +678,24 @@ const server = http.createServer(async (req, res) => {
                     gm,
                 );
             }
-            return send({ ok: true });
+            return json({ ok: true });
         } catch (e) {
-            return send({ ok: false, error: e.message }, 500);
+            return json({ ok: false, error: e.message }, 500);
         }
     }
 
-    // ── API: check for submodule update ──
-    if (req.method === "GET" && urlPath === "/api/check-update") {
+    // ── Check for submodule update ──
+    if (method === "GET" && urlPath === "/api/check-update") {
         try {
             const { name, subUrl } = qp;
-            if (!name || !subUrl) return send({ hasUpdate: false });
+            if (!name || !subUrl) return json({ hasUpdate: false });
             const normalized = normalizeGitUrl(decodeURIComponent(subUrl));
             const m =
                 normalized &&
                 normalized.match(
                     /github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
                 );
-            if (!m) return send({ hasUpdate: false });
+            if (!m) return json({ hasUpdate: false });
             const [, owner, repo] = m;
             const [remoteHash, localHash] = await Promise.all([
                 getRemoteHeadCommit(owner, repo),
@@ -759,45 +703,43 @@ const server = http.createServer(async (req, res) => {
             ]);
             const hasUpdate =
                 !!remoteHash && !!localHash && remoteHash !== localHash;
-            return send({ hasUpdate, remoteHash, localHash });
+            return json({ hasUpdate, remoteHash, localHash });
         } catch (e) {
-            return send({ hasUpdate: false, error: e.message });
+            return json({ hasUpdate: false, error: e.message });
         }
     }
 
-    // ── API: toggle enable/disable ──
-    if (req.method === "POST" && urlPath === "/api/toggle") {
+    // ── Toggle enable/disable ──
+    if (method === "POST" && urlPath === "/api/toggle") {
         try {
-            const { name } = JSON.parse(await body());
+            const { name } = JSON.parse(await getBody());
             const enabled = fsToggle(name);
-            return send({ ok: true, enabled });
+            return json({ ok: true, enabled });
         } catch (e) {
-            return send({ ok: false, error: e.message }, 500);
+            return json({ ok: false, error: e.message }, 500);
         }
     }
 
-    // ── API: delete addon ──
-    if (req.method === "POST" && urlPath === "/api/delete") {
+    // ── Delete addon ──
+    if (method === "POST" && urlPath === "/api/delete") {
         try {
-            const { name } = JSON.parse(await body());
+            const { name } = JSON.parse(await getBody());
             fsDelete(name);
-            return send({ ok: true });
+            return json({ ok: true });
         } catch (e) {
-            return send({ ok: false, error: e.message }, 500);
+            return json({ ok: false, error: e.message }, 500);
         }
     }
 
-    // ── API: get CSS vars from main window ──
-    if (req.method === "GET" && urlPath === "/api/theme-vars") {
+    // ── Get CSS vars from main window ──
+    if (method === "GET" && urlPath === "/api/theme-vars") {
         try {
             const wins = BrowserWindow.getAllWindows();
             const mainWin =
                 wins.find(
-                    (w) =>
-                        !w.webContents.getURL().includes("127.0.0.1:" + PORT),
+                    (w) => !w.webContents.getURL().includes("nextstore://"),
                 ) || null;
-            if (!mainWin) return send({});
-
+            if (!mainWin) return json({});
             const vars = await mainWin.webContents.executeJavaScript(`
             (() => {
                 const tmp = document.createElement('div');
@@ -812,57 +754,102 @@ const server = http.createServer(async (req, res) => {
                     }
                 }
                 return vars;
-            })()
-            `);
-
-            return send(vars);
-        } catch (e) {
-            return send({});
+            })()`);
+            return json(vars);
+        } catch {
+            return json({});
         }
     }
 
-    // ── API: reload main window ──
-    // ── API: open URL in system browser ──
-    if (req.method === "POST" && urlPath === "/api/open-url") {
+    // ── Open URL in system browser ──
+    if (method === "POST" && urlPath === "/api/open-url") {
         try {
-            const { url } = JSON.parse(await body());
+            const { url } = JSON.parse(await getBody());
             if (!url || !url.startsWith("https://"))
                 throw new Error("Invalid URL");
             await shell.openExternal(url);
-            return send({ ok: true });
+            return json({ ok: true });
         } catch (e) {
-            return send({ ok: false, error: e.message }, 500);
+            return json({ ok: false, error: e.message }, 500);
         }
     }
 
-    if (req.method === "POST" && urlPath === "/api/reload") {
+    // ── Reload main window ──
+    if (method === "POST" && urlPath === "/api/reload") {
         try {
             const wins = BrowserWindow.getAllWindows();
-            if (wins.length > 0) {
-                // Reload the focused/main window (not the store webview)
-                const mainWin =
-                    wins.find(
-                        (w) =>
-                            !w.webContents
-                                .getURL()
-                                .includes("127.0.0.1:" + PORT),
-                    ) || wins[0];
-                mainWin.webContents.reload();
-            }
-            return send({ ok: true });
+            const mainWin =
+                wins.find(
+                    (w) => !w.webContents.getURL().includes("nextstore://"),
+                ) || wins[0];
+            if (mainWin) mainWin.webContents.reload();
+            return json({ ok: true });
         } catch (e) {
-            return send({ ok: false, error: e.message }, 500);
+            return json({ ok: false, error: e.message }, 500);
         }
     }
 
-    res.writeHead(404);
-    res.end("Not found");
-});
+    return notFound();
+}
+
+// ─── Electron protocol handler ────────────────────────────────────────────────
 
 function setupStorePage() {
-    server.listen(PORT, "127.0.0.1", () => {
-        console.log(`[Store] Running at http://127.0.0.1:${PORT}`);
+    protocol.handle("nextstore", async (request) => {
+        const url = new URL(request.url);
+        const urlPath = url.pathname;
+        const qp = Object.fromEntries(url.searchParams);
+        const method = request.method;
+
+        const getBody = () =>
+            request
+                .arrayBuffer()
+                .then((ab) => Buffer.from(ab).toString("utf8"));
+
+        try {
+            const result = await handleRequest(method, urlPath, qp, getBody);
+            return new Response(result.body, {
+                status: result.status,
+                headers: result.headers,
+            });
+        } catch (e) {
+            return new Response(JSON.stringify({ error: e.message }), {
+                status: 500,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
     });
 }
 
-module.exports = { setupStorePage, server, addonsDirectory };
+// ─── HTML injection ───────────────────────────────────────────────────────────
+
+function getStoreHtml() {
+    const { pathToFileURL } = require("url");
+    const htmlPath = path.join(PUBLIC_DIR, "index.html");
+    let html = fs.readFileSync(htmlPath, "utf8");
+    html = html
+        .replace("SKELS_ADDONS", SKELS(6))
+        .replace("SKELS_THEMES", SKELS(6))
+        .replace(
+            /\/(public\/[^"']+)/g,
+            (_, p) =>
+                pathToFileURL(path.join(PUBLIC_DIR, p.replace(/^public\//, "")))
+                    .href,
+        )
+        .replace("<head>", `<head>\n        <base href="nextstore://app/">`);
+    return html;
+}
+
+function injectStoreHtml(win) {
+    const html = getStoreHtml();
+    win.webContents.executeJavaScript(
+        `window.__nextStoreHtml = ${JSON.stringify(html)};`,
+    );
+}
+
+module.exports = {
+    setupStorePage,
+    getStoreHtml,
+    injectStoreHtml,
+    addonsDirectory,
+};

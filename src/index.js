@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, protocol } = require("electron");
 
 // Config
 const { loadConfig } = require("./config");
@@ -11,7 +11,10 @@ const { checkForUpdates } = require("./lib/updater.js");
 const { presenceService } = require("./lib/richPresence.js");
 const { createWindow } = require("./lib/window/mainWindow/createWindow.js");
 const { setupSplashScreen } = require("./lib/splashScreen.js");
-const { setupStorePage } = require("./lib/storePage/storePage.js");
+const {
+    setupStorePage,
+    injectStoreHtml,
+} = require("./lib/storePage/storePage.js");
 const obsWidgetService = require("./lib/obsWidget/obsWidget.js");
 
 // IPC
@@ -28,6 +31,19 @@ if (process.platform === "linux") {
 // Normalize color profile across platforms
 app.commandLine.appendSwitch("force-color-profile", "srgb");
 
+// Register nextstore:// as a privileged scheme before app is ready
+protocol.registerSchemesAsPrivileged([
+    {
+        scheme: "nextstore",
+        privileges: {
+            standard: true,
+            secure: true,
+            supportFetchAPI: true,
+            corsEnabled: true,
+        },
+    },
+]);
+
 // Allow self-signed/spoofed certificates
 app.on(
     "certificate-error",
@@ -39,7 +55,6 @@ app.on(
 
 // Single Instance Lock
 const isSingleInstance = app.requestSingleInstanceLock();
-
 if (!isSingleInstance) {
     app.quit();
     return;
@@ -72,7 +87,6 @@ app.on("activate", () => {
 // App Initialization
 app.whenReady().then(() => {
     const config = loadConfig();
-
     mainWindow = createWindow(config);
 
     const listenAlong = config?.experimental?.listenAlong;
@@ -103,6 +117,9 @@ app.whenReady().then(() => {
 
     if (config.programSettings?.addons?.enable) {
         setupStorePage();
+        mainWindow.webContents.on("did-finish-load", () =>
+            injectStoreHtml(mainWindow),
+        );
     }
 
     setupIpcEvents(mainWindow);
