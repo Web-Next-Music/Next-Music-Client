@@ -118,46 +118,58 @@ function startAssetServer() {
                 return res.end("Missing name");
             }
 
-            // Ищем реальный путь к папке аддона по имени
             const addonDir = ADDON_DIRS.get(name);
             if (!addonDir) {
                 res.writeHead(404);
                 return res.end("Addon not found");
             }
 
-            const assetsRoot = path.join(addonDir, "assets");
+            // Ищем папку assets рекурсивно внутри addonDir
+            function findAssetsDir(dir) {
+                if (!fs.existsSync(dir)) return null;
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    try {
+                        const stat = fs.statSync(fullPath);
+                        if (stat.isDirectory()) {
+                            if (entry.name === "assets") return fullPath;
+                            const found = findAssetsDir(fullPath);
+                            if (found) return found;
+                        }
+                    } catch {
+                        continue;
+                    }
+                }
+                return null;
+            }
 
-            if (!fs.existsSync(assetsRoot)) {
+            const assetsRoot = findAssetsDir(addonDir);
+            if (!assetsRoot) {
                 res.writeHead(404);
                 return res.end("Assets folder not found");
             }
 
-            // Рекурсивный поиск файла в assets (с поддержкой симлинков)
             function findFileRecursive(dir) {
                 const entries = fs.readdirSync(dir, { withFileTypes: true });
                 for (const entry of entries) {
                     const fullPath = path.join(dir, entry.name);
-
-                    // Разрешаем симлинки через stat (следует по ссылке)
-                    let stat;
                     try {
-                        stat = fs.statSync(fullPath);
+                        const stat = fs.statSync(fullPath);
+                        if (stat.isFile() && entry.name === fileName)
+                            return fullPath;
+                        if (stat.isDirectory()) {
+                            const found = findFileRecursive(fullPath);
+                            if (found) return found;
+                        }
                     } catch {
-                        continue; // битая ссылка — пропускаем
-                    }
-
-                    if (stat.isFile() && entry.name === fileName)
-                        return fullPath;
-                    if (stat.isDirectory()) {
-                        const found = findFileRecursive(fullPath);
-                        if (found) return found;
+                        continue;
                     }
                 }
                 return null;
             }
 
             const filePath = findFileRecursive(assetsRoot);
-
             if (!filePath) {
                 res.writeHead(404);
                 return res.end("File not found in assets");
@@ -242,15 +254,38 @@ function loadFilesFromDirectory(directory, extension, callback) {
             const isDirectory = stat.isDirectory();
             const isFile = stat.isFile();
 
+            // нашли assets — регистрируем папку аддона по её имени
+            if (isDirectory && entry.name === "assets") {
+                const addonName = path.basename(directory);
+                if (!ADDON_DIRS.has(addonName)) {
+                    ADDON_DIRS.set(addonName, directory);
+                    console.log(
+                        `[Assets] Registered addon: ${addonName} → ${directory}`,
+                    );
+                }
+                // Don't skip — still recurse into assets? No, but DO continue.
+                continue;
+            }
+
+            // Register any named subdirectory as a potential addon dir immediately on entry
+            if (isDirectory && !entry.name.startsWith("!")) {
+                // Регистрируем только папки первого уровня (прямые дети addonsDirectory)
+                if (
+                    directory === addonsDirectory &&
+                    !ADDON_DIRS.has(entry.name)
+                ) {
+                    ADDON_DIRS.set(entry.name, fullPath);
+                    console.log(
+                        `[Assets] Pre-registered addon: ${entry.name} → ${fullPath}`,
+                    );
+                }
+                loadFilesFromDirectory(fullPath, extension, callback);
+                continue;
+            }
+
+            // пропускаем папки с "!"
             if (isDirectory) {
                 if (!entry.name.startsWith("!")) {
-                    // Регистрируем папку аддона при входе в неё (независимо от наличия assets)
-                    if (!ADDON_DIRS.has(entry.name)) {
-                        ADDON_DIRS.set(entry.name, fullPath);
-                        console.log(
-                            `[Assets] Registered addon: ${entry.name} → ${fullPath}`,
-                        );
-                    }
                     loadFilesFromDirectory(fullPath, extension, callback);
                 }
                 continue;
