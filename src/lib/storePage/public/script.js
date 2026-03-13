@@ -1,3 +1,27 @@
+// ── Button order configuration ────────────────────────────────────────────────
+
+//   "toggle"   — кнопка Enable / Disable
+//   "delete"   — кнопка удаления (иконка корзины)
+//   "settings" — кнопка открытия handleEvents.json (показывается только если файл есть)
+//   "download" — кнопка Download (только для не-установленных элементов)
+//   "update" — кнопка Update; при её наличии "toggle" автоматически сворачивается в иконку
+//   "readme"   — иконка README в заголовке карточки (не в .card-actions, а в .card-name)
+
+// Карточки из магазина (вкладки Addons / Themes) — когда элемент УЖЕ установлен
+const CARD_BUTTONS_INSTALLED = ["toggle", "settings", "delete"];
+
+// Карточки из магазина — когда элемент ЕЩЁ НЕ установлен
+const CARD_BUTTONS_NOT_INSTALLED = ["download", "settings"];
+
+// Карточки на вкладке Custom / Installed (локальные файлы и папки)
+const CARD_BUTTONS_CUSTOM = ["toggle", "settings", "delete"];
+
+// Кнопки, которые появляются после успешного скачивания (inline-обновление)
+const CARD_BUTTONS_AFTER_DOWNLOAD = ["toggle", "settings", "delete"];
+
+// Кнопки установленной карточки, когда доступно обновление
+const CARD_BUTTONS_WITH_UPDATE = ["update", "toggle", "settings", "delete"];
+
 // ── Apply CSS vars from parent window ────────────────────────────────────────
 (async () => {
     const vars = await fetch("/api/theme-vars").then((r) => r.json());
@@ -433,6 +457,48 @@ async function checkAndShowSettingsBtn(name, btnId, isInstalled) {
     }
 }
 
+// ── Button renderer (использует массивы порядка из начала файла) ──────────────
+function renderButtons(order, ctx) {
+    // ctx = { name, enabled, inst, cid, settingsBtnId, dlArg, isIconMode }
+    return order
+        .map((key) => {
+            switch (key) {
+                case "toggle": {
+                    const tc = ctx.enabled ? "btn-on" : "btn-off";
+                    const tl = ctx.enabled
+                        ? ctx.isIconMode
+                            ? ICONS.disable
+                            : `Disable`
+                        : ctx.isIconMode
+                          ? ICONS.enable
+                          : `Enable`;
+                    const title = ctx.isIconMode
+                        ? ctx.enabled
+                            ? "Disable"
+                            : "Enable"
+                        : "";
+                    const iconCls = ctx.isIconMode ? " btn-toggle-icon" : "";
+                    return `<button class="btn ${tc}${iconCls}" onclick="doToggle('${esc(ctx.name)}',this,event)" title="${title}">${tl}</button>`;
+                }
+                case "delete":
+                    return `<button class="btn btn-danger" onclick="doDelete('${esc(ctx.name)}',this,event)" title="Delete">${ICONS.trash}</button>`;
+                case "settings":
+                    return `<button class="btn btn-settings" id="${ctx.settingsBtnId}" title="Open handleEvents.json" onclick="openHandleEvents('${esc(ctx.name)}',this,event)" style="display:none" ${ctx.inst !== undefined && !ctx.inst ? "disabled" : ""}>${ICONS.settings}</button>`;
+                case "download":
+                    return ctx.dlArg
+                        ? `<button class="btn btn-primary" onclick="doDownload(decodeURIComponent('${ctx.dlArg}'),this,event)">Download</button>`
+                        : "";
+                case "update":
+                    return ctx.updateDlArg
+                        ? `<button class="btn btn-primary btn-update" title="Update available" onclick="doUpdate(decodeURIComponent('${ctx.updateDlArg}'),this,event)">Update</button>`
+                        : "";
+                default:
+                    return "";
+            }
+        })
+        .join("");
+}
+
 // ── Card builder (store items) ────────────────────────────────────────────────
 function buildCard(f, i, section, inst) {
     const cid = section + "-" + f.name;
@@ -448,14 +514,14 @@ function buildCard(f, i, section, inst) {
         ? `<span class="readme-icon" title="README" onclick="openReadme('${esc(f.name)}','${esc(f.readme)}',event)">${ICONS.readme}</span>`
         : "";
 
-    // Settings button: rendered but may be hidden/disabled until handleEvents check completes
-    const settingsBtn = `<button class="btn btn-settings" id="settings-btn-${cid.replace(/[^a-zA-Z0-9]/g, "_")}" title="Open handleEvents.json" onclick="openHandleEvents('${esc(f.name)}',this,event)" style="display:none" ${inst ? "" : "disabled"}>${ICONS.settings}</button>`;
-
     let actions;
     if (inst) {
-        const tc = enabled ? "btn-on" : "btn-off";
-        const tl = enabled ? `Disable` : `Enable`;
-        actions = `<button class="btn ${tc}" onclick="doToggle('${esc(f.name)}',this,event)">${tl}</button><button class="btn btn-danger" onclick="doDelete('${esc(f.name)}',this,event)" title="Delete">${ICONS.trash}</button>${settingsBtn}`;
+        actions = renderButtons(CARD_BUTTONS_INSTALLED, {
+            name: f.name,
+            enabled,
+            inst: true,
+            settingsBtnId: "settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_"),
+        });
     } else {
         const dlArg = encodeURIComponent(
             JSON.stringify({
@@ -466,7 +532,13 @@ function buildCard(f, i, section, inst) {
                 subUrl: f.subUrl || "",
             }),
         );
-        actions = `<button class="btn btn-primary" onclick="doDownload(decodeURIComponent('${dlArg}'),this,event)">Download</button>${settingsBtn}`;
+        actions = renderButtons(CARD_BUTTONS_NOT_INSTALLED, {
+            name: f.name,
+            enabled: true,
+            inst: false,
+            settingsBtnId: "settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_"),
+            dlArg,
+        });
     }
 
     const cls = [
@@ -530,11 +602,13 @@ function buildCustomCard(item, i) {
 
     const settingsBtnId =
         "settings-btn-custom-" + item.name.replace(/[^a-zA-Z0-9]/g, "_");
-    const settingsBtn = `<button class="btn btn-settings" id="${settingsBtnId}" title="Open handleEvents.json" onclick="openHandleEvents('${esc(item.name)}',this,event)" style="display:none">${ICONS.settings}</button>`;
 
-    const tc = item.enabled ? "btn-on" : "btn-off";
-    const tl = item.enabled ? `Disable` : `Enable`;
-    const actions = `<button class="btn ${tc}" onclick="doToggle('${esc(item.name)}',this,event)">${tl}</button><button class="btn btn-danger" onclick="doDelete('${esc(item.name)}',this,event)" title="Delete">${ICONS.trash}</button>${settingsBtn}`;
+    const actions = renderButtons(CARD_BUTTONS_CUSTOM, {
+        name: item.name,
+        enabled: item.enabled,
+        inst: true,
+        settingsBtnId: settingsBtnId,
+    });
 
     const cls = [
         "card custom-card installed",
@@ -671,8 +745,15 @@ async function doDownload(argsJson, btn, event) {
             card.classList.remove("item-disabled");
             const settingsBtnId =
                 "settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
-            card.querySelector(".card-actions").innerHTML =
-                `<button class="btn btn-on" onclick="doToggle('${esc(args.name)}',this,event)">${ICONS.disable} Disable</button><button class="btn btn-danger" onclick="doDelete('${esc(args.name)}',this,event)" title="Delete">${ICONS.trash}</button><button class="btn btn-settings" id="${settingsBtnId}" title="Open handleEvents.json" onclick="openHandleEvents('${esc(args.name)}',this,event)" style="display:none">${ICONS.settings}</button>`;
+            card.querySelector(".card-actions").innerHTML = renderButtons(
+                CARD_BUTTONS_AFTER_DOWNLOAD,
+                {
+                    name: args.name,
+                    enabled: true,
+                    inst: true,
+                    settingsBtnId,
+                },
+            );
             checkAndShowSettingsBtn(args.name, settingsBtnId, true);
             const ob = card.querySelector(".badge");
             if (ob) ob.remove();
@@ -725,24 +806,24 @@ async function checkSubmoduleUpdate(f, section) {
                 subUrl: f.subUrl,
             }),
         );
-        const updateBtn = document.createElement("button");
-        updateBtn.className = "btn btn-primary btn-update";
-        updateBtn.title = "Update available";
-        updateBtn.innerHTML = `Update`;
-        updateBtn.onclick = (event) =>
-            doUpdate(decodeURIComponent(dlArg), updateBtn, event);
-        actions.insertBefore(updateBtn, actions.firstChild);
-        // Collapse the toggle button to icon-only mode
-        const toggleBtn = actions.querySelector(".btn-on, .btn-off");
-        if (toggleBtn) {
-            toggleBtn.classList.add("btn-toggle-icon");
-            toggleBtn.dataset.fullHtml = toggleBtn.innerHTML;
-            // Keep only the SVG icon
-            const isEnabled = toggleBtn.classList.contains("btn-on");
-            toggleBtn.innerHTML = isEnabled ? ICONS.disable : ICONS.enable;
-            toggleBtn.title = isEnabled ? "Disable" : "Enable";
-        }
-        actions.insertBefore(updateBtn, actions.firstChild);
+        // Determine current enabled state from existing toggle button
+        const existingToggle = actions.querySelector(".btn-on, .btn-off");
+        const isEnabled = existingToggle
+            ? existingToggle.classList.contains("btn-on")
+            : true;
+        const settingsBtnId =
+            "settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
+        // Re-render all buttons according to CARD_BUTTONS_WITH_UPDATE order.
+        // "toggle" will be in icon-mode because "update" is present in the array.
+        const hasUpdate = CARD_BUTTONS_WITH_UPDATE.includes("update");
+        actions.innerHTML = renderButtons(CARD_BUTTONS_WITH_UPDATE, {
+            name: f.name,
+            enabled: isEnabled,
+            inst: true,
+            isIconMode: hasUpdate,
+            settingsBtnId,
+            updateDlArg: dlArg,
+        });
     } catch {
         // silently ignore check errors
     }
@@ -761,18 +842,25 @@ async function doUpdate(argsJson, btn, event) {
     }));
     delete btn.dataset.downloading;
     if (data.ok) {
-        // Restore toggle button to full text before removing update button
+        // Re-render card actions back to normal installed state (no update button)
         const actions = btn.closest(".card-actions");
         if (actions) {
-            const toggleBtn = actions.querySelector(".btn-on, .btn-off");
-            if (toggleBtn && toggleBtn.classList.contains("btn-toggle-icon")) {
-                toggleBtn.classList.remove("btn-toggle-icon");
-                const isEnabled = toggleBtn.classList.contains("btn-on");
-                toggleBtn.innerHTML = isEnabled ? `Disable` : `Enable`;
-                toggleBtn.title = "";
-            }
+            const card = actions.closest(".card");
+            const existingToggle = actions.querySelector(".btn-on, .btn-off");
+            const isEnabled = existingToggle
+                ? existingToggle.classList.contains("btn-on")
+                : true;
+            const cardId = card ? card.id.replace(/^card-/, "") : "";
+            const settingsBtnId =
+                "settings-btn-" + cardId.replace(/[^a-zA-Z0-9]/g, "_");
+            actions.innerHTML = renderButtons(CARD_BUTTONS_INSTALLED, {
+                name: args.name,
+                enabled: isEnabled,
+                inst: true,
+                isIconMode: false,
+                settingsBtnId,
+            });
         }
-        btn.remove();
         showRestartBanner();
         broadcastChange("downloaded", {
             name: args.name,
