@@ -502,10 +502,6 @@ main {
     opacity: 0.28;
     cursor: not-allowed;
 }
-.btn-settings svg {
-    width: 13px;
-    height: 13px;
-}
 
 .sb {
     display: inline-flex;
@@ -717,6 +713,8 @@ main {
 .btn svg {
     flex-shrink: 0;
     vertical-align: middle;
+    width: 15px;
+    height: 15px;
 }
 .readme-icon svg {
     display: inline-block;
