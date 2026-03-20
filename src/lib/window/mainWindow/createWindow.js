@@ -22,8 +22,8 @@ function createWindow(config) {
         width: 1280,
         height: 800,
         autoHideMenuBar: true,
-        minWidth: config.windowSettings.freeWindowResize ? 0 : 800,
-        minHeight: config.windowSettings.freeWindowResize ? 0 : 650,
+        minWidth: config.windowSettings.freeWindowResize ? 1 : 800,
+        minHeight: config.windowSettings.freeWindowResize ? 1 : 650,
         alwaysOnTop: config.windowSettings.alwaysOnTop,
         backgroundColor: nativeTheme.shouldUseDarkColors
             ? "#0D0D0D"
