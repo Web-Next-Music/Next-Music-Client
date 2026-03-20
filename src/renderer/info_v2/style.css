@@ -1,0 +1,290 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap");
+
+:root {
+    --accent-color: #29f1e8;
+    --bg-color: #010409;
+    --gradient-color: #06033090;
+    --text-color: #f0f6fc;
+    --sub-text-color: #9198a1;
+    --border-color: #3d444db3;
+    --surface-color: #0d1117;
+    --surface-color-hovered: #262c36;
+    --err: #ef4444;
+
+    --font-heading-large: "Syne", "Science Gothic", sans-serif;
+    --font-base: "Space Mono", monospace;
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    user-select: none;
+    background: linear-gradient(
+        165deg,
+        var(--gradient-color) 0%,
+        var(--bg-color) 70%
+    );
+    font-family: var(--font-base);
+}
+
+.separator {
+    width: 100%;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.main_wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(100% - 40px);
+}
+
+.titleBar {
+    display: flex;
+    padding: 0 25px 0 0;
+    -webkit-app-region: drag;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 400;
+}
+
+.titleBar > div {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.nm_icon {
+    width: 60px;
+    height: 60px;
+    background-image: url("../../assets/nm-icons/icon-256.png");
+    background-size: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.nm_title {
+    font-family: var(--font-heading-large);
+    font-weight: 750;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.version {
+    font-family: var(--font-base);
+    font-weight: 1000;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+.btn {
+    display: flex;
+    -webkit-app-region: no-drag;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading-large);
+    font-weight: 750;
+    height: 32px;
+    background: none;
+    backdrop-filter: blur(30px);
+    border: 1px solid var(--border-color);
+    padding: 0 10px;
+    cursor: pointer;
+    color: var(--text-color);
+    border-radius: 6px;
+    z-index: 400;
+    transition:
+        color 0.2s ease,
+        border 0.2s ease,
+        background 0.2s ease;
+}
+
+.btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.close-btn {
+    padding: 0;
+    width: 32px;
+    height: 32px;
+}
+
+.close-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--err);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.close-btn > svg {
+    height: 14px;
+    width: 14px;
+}
+
+.nm_meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.women {
+    position: fixed;
+    background-image: url("../../assets/info-page/women.png");
+    right: 0;
+    bottom: 40px;
+    width: 270px;
+    height: 350px;
+    background-size: contain;
+    background-position: bottom right;
+    background-repeat: no-repeat;
+}
+
+.info_content {
+    position: fixed;
+    left: 30px;
+    bottom: 80px;
+    display: flex;
+    width: 270px;
+    height: 232px;
+    flex-direction: column;
+    gap: 15px;
+    justify-content: center;
+}
+
+.info_content > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info_description {
+    color: var(--sub-text-color);
+    font-size: 12px;
+    text-align: center;
+}
+
+.info_title {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 750;
+    font-family: var(--font-heading-large);
+    color: var(--text-color);
+}
+
+.developer_card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 50px;
+    padding: 0 15px 0 10px;
+    box-sizing: border-box;
+    background: var(--surface-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.2s ease;
+}
+
+.developer_card:hover {
+    border-color: var(--accent-color);
+}
+
+.developer_card:hover .dev_github {
+    opacity: 1;
+    fill: var(--accent-color);
+}
+
+.dev_icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.dev_icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dev_meta {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+}
+
+.dev_name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+    font-family: var(--font-heading-large);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dev_text {
+    font-size: 11px;
+    color: var(--sub-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dev_github {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: var(--sub-text-color);
+    opacity: 0.5;
+    margin-left: auto;
+    transition:
+        opacity 0.2s ease,
+        fill 0.2s ease;
+}
+
+.linkButtons {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--surface-color);
+    position: fixed;
+    border: solid var(--border-color);
+    border-width: 1px 0 0 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+}
+
+.linkBtn {
+    background-color: var(--surface-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    width: 50%;
+    height: 100%;
+    color: var(--text-color);
+    font-size: 17px;
+    font-weight: 600;
+    flex: 1 1 calc(50% - 10px);
+    font-family: var(--font-heading-large);
+    font-weight: 700;
+    transition:
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.linkBtn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    cursor: pointer;
+}

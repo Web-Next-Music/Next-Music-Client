@@ -89,7 +89,7 @@ app.whenReady().then(() => {
     const config = loadConfig();
     mainWindow = createWindow(config);
 
-    const listenAlong = config?.experimental?.listenAlong;
+    const listenAlong = config?.experiments?.listenAlong;
     let targetUrl = "https://music.yandex.ru/";
 
     if (listenAlong?.enable) {

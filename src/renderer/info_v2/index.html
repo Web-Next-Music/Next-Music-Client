@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <title class="nm_title"></title>
+        <link rel="stylesheet" href="style.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Syne:wght@400..800&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Science+Gothic:wght@100..900&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="main_wrapper">
+            <div id="women" class="women"></div>
+            <div class="titleBar">
+                <div>
+                    <div class="nm_icon"></div>
+                    <div class="nm_meta">
+                        <div class="nm_title">Next Music Client</div>
+                        <div class="version"></div>
+                    </div>
+                </div>
+
+                <div style="padding: 0;">
+                    <button class="btn" id="githubRepoBtn" data-i18n="info.titleBarStarBtnText"></button>
+
+                    <button class="btn close-btn" id="btn-close">
+                        <svg
+                            viewBox="0 0 10 10"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <line
+                                x1="1.5"
+                                y1="1.5"
+                                x2="8.5"
+                                y2="8.5"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                            />
+                            <line
+                                x1="8.5"
+                                y1="1.5"
+                                x2="1.5"
+                                y2="8.5"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="info_content">
+                <div>
+                    <div
+                        class="info_description"
+                        data-i18n="info.infoText"
+                    ></div>
+                    <div
+                        class="info_description"
+                        data-i18n="info.infoCreatedByText"
+                    ></div>
+                </div>
+
+                <div class="separator"></div>
+
+                <div>
+                    <div class="info_title" data-i18n="info.infoDevTitle"></div>
+
+                    <div class="developer_card" id="githubBtn">
+                        <div class="dev_icon">
+                            <img
+                                src="https://avatars.githubusercontent.com/u/79011730?v=4"
+                                onerror="
+                                    this.onerror = null;
+                                    this.src = '../../assets/info-page/avatar-fallback.png';
+                                "
+                            />
+                        </div>
+                        <div class="dev_meta">
+                            <div class="dev_name">Diramix</div>
+                            <div class="dev_text">she/her</div>
+                        </div>
+                        <svg
+                            class="dev_github"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577
+                            0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755
+                            -1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07
+                            1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332
+                            -5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005
+                            -.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552
+                            3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22
+                            0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015
+                            3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"
+                            />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="linkButtons">
+            <button id="discordBtn" class="linkBtn">Discord</button>
+            <button id="twitterBtn" class="linkBtn">Twitter</button>
+            <button id="boostyBtn" class="linkBtn">Boosty</button>
+            <button id="youtubeBtn" class="linkBtn">YouTube</button>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>

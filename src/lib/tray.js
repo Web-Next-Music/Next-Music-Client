@@ -5,6 +5,7 @@ const {
     BrowserWindow,
     nativeImage,
     app,
+    ipcMain,
 } = require("electron");
 const { checkForUpdates } = require("../lib/updater");
 const { version: CURRENT_VERSION } = require("../../package.json");
@@ -17,24 +18,19 @@ const {
     getCurrentLangCode,
     t,
 } = require("../lib/langManager.js");
+const { createInfoWindow } = require("./window/createInfoWindow.js");
+const { createInfoV2Window } = require("./window/createInfoV2Window.js");
+const config = getConfig();
 const path = require("path");
 
-let infoWindow = null;
 let trayInstance = null;
 let mainWindowRef = null;
-
-const infoPath = path.join(__dirname, "../renderer/info/info.html");
 
 const trayIcon = nativeImage
     .createFromPath(trayIconPath)
     .resize({ width: 24, height: 24 });
 
-// ─── Инициализация языка ───────────────────────────────────────────────────
-
-/**
- * Вызывается один раз при старте приложения.
- * Копирует встроенные языки и загружает язык из конфига.
- */
+// Инициализация языка
 function setupLanguage() {
     const { languagesDirectory } = getPaths();
     const config = getConfig();
@@ -42,14 +38,12 @@ function setupLanguage() {
     initLanguages(languagesDirectory, langCode);
 }
 
-// ─── Построение меню ───────────────────────────────────────────────────────
-
+// Построение меню
 function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
     const { languagesDirectory } = getPaths();
     const availableLanguages = getAvailableLanguages(languagesDirectory);
     const currentLangCode = getCurrentLangCode();
 
-    // Подменю языков: каждый язык — radio-пункт
     const languageSubmenu = availableLanguages.map((langCode) => ({
         label: langCode,
         type: "radio",
@@ -57,16 +51,18 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
         click: () => {
             if (langCode === getCurrentLangCode()) return;
 
-            // Загружаем язык и сохраняем в конфиг
             loadLanguage(languagesDirectory, langCode);
             setLanguage(langCode);
-
-            // Перестраиваем меню трея с новым языком
             rebuildTrayMenu(
                 nextMusicDirectory,
                 addonsDirectory,
                 configFilePath,
             );
+
+            // Отправить всем открытым окнам
+            BrowserWindow.getAllWindows().forEach((win) => {
+                win.webContents.send("change-language", langCode);
+            });
         },
     }));
 
@@ -135,7 +131,7 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
         { type: "separator" },
         {
             label: t("tray.info"),
-            click: () => createInfoWindow(),
+            click: () => selInfoVer(),
         },
         {
             label: t("tray.checkUpdates"),
@@ -165,8 +161,7 @@ function rebuildTrayMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
     );
 }
 
-// ─── Создание трея ─────────────────────────────────────────────────────────
-
+// Создание трея
 function createTray(
     iconPath,
     mainWindow,
@@ -191,35 +186,24 @@ function createTray(
     });
 }
 
-// ─── Информационное окно ───────────────────────────────────────────────────
-
-function createInfoWindow() {
-    if (infoWindow) {
-        infoWindow.focus();
-        return;
+// info
+function selInfoVer() {
+    if (config?.experiments?.nm_info_v2 == false) {
+        createInfoWindow();
+    } else {
+        createInfoV2Window();
     }
-
-    infoWindow = new BrowserWindow({
-        width: 585,
-        height: 360,
-        useContentSize: true,
-        resizable: false,
-        autoHideMenuBar: true,
-        alwaysOnTop: true,
-        backgroundColor: "#030117",
-        icon: trayIcon,
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-        },
-    });
-
-    infoWindow.loadFile(infoPath);
-    infoWindow.setMenu(null);
-
-    infoWindow.on("closed", () => {
-        infoWindow = null;
-    });
 }
+
+ipcMain.on("close-window", () => {
+    const infoWindow = BrowserWindow.getFocusedWindow();
+    if (infoWindow) infoWindow.close();
+});
+
+ipcMain.on("get-lang-info", (event) => {
+    const { languagesDirectory } = getPaths();
+    const langCode = getConfig().programSettings?.language ?? "en";
+    event.returnValue = { languagesDirectory, langCode };
+});
 
 module.exports = { createTray, setupLanguage, t };

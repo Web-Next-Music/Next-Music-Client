@@ -56,5 +56,11 @@
         "modalEditorBadge": "JSON",
         "modalEditorTitle": "{name} — handleEvents.json",
         "modalLoading": "Loading…"
+    },
+    "info": {
+        "titleBarStarBtnText": "Give a lucky star",
+        "infoText": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget.",
+        "infoCreatedByText": "Made with misunderstanding by the “team” of neural networks.",
+        "infoDevTitle": "Vibe Coder"
     }
 }

@@ -43,7 +43,7 @@ const defaultConfig = {
         disableAutoZoom: false,
     },
 
-    experimental: {
+    experiments: {
         volumeNormalization: false,
         listenAlong: {
             enable: false,
@@ -65,7 +65,7 @@ const injectList = [
     },
     {
         file: "listenAlongClient.js",
-        condition: (config) => config?.experimental?.listenAlong?.enable,
+        condition: (config) => config?.experiments?.listenAlong?.enable,
     },
     {
         file: "nextStore.js",
@@ -89,7 +89,7 @@ const injectList = [
     },
     {
         file: "volumeNormalization.js",
-        condition: (config) => config?.experimental?.volumeNormalization,
+        condition: (config) => config?.experiments?.volumeNormalization,
     },
 ];
 
@@ -100,7 +100,7 @@ function getPaths() {
     return {
         nextMusicDirectory: userData,
         addonsDirectory: path.join(userData, "Addons"),
-        languagesDirectory: path.join(userData, "Languages"), // <-- папка языков
+        languagesDirectory: path.join(userData, "Languages"),
         configFilePath: path.join(userData, "Config.json"),
     };
 }

@@ -56,5 +56,11 @@
         "modalEditorBadge": "JSON",
         "modalEditorTitle": "{name} — handleEvents.json",
         "modalLoading": "Загрузка…"
+    },
+    "info": {
+        "titleBarStarBtnText": "Поставить звезду",
+        "infoText": "Веб-клиент для Яндекс Музыки с поддержкой тем, аддонов, Discord Rich Presence (RPC) и виджета для OBS.",
+        "infoCreatedByText": "Сделано с недопониманием ”командой” нейронных сетей.",
+        "infoDevTitle": "Вайб Кодер"
     }
 }
