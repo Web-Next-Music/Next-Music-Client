@@ -26,10 +26,23 @@ function copyBundledLanguages(languagesDirectory) {
         .filter((f) => f.endsWith(".json"));
 
     for (const file of files) {
+        const src = path.join(BUNDLED_LANG_DIR, file);
         const dest = path.join(languagesDirectory, file);
+
         if (!fs.existsSync(dest)) {
-            fs.copyFileSync(path.join(BUNDLED_LANG_DIR, file), dest);
+            fs.copyFileSync(src, dest);
             console.log("[Lang] Copied language file:", file);
+        } else {
+            const srcContent = fs.readFileSync(src);
+            const destContent = fs.readFileSync(dest);
+
+            if (!srcContent.equals(destContent)) {
+                fs.copyFileSync(src, dest);
+                console.log(
+                    "[Lang] Updated language file (content mismatch):",
+                    file,
+                );
+            }
         }
     }
 }
@@ -102,9 +115,6 @@ function t(key, vars = {}) {
     );
 }
 
-/**
- * Текущий код языка.
- */
 function getCurrentLangCode() {
     return currentLangCode;
 }
