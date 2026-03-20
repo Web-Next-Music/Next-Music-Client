@@ -786,9 +786,22 @@ async function handleRequest(method, urlPath, qp, getBody) {
         try {
             const wins = BrowserWindow.getAllWindows();
             const mainWin =
-                wins.find(
-                    (w) => !w.webContents.getURL().includes("nextstore://"),
-                ) || null;
+                wins.find((w) => {
+                    const url = w.webContents.getURL();
+                    return (
+                        url.includes("music.yandex") ||
+                        url.includes("music.yandex.ru")
+                    );
+                }) ||
+                // fallback: any window that is not the store and not a file:// utility window
+                wins.find((w) => {
+                    const url = w.webContents.getURL();
+                    return (
+                        !url.includes("nextstore://") &&
+                        !url.startsWith("file://")
+                    );
+                }) ||
+                null;
             if (!mainWin) return json({});
             const vars = await mainWin.webContents.executeJavaScript(`
             (() => {
