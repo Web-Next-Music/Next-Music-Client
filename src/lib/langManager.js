@@ -12,7 +12,6 @@ function copyBundledLanguages(languagesDirectory) {
     if (!fs.existsSync(languagesDirectory)) {
         fs.mkdirSync(languagesDirectory, { recursive: true });
     }
-
     if (!fs.existsSync(BUNDLED_LANG_DIR)) {
         console.warn(
             "[Lang] Bundled lang directory not found:",
@@ -20,22 +19,18 @@ function copyBundledLanguages(languagesDirectory) {
         );
         return;
     }
-
     const files = fs
         .readdirSync(BUNDLED_LANG_DIR)
         .filter((f) => f.endsWith(".json"));
-
     for (const file of files) {
         const src = path.join(BUNDLED_LANG_DIR, file);
         const dest = path.join(languagesDirectory, file);
-
         if (!fs.existsSync(dest)) {
             fs.copyFileSync(src, dest);
             console.log("[Lang] Copied language file:", file);
         } else {
             const srcContent = fs.readFileSync(src);
             const destContent = fs.readFileSync(dest);
-
             if (!srcContent.equals(destContent)) {
                 fs.copyFileSync(src, dest);
                 console.log(
@@ -49,7 +44,6 @@ function copyBundledLanguages(languagesDirectory) {
 
 function getAvailableLanguages(languagesDirectory) {
     if (!fs.existsSync(languagesDirectory)) return [];
-
     return fs
         .readdirSync(languagesDirectory)
         .filter((f) => f.endsWith(".json"))
@@ -58,7 +52,6 @@ function getAvailableLanguages(languagesDirectory) {
 
 function loadLanguage(languagesDirectory, langCode) {
     const filePath = path.join(languagesDirectory, `${langCode}.json`);
-
     if (fs.existsSync(filePath)) {
         try {
             const raw = fs.readFileSync(filePath, "utf-8");
@@ -74,7 +67,6 @@ function loadLanguage(languagesDirectory, langCode) {
             );
         }
     }
-
     // Фоллбэк на en
     if (langCode !== "en") {
         console.warn(
@@ -82,7 +74,6 @@ function loadLanguage(languagesDirectory, langCode) {
         );
         return loadLanguage(languagesDirectory, "en");
     }
-
     // Совсем пусто
     currentLang = {};
     currentLangCode = "en";
@@ -97,7 +88,6 @@ function initLanguages(languagesDirectory, langCode = "en") {
 function t(key, vars = {}) {
     const parts = key.split(".");
     let value = currentLang;
-
     for (const part of parts) {
         if (value && typeof value === "object" && part in value) {
             value = value[part];
@@ -106,9 +96,7 @@ function t(key, vars = {}) {
             return key;
         }
     }
-
     if (typeof value !== "string") return key;
-
     // Подставляем переменные: {version} → vars.version
     return value.replace(/\{(\w+)\}/g, (_, k) =>
         k in vars ? vars[k] : `{${k}}`,
@@ -119,11 +107,28 @@ function getCurrentLangCode() {
     return currentLangCode;
 }
 
+function _flatten(obj, prefix, out = {}) {
+    for (const [k, v] of Object.entries(obj)) {
+        const key = prefix ? `${prefix}.${k}` : k;
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+            _flatten(v, key, out);
+        } else if (typeof v === "string") {
+            out[key] = v;
+        }
+    }
+    return out;
+}
+
+function getAllStrings() {
+    return _flatten(currentLang, "");
+}
+
 module.exports = {
     initLanguages,
     loadLanguage,
     getAvailableLanguages,
     copyBundledLanguages,
     getCurrentLangCode,
+    getAllStrings,
     t,
 };

@@ -12,6 +12,10 @@ const { version: CURRENT_VERSION } = require("../../package.json");
 const { trayIconPath, getPaths } = require("../config.js");
 const { getConfig, setLanguage } = require("../lib/configManager.js");
 const {
+    createSettingsWindow,
+    setTrayRebuilder,
+} = require("./window/settingsWindow/createSettingsWindow.js");
+const {
     initLanguages,
     loadLanguage,
     getAvailableLanguages,
@@ -111,6 +115,10 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
                 if (result) console.error("Failed to open path:", result);
             },
         },
+        {
+            label: t("tray.settings"),
+            click: () => createSettingsWindow(),
+        },
         { type: "separator" },
         {
             label: t("tray.downloadExtensions"),
@@ -171,14 +179,16 @@ function createTray(
 ) {
     mainWindowRef = mainWindow;
 
-    // Инициализируем язык перед построением меню
     setupLanguage();
 
     trayInstance = new Tray(trayIcon);
-
     trayInstance.setToolTip("Next Music");
     trayInstance.setContextMenu(
         buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath),
+    );
+
+    setTrayRebuilder(() =>
+        rebuildTrayMenu(nextMusicDirectory, addonsDirectory, configFilePath),
     );
 
     trayInstance.on("click", () => {
@@ -188,7 +198,7 @@ function createTray(
 
 // info
 function selInfoVer() {
-    if (config?.experiments?.nm_info_v2 == false) {
+    if (config?.labs?.nm_info_v2 == false) {
         createInfoWindow();
     } else {
         createInfoV2Window();

@@ -1,6 +1,7 @@
 {
     "tray": {
         "appTitle": "💖 Next Music {version} ⚡",
+        "settings": "Настройки",
         "openMusicFolder": "Открыть папку Next Music",
         "openAddonsFolder": "Открыть папку аддонов",
         "openConfig": "Открыть конфиг",
@@ -9,8 +10,7 @@
         "info": "О программе",
         "checkUpdates": "Проверить обновления",
         "restart": "Перезапустить",
-        "quit": "Выйти",
-        "language": "Язык"
+        "quit": "Выйти"
     },
     "store": {
         "tabAddons": "Аддоны",
@@ -62,5 +62,67 @@
         "infoText": "Веб-клиент для Яндекс Музыки с поддержкой тем, аддонов, Discord Rich Presence (RPC) и виджета для OBS.",
         "infoCreatedByText": "Сделано с недопониманием ”командой” нейронных сетей.",
         "infoDevTitle": "Вайб Кодер"
+    },
+    "settings": {
+        "title": "Настройки",
+        "saveRestart": "Сохранить",
+        "openAddons": "Открыть папку аддонов",
+        "config": {
+            "launchSettings": "Запуск",
+            "loaderWindow": "Окно Загрузки",
+            "startMinimized": "Запуск Свёрнутым",
+            "splashScreen": "Заставка",
+            "windowSettings": "Окно",
+            "titleBar": "Заголовок Окна",
+            "enable": "Включить",
+            "nextText": "Next Text",
+            "alwaysOnTop": "Поверх Всех Окон",
+            "freeWindowResize": "Свободный Размер Окна",
+            "nextTitle": "Next Title",
+            "programSettings": "Программа",
+            "checkUpdates": "Проверка Обновлений",
+            "language": "Язык",
+            "richPresence": "Discord Rich Presence",
+            "enabled": "Включено",
+            "rpcTitle": "Название в RPC",
+            "buttons": "Кнопки",
+            "trackButton": "Open in Yandex Music",
+            "githubButton": "Next Music Project",
+            "addons": "Аддоны",
+            "onlineScripts": "Онлайн Скрипты",
+            "obsWidget": "OBS Виджет",
+            "alwaysExpandedPlayer": "Широкая Панель Плеера",
+            "disableAutoZoom": "Отключить Авто-зум",
+            "experiments": "Эксперименты",
+            "volumeNormalization": "Нормализация Громкости",
+            "listenAlong": "Совместное Прослушивание",
+            "blackIsland": "Чёрный Цвет Острова",
+            "host": "IP адрес",
+            "port": "Порт",
+            "roomId": "ID Комнаты",
+            "clientId": "ID Клиента",
+            "avatarUrl": "Аватарка"
+        },
+        "desc": {
+            "loaderWindow": "Показывать окно загрузки перед открытием основного окна",
+            "startMinimized": "Запускать приложение свёрнутым в трей",
+            "splashScreen": "Проигрывать анимацию при запуске",
+            "nextText": "Брендинг приложения в строке заголовка",
+            "alwaysOnTop": "Держать Next Music поверх всех остальных окон",
+            "freeWindowResize": "Убирает ограничения минимального размера окна",
+            "nextTitle": "Заменяет системный заголовок окна на ”Next Music”",
+            "checkUpdates": "Автоматически проверять наличие обновлений",
+            "rpcTitle": "Название приложения, отображаемое в статусе Discord",
+            "trackButton": "Показывать кнопку со ссылкой на текущий трек",
+            "githubButton": "Показывать кнопку со ссылкой на репозиторий Next Music",
+            "onlineScripts": "URL на JavaScript файлы. (По одному на строку)",
+            "obsWidget": "Запускать OBS виджет на localhost:4091",
+            "alwaysExpandedPlayer": "Расширяет панель плеера ЯМ",
+            "disableAutoZoom": "Отключает автоматическое масштабирование интерфейса ЯМ",
+            "blackIsland": "Делает остров чёрным",
+            "roomId": "ID комнаты для подключения",
+            "clientId": "ID = ник клиента",
+            "avatarUrl": "URL на картинку аватара"
+        }
     }
 }

@@ -71,4 +71,9 @@ function setLanguage(langCode) {
     saveConfig(cfg);
 }
 
-module.exports = { getConfig, saveConfig, setLanguage };
+function updateConfig(newConfig) {
+    _config = newConfig;
+    saveConfig(newConfig);
+}
+
+module.exports = { getConfig, saveConfig, setLanguage, updateConfig };

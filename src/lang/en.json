@@ -1,6 +1,7 @@
 {
     "tray": {
         "appTitle": "💖 Next Music {version} ⚡",
+        "settings": "Settings",
         "openMusicFolder": "Open Next Music folder",
         "openAddonsFolder": "Open addons folder",
         "openConfig": "Open config",
@@ -9,8 +10,7 @@
         "info": "Info",
         "checkUpdates": "Check updates",
         "restart": "Restart",
-        "quit": "Quit",
-        "language": "Language"
+        "quit": "Quit"
     },
     "store": {
         "tabAddons": "Addons",
@@ -62,5 +62,67 @@
         "infoText": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget.",
         "infoCreatedByText": "Made with misunderstanding by the “team” of neural networks.",
         "infoDevTitle": "Vibe Coder"
+    },
+    "settings": {
+        "title": "Settings",
+        "saveRestart": "Save",
+        "openAddons": "Open Addons Folder",
+        "config": {
+            "launchSettings": "Launch",
+            "loaderWindow": "Loader Window",
+            "startMinimized": "Start Minimized",
+            "splashScreen": "Splash Screen",
+            "windowSettings": "Window",
+            "titleBar": "Title Bar",
+            "enable": "Enable",
+            "nextText": "Next Text",
+            "alwaysOnTop": "Always on Top",
+            "freeWindowResize": "Free Window Resize",
+            "nextTitle": "Next Title",
+            "programSettings": "Program",
+            "checkUpdates": "Check for Updates",
+            "language": "Language",
+            "richPresence": "Discord Rich Presence",
+            "enabled": "Enabled",
+            "rpcTitle": "RPC Title",
+            "buttons": "Buttons",
+            "trackButton": "Open in Yandex Music",
+            "githubButton": "Next Music Project",
+            "addons": "Addons",
+            "onlineScripts": "Online Scripts",
+            "obsWidget": "OBS Widget",
+            "alwaysExpandedPlayer": "Wide Player Panel",
+            "disableAutoZoom": "Disable Auto Zoom",
+            "experiments": "Experiments",
+            "volumeNormalization": "Volume Normalization",
+            "listenAlong": "Listen Along",
+            "blackIsland": "Black Island",
+            "host": "IP Address",
+            "port": "Port",
+            "roomId": "Room ID",
+            "clientId": "Client ID",
+            "avatarUrl": "Avatar"
+        },
+        "desc": {
+            "loaderWindow": "Show a loader window before the main window appears",
+            "startMinimized": "Launch the app minimized to the system tray",
+            "splashScreen": "Play an animation on startup",
+            "nextText": "App branding in the title bar",
+            "alwaysOnTop": "Keep Next Music above all other windows",
+            "freeWindowResize": "Remove the minimum window size constraint",
+            "nextTitle": "Replaces the system window title with ”Next Music”",
+            "checkUpdates": "Automatically check for updates on startup",
+            "rpcTitle": "Application name shown in your Discord status",
+            "trackButton": "Show a button linking to the current track",
+            "githubButton": "Show a button linking to the Next Music repository",
+            "onlineScripts": "URLs to JavaScript files. (One per line)",
+            "obsWidget": "Run OBS widget on localhost:4091",
+            "alwaysExpandedPlayer": "Expands the Yandex Music player panel",
+            "disableAutoZoom": "Disables automatic scaling of the Yandex Music interface",
+            "blackIsland": "Makes the island black",
+            "roomId": "Room ID to connect to",
+            "clientId": "ID = client nickname",
+            "avatarUrl": "URL to the avatar image"
+        }
     }
 }
