@@ -5,7 +5,7 @@
     "main": "src/index.js",
     "scripts": {
         "start": "electron .",
-        "build": "electron-builder",
+        "build": "electron-builder --win --linux",
         "build:win": "electron-builder --win",
         "build:linux": "electron-builder --linux"
     },
