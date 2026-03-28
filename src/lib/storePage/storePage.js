@@ -468,6 +468,204 @@ async function downloadAndExtractZip(url, destDir) {
 }
 
 /**
+ * Downloads the GitHub source ZIP (zipball) for owner/repo and extracts
+ * all contents into destDir, stripping the single top-level directory that
+ * GitHub always wraps around the files.
+ */
+async function downloadAndExtractSourceZip(owner, repo, destDir) {
+    for (const branch of ["main", "master", "HEAD"]) {
+        const url = `https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`;
+        let r;
+        try {
+            r = await httpsGet(url, {}, 60000);
+        } catch {
+            continue;
+        }
+        if (r.statusCode !== 200) continue;
+        // downloadAndExtractZip expects a direct-download URL that returns the zip bytes.
+        // We already have the buffer in r.body — reuse the existing parser by passing
+        // a data: URL trick is ugly, so instead we inline the extraction here.
+        // Actually httpsGet follows redirects, so r.body is the real zip buffer.
+        // Re-use downloadAndExtractZip by writing a thin wrapper that accepts a buffer.
+        await _extractZipBuffer(r.body, destDir);
+        return;
+    }
+    throw new Error(`Could not download source zip for ${owner}/${repo}`);
+}
+
+/**
+ * Extracts a zip buffer into destDir, stripping the single common top-level dir.
+ * Shared by downloadAndExtractZip and downloadAndExtractSourceZip.
+ */
+async function _extractZipBuffer(zipBuf, destDir) {
+    function findEOCD(buf) {
+        for (let i = buf.length - 22; i >= 0; i--) {
+            if (
+                buf[i] === 0x50 &&
+                buf[i + 1] === 0x4b &&
+                buf[i + 2] === 0x05 &&
+                buf[i + 3] === 0x06
+            )
+                return i;
+        }
+        return -1;
+    }
+    const eocdOffset = findEOCD(zipBuf);
+    if (eocdOffset === -1) throw new Error("Invalid ZIP: EOCD not found");
+    const cdOffset = zipBuf.readUInt32LE(eocdOffset + 16);
+    const totalEntries = zipBuf.readUInt16LE(eocdOffset + 10);
+    const topDirs = new Set();
+    let pos = cdOffset;
+    for (let e = 0; e < totalEntries; e++) {
+        if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
+        const fnLen = zipBuf.readUInt16LE(pos + 28);
+        const extraLen = zipBuf.readUInt16LE(pos + 30);
+        const commentLen = zipBuf.readUInt16LE(pos + 32);
+        const name = zipBuf.toString("utf8", pos + 46, pos + 46 + fnLen);
+        const topPart = name.split("/")[0];
+        if (topPart) topDirs.add(topPart);
+        pos += 46 + fnLen + extraLen + commentLen;
+    }
+    const stripPrefix = topDirs.size === 1 ? [...topDirs][0] + "/" : "";
+    pos = cdOffset;
+    for (let e = 0; e < totalEntries; e++) {
+        if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
+        const fnLen = zipBuf.readUInt16LE(pos + 28);
+        const extraLen = zipBuf.readUInt16LE(pos + 30);
+        const commentLen = zipBuf.readUInt16LE(pos + 32);
+        const localOffset = zipBuf.readUInt32LE(pos + 42);
+        const name = zipBuf.toString("utf8", pos + 46, pos + 46 + fnLen);
+        pos += 46 + fnLen + extraLen + commentLen;
+        const relName =
+            stripPrefix && name.startsWith(stripPrefix)
+                ? name.slice(stripPrefix.length)
+                : name;
+        if (!relName || relName.endsWith("/")) continue;
+        const lhExtraLen = zipBuf.readUInt16LE(localOffset + 28);
+        const lhFnLen = zipBuf.readUInt16LE(localOffset + 26);
+        const dataOffset = localOffset + 30 + lhFnLen + lhExtraLen;
+        const compMethod = zipBuf.readUInt16LE(localOffset + 8);
+        const compSize = zipBuf.readUInt32LE(localOffset + 18);
+        const compData = zipBuf.slice(dataOffset, dataOffset + compSize);
+        let fileData;
+        if (compMethod === 0) {
+            fileData = compData;
+        } else if (compMethod === 8) {
+            const { inflateRawSync } = await import("zlib");
+            fileData = inflateRawSync(compData);
+        } else {
+            throw new Error(
+                `Unsupported ZIP compression method: ${compMethod}`,
+            );
+        }
+        const outPath = path.join(destDir, ...relName.split("/"));
+        fs.mkdirSync(path.dirname(outPath), { recursive: true });
+        fs.writeFileSync(outPath, fileData);
+    }
+}
+
+/**
+ * Downloads the GitHub source ZIP for a repo and extracts its contents into destDir.
+ * GitHub source ZIPs contain a single top-level directory (e.g. "repo-abc123/")
+ * which is automatically stripped during extraction.
+ */
+async function downloadSourceZip(owner, repo, destDir) {
+    for (const branch of ["main", "master", "HEAD"]) {
+        let r;
+        try {
+            r = await httpsGet(
+                `https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`,
+                {},
+                60000,
+            );
+        } catch {
+            continue;
+        }
+        if (r.statusCode !== 200) continue;
+
+        const zipBuf = r.body;
+
+        function findEOCD(buf) {
+            for (let i = buf.length - 22; i >= 0; i--) {
+                if (
+                    buf[i] === 0x50 &&
+                    buf[i + 1] === 0x4b &&
+                    buf[i + 2] === 0x05 &&
+                    buf[i + 3] === 0x06
+                )
+                    return i;
+            }
+            return -1;
+        }
+
+        const eocdOffset = findEOCD(zipBuf);
+        if (eocdOffset === -1) continue;
+
+        const cdOffset = zipBuf.readUInt32LE(eocdOffset + 16);
+        const totalEntries = zipBuf.readUInt16LE(eocdOffset + 10);
+
+        // Detect the single top-level prefix (e.g. "repo-abc123/") and strip it
+        let stripPrefix = "";
+        {
+            const p = cdOffset;
+            if (zipBuf.readUInt32LE(p) === 0x02014b50) {
+                const fnLen = zipBuf.readUInt16LE(p + 28);
+                const firstName = zipBuf.toString(
+                    "utf8",
+                    p + 46,
+                    p + 46 + fnLen,
+                );
+                const slash = firstName.indexOf("/");
+                if (slash !== -1) stripPrefix = firstName.slice(0, slash + 1);
+            }
+        }
+
+        let pos = cdOffset;
+        for (let e = 0; e < totalEntries; e++) {
+            if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
+            const fnLen = zipBuf.readUInt16LE(pos + 28);
+            const extraLen = zipBuf.readUInt16LE(pos + 30);
+            const commentLen = zipBuf.readUInt16LE(pos + 32);
+            const localOffset = zipBuf.readUInt32LE(pos + 42);
+            const name = zipBuf.toString("utf8", pos + 46, pos + 46 + fnLen);
+            pos += 46 + fnLen + extraLen + commentLen;
+
+            const relName =
+                stripPrefix && name.startsWith(stripPrefix)
+                    ? name.slice(stripPrefix.length)
+                    : name;
+            if (!relName || relName.endsWith("/")) continue;
+
+            const lhFnLen = zipBuf.readUInt16LE(localOffset + 26);
+            const lhExtraLen = zipBuf.readUInt16LE(localOffset + 28);
+            const dataOffset = localOffset + 30 + lhFnLen + lhExtraLen;
+
+            const compMethod = zipBuf.readUInt16LE(localOffset + 8);
+            const compSize = zipBuf.readUInt32LE(localOffset + 18);
+            const compData = zipBuf.slice(dataOffset, dataOffset + compSize);
+
+            let fileData;
+            if (compMethod === 0) {
+                fileData = compData;
+            } else if (compMethod === 8) {
+                const { inflateRawSync } = await import("zlib");
+                fileData = inflateRawSync(compData);
+            } else {
+                throw new Error(
+                    `Unsupported ZIP compression method: ${compMethod}`,
+                );
+            }
+
+            const outPath = path.join(destDir, ...relName.split("/"));
+            fs.mkdirSync(path.dirname(outPath), { recursive: true });
+            fs.writeFileSync(outPath, fileData);
+        }
+        return; // success
+    }
+    throw new Error(`Could not download source zip for ${owner}/${repo}`);
+}
+
+/**
  * Returns the locally saved release tag for an addon (written during install).
  */
 function getLocalReleaseTag(addonName) {
@@ -817,8 +1015,9 @@ async function handleRequest(method, urlPath, qp, getBody) {
                         "utf8",
                     );
                 } else {
-                    const subGm = await loadGitmodules(subOwner, subRepo);
-                    await downloadTree("", dest, subOwner, subRepo, subGm);
+                    // No nm.zip release — download full source zip of the submodule repo
+                    fs.mkdirSync(dest, { recursive: true });
+                    await downloadSourceZip(subOwner, subRepo, dest);
                     try {
                         const sha = await getRemoteHeadCommit(
                             subOwner,
