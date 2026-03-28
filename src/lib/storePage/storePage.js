@@ -348,7 +348,7 @@ function getLocalCommitHash(addonName) {
 // Release-based install helpers
 /**
  * Returns { tag, downloadUrl } if the latest GitHub release for owner/repo
- * contains an asset whose name ends with "nm.zip", otherwise returns null.
+ * contains an asset whose name ends with "nm.tar.gz", otherwise returns null.
  */
 async function getLatestNmRelease(owner, repo) {
     try {
@@ -359,7 +359,7 @@ async function getLatestNmRelease(owner, repo) {
         const release = JSON.parse(r.body.toString());
         const asset =
             release.assets &&
-            release.assets.find((a) => a.name.endsWith("nm.zip"));
+            release.assets.find((a) => a.name.endsWith("nm.tar.gz"));
         if (!asset) return null;
         return {
             tag: release.tag_name,
@@ -371,99 +371,64 @@ async function getLatestNmRelease(owner, repo) {
 }
 
 /**
- * Downloads a zip from url and extracts its contents into destDir.
+ * Downloads a tar.gz from url and extracts its contents into destDir.
  * Uses only Node built-ins (no extra npm deps).
  */
-async function downloadAndExtractZip(url, destDir) {
+async function downloadAndExtractTarGz(url, destDir) {
     const r = await httpsGet(url, {}, 60000);
     if (r.statusCode !== 200)
-        throw new Error(`Failed to download zip: HTTP ${r.statusCode}`);
+        throw new Error(`Failed to download tar.gz: HTTP ${r.statusCode}`);
 
-    const zipBuf = r.body;
+    const { gunzipSync } = await import("zlib");
+    const tarBuf = gunzipSync(r.body);
 
-    // Parse ZIP end-of-central-directory record
-    function findEOCD(buf) {
-        for (let i = buf.length - 22; i >= 0; i--) {
-            if (
-                buf[i] === 0x50 &&
-                buf[i + 1] === 0x4b &&
-                buf[i + 2] === 0x05 &&
-                buf[i + 3] === 0x06
-            )
-                return i;
-        }
-        return -1;
-    }
-
-    const eocdOffset = findEOCD(zipBuf);
-    if (eocdOffset === -1) throw new Error("Invalid ZIP: EOCD not found");
-
-    const cdOffset = zipBuf.readUInt32LE(eocdOffset + 16);
-    const cdSize = zipBuf.readUInt32LE(eocdOffset + 12);
-    const totalEntries = zipBuf.readUInt16LE(eocdOffset + 10);
-
-    // Detect a single top-level directory (strip it like `unzip -j` alternative)
+    // Parse TAR: each entry has a 512-byte header followed by data blocks
+    // Detect a single top-level directory prefix to strip (like tar --strip-components=1)
     const topDirs = new Set();
-    let pos = cdOffset;
-    for (let e = 0; e < totalEntries; e++) {
-        if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
-        const fnLen = zipBuf.readUInt16LE(pos + 28);
-        const extraLen = zipBuf.readUInt16LE(pos + 30);
-        const commentLen = zipBuf.readUInt16LE(pos + 32);
-        const name = zipBuf.toString("utf8", pos + 46, pos + 46 + fnLen);
+    let offset = 0;
+    while (offset + 512 <= tarBuf.length) {
+        const header = tarBuf.slice(offset, offset + 512);
+        const name = header.toString("utf8", 0, 100).replace(/\0+$/, "");
+        if (!name) break;
+        const sizeOctal = header
+            .toString("utf8", 124, 136)
+            .trim()
+            .replace(/\0+$/, "");
+        const size = parseInt(sizeOctal, 8) || 0;
         const topPart = name.split("/")[0];
         if (topPart) topDirs.add(topPart);
-        pos += 46 + fnLen + extraLen + commentLen;
+        offset += 512 + Math.ceil(size / 512) * 512;
     }
     const stripPrefix = topDirs.size === 1 ? [...topDirs][0] + "/" : "";
 
-    // Extract local file entries
-    pos = cdOffset;
-    for (let e = 0; e < totalEntries; e++) {
-        if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
-        const fnLen = zipBuf.readUInt16LE(pos + 28);
-        const extraLen = zipBuf.readUInt16LE(pos + 30);
-        const commentLen = zipBuf.readUInt16LE(pos + 32);
-        const localOffset = zipBuf.readUInt32LE(pos + 42);
-        const name = zipBuf.toString("utf8", pos + 46, pos + 46 + fnLen);
-        pos += 46 + fnLen + extraLen + commentLen;
+    // Extract entries
+    offset = 0;
+    while (offset + 512 <= tarBuf.length) {
+        const header = tarBuf.slice(offset, offset + 512);
+        const name = header.toString("utf8", 0, 100).replace(/\0+$/, "");
+        if (!name) break;
+        const typeFlag = header.toString("utf8", 156, 157);
+        const sizeOctal = header
+            .toString("utf8", 124, 136)
+            .trim()
+            .replace(/\0+$/, "");
+        const size = parseInt(sizeOctal, 8) || 0;
+        offset += 512;
 
-        // Strip common top-level dir
-        const relName =
-            stripPrefix && name.startsWith(stripPrefix)
-                ? name.slice(stripPrefix.length)
-                : name;
-
-        if (!relName || relName.endsWith("/")) continue; // directory entry
-
-        // Read local file header to get actual data offset
-        const lhExtraLen = zipBuf.readUInt16LE(localOffset + 28);
-        const lhFnLen = zipBuf.readUInt16LE(localOffset + 26);
-        const dataOffset = localOffset + 30 + lhFnLen + lhExtraLen;
-
-        const compMethod = zipBuf.readUInt16LE(localOffset + 8);
-        const compSize = zipBuf.readUInt32LE(localOffset + 18);
-        const uncompSize = zipBuf.readUInt32LE(localOffset + 22);
-
-        const compData = zipBuf.slice(dataOffset, dataOffset + compSize);
-
-        let fileData;
-        if (compMethod === 0) {
-            // Stored (no compression)
-            fileData = compData;
-        } else if (compMethod === 8) {
-            // Deflate
-            const { inflateRawSync } = await import("zlib");
-            fileData = inflateRawSync(compData);
-        } else {
-            throw new Error(
-                `Unsupported ZIP compression method: ${compMethod}`,
-            );
+        if (typeFlag === "0" || typeFlag === "" || typeFlag === "\0") {
+            // Regular file
+            const relName =
+                stripPrefix && name.startsWith(stripPrefix)
+                    ? name.slice(stripPrefix.length)
+                    : name;
+            if (relName && !relName.endsWith("/")) {
+                const outPath = path.join(destDir, ...relName.split("/"));
+                fs.mkdirSync(path.dirname(outPath), { recursive: true });
+                fs.writeFileSync(outPath, tarBuf.slice(offset, offset + size));
+            }
         }
 
-        const outPath = path.join(destDir, ...relName.split("/"));
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        fs.writeFileSync(outPath, fileData);
+        offset += Math.ceil(size / 512) * 512;
     }
 }
 
@@ -482,11 +447,10 @@ async function downloadAndExtractSourceZip(owner, repo, destDir) {
             continue;
         }
         if (r.statusCode !== 200) continue;
-        // downloadAndExtractZip expects a direct-download URL that returns the zip bytes.
         // We already have the buffer in r.body — reuse the existing parser by passing
         // a data: URL trick is ugly, so instead we inline the extraction here.
         // Actually httpsGet follows redirects, so r.body is the real zip buffer.
-        // Re-use downloadAndExtractZip by writing a thin wrapper that accepts a buffer.
+        // Re-use _extractZipBuffer by writing a thin wrapper that accepts a buffer.
         await _extractZipBuffer(r.body, destDir);
         return;
     }
@@ -495,7 +459,7 @@ async function downloadAndExtractSourceZip(owner, repo, destDir) {
 
 /**
  * Extracts a zip buffer into destDir, stripping the single common top-level dir.
- * Shared by downloadAndExtractZip and downloadAndExtractSourceZip.
+ * Shared by downloadAndExtractSourceZip.
  */
 async function _extractZipBuffer(zipBuf, destDir) {
     function findEOCD(buf) {
@@ -1003,11 +967,11 @@ async function handleRequest(method, urlPath, qp, getBody) {
                     throw new Error("Cannot parse submodule URL: " + subUrl);
                 const [, subOwner, subRepo] = m;
 
-                // Prefer nm.zip release asset if one exists
+                // Prefer nm.tar.gz release asset if one exists
                 const nmRelease = await getLatestNmRelease(subOwner, subRepo);
                 if (nmRelease) {
                     fs.mkdirSync(dest, { recursive: true });
-                    await downloadAndExtractZip(nmRelease.downloadUrl, dest);
+                    await downloadAndExtractTarGz(nmRelease.downloadUrl, dest);
                     // Save release tag so update checks compare tags, not commits
                     fs.writeFileSync(
                         path.join(dest, ".git-release"),
@@ -1015,7 +979,7 @@ async function handleRequest(method, urlPath, qp, getBody) {
                         "utf8",
                     );
                 } else {
-                    // No nm.zip release — download full source zip of the submodule repo
+                    // No nm.tar.gz release — download full source zip of the submodule repo
                     fs.mkdirSync(dest, { recursive: true });
                     await downloadSourceZip(subOwner, subRepo, dest);
                     try {
@@ -1063,7 +1027,7 @@ async function handleRequest(method, urlPath, qp, getBody) {
             if (!m) return json({ hasUpdate: false });
             const [, owner, repo] = m;
 
-            // If installed via nm.zip release — compare tags, not commits
+            // If installed via nm.tar.gz release — compare tags, not commits
             const localTag = getLocalReleaseTag(name);
             if (localTag) {
                 const nmRelease = await getLatestNmRelease(owner, repo);
