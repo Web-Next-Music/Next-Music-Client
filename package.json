@@ -64,7 +64,7 @@
     "keywords": [],
     "author": "Diramix <39developer@diram1x.ru>",
     "license": "MIT",
-    "type": "commonjs",
+    "type": "module",
     "bugs": {
         "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
     },

@@ -29,8 +29,17 @@ let _lang = {};
 async function loadLang() {
     try {
         const res = await fetch("/api/lang");
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
+
+        const text = await res.text(); // 👈 ВАЖНО
+
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error("[lang] NOT JSON RESPONSE:\n", text);
+            throw new Error("Lang endpoint returned HTML instead of JSON");
+        }
+
         if (data && typeof data === "object" && !data.error && data.store) {
             _lang = data;
             console.log("[lang] loaded:", data.store.btnDownload);

@@ -1,9 +1,9 @@
-const { loadConfig, getPaths } = require("../config");
-const { addonsDirectory } = getPaths();
-const fs = require("fs");
-const path = require("path");
-const http = require("http");
+import { loadConfig, getPaths } from "../config.js";
+import fs from "fs";
+import path from "path";
+import http from "http";
 
+const { addonsDirectory } = getPaths();
 const config = loadConfig();
 
 // Addons
@@ -293,7 +293,6 @@ function loadFilesFromDirectory(directory, extension, callback) {
                         `[Assets] Registered addon: ${addonName} → ${directory}`,
                     );
                 }
-                // Don't skip — still recurse into assets? No, but DO continue.
                 continue;
             }
 
@@ -331,4 +330,4 @@ function loadFilesFromDirectory(directory, extension, callback) {
     });
 }
 
-module.exports = { applyAddons, startAssetServer, loadFilesFromDirectory };
+export { applyAddons, startAssetServer, loadFilesFromDirectory };

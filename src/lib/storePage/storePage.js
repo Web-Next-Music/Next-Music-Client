@@ -1,19 +1,24 @@
-const https = require("https");
-const fs = require("fs");
-const path = require("path");
-const { BrowserWindow, shell, protocol, net } = require("electron");
+import https from "https";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
+import { BrowserWindow, shell, protocol } from "electron";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const GITHUB_OWNER = "Web-Next-Music";
 const GITHUB_REPO = "Next-Music-Extensions";
 
-const { getPaths } = require("../../config.js");
+import { getPaths } from "../../config.js";
 const { addonsDirectory } = getPaths();
-const {
-    t: langT,
+
+import {
+    t as langT,
     getCurrentLangCode,
     getAvailableLanguages,
-} = require("../langManager.js");
-const { getConfig } = require("../configManager.js");
+} from "../langManager.js";
+import { getConfig } from "../configManager.js";
 
 if (!fs.existsSync(addonsDirectory))
     fs.mkdirSync(addonsDirectory, { recursive: true });
@@ -741,8 +746,6 @@ async function handleRequest(method, urlPath, qp, getBody) {
     if (method === "GET" && urlPath === "/api/lang") {
         try {
             const { languagesDirectory } = getPaths();
-            // Читаем язык напрямую из конфига — надёжнее чем getCurrentLangCode()
-            // т.к. langManager может быть не инициализирован в этом модуле
             const config = getConfig();
             const langCode =
                 config?.programSettings?.language ||
@@ -793,7 +796,6 @@ async function handleRequest(method, urlPath, qp, getBody) {
                         url.includes("music.yandex.ru")
                     );
                 }) ||
-                // fallback: any window that is not the store and not a file:// utility window
                 wins.find((w) => {
                     const url = w.webContents.getURL();
                     return (
@@ -998,7 +1000,6 @@ function setupStorePage() {
 // ─── HTML injection ───────────────────────────────────────────────────────────
 
 function getStoreHtml() {
-    const { pathToFileURL } = require("url");
     const htmlPath = path.join(PUBLIC_DIR, "index.html");
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html
@@ -1021,9 +1022,4 @@ function injectStoreHtml(win) {
     );
 }
 
-module.exports = {
-    setupStorePage,
-    getStoreHtml,
-    injectStoreHtml,
-    addonsDirectory,
-};
+export { setupStorePage, getStoreHtml, injectStoreHtml, addonsDirectory };

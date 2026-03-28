@@ -1,13 +1,24 @@
 "use strict";
-const { app } = require("electron");
-const path = require("path");
-const fs = require("fs");
 
-const appIcon = path.join(__dirname, "assets/nm-icons/icon-256.png");
-const trayIconPath = path.join(__dirname, "assets/nm-icons/nm-tray.png");
+import { app } from "electron";
+import path from "path";
+import fs from "fs";
+
+export const APPNAME = `next-music`;
+
+// App name
+app.setName(APPNAME);
+
+// __dirname fix for ESM
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const appIcon = path.join(__dirname, "assets/nm-icons/icon-256.png");
+export const trayIconPath = path.join(__dirname, "assets/nm-icons/nm-tray.png");
 
 // Default configuration
-const defaultConfig = {
+export const defaultConfig = {
     launchSettings: {
         loaderWindow: true,
         startMinimized: false,
@@ -58,7 +69,7 @@ const defaultConfig = {
 };
 
 // Injector list
-const injectList = [
+export const injectList = [
     {
         file: "alwaysExpandedPlayer.css",
         condition: (config) => config?.programSettings?.alwaysExpandedPlayer,
@@ -94,7 +105,7 @@ const injectList = [
 ];
 
 // Paths
-function getPaths() {
+export function getPaths() {
     const userData = app.getPath("userData");
 
     return {
@@ -106,7 +117,7 @@ function getPaths() {
 }
 
 // Deep merge helper
-function deepMerge(target, source) {
+export function deepMerge(target, source) {
     for (const key in source) {
         if (
             source[key] &&
@@ -125,7 +136,7 @@ function deepMerge(target, source) {
 }
 
 // Load config
-function loadConfig() {
+export function loadConfig() {
     const { configFilePath, addonsDirectory, languagesDirectory } = getPaths();
 
     if (!fs.existsSync(addonsDirectory)) {
@@ -155,8 +166,9 @@ function loadConfig() {
 }
 
 // Save config
-function saveConfig(config) {
+export function saveConfig(config) {
     const { configFilePath } = getPaths();
+
     try {
         fs.writeFileSync(
             configFilePath,
@@ -167,13 +179,3 @@ function saveConfig(config) {
         console.error("Failed to save config:", err);
     }
 }
-
-module.exports = {
-    appIcon,
-    trayIconPath,
-    loadConfig,
-    saveConfig,
-    getPaths,
-    defaultConfig,
-    injectList,
-};

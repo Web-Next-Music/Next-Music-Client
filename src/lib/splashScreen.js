@@ -1,14 +1,22 @@
-const { nativeTheme } = require("electron");
-const path = require("path");
+import { nativeTheme } from "electron";
+import path from "path";
 
-function setupSplashScreen(mainWindow, targetUrl) {
+// ESM __dirname fix
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export function setupSplashScreen(mainWindow, targetUrl) {
     const isDark = nativeTheme.shouldUseDarkColors;
+
     const videoFile = isDark
         ? "splash_screen_dark.webm"
         : "splash_screen_light.webm";
+
     const videoPath = path
         .join(__dirname, "..", "assets", "splash_screen", videoFile)
         .replace(/\\/g, "/");
+
     const bgColor = isDark ? "#000" : "#fff";
 
     const FADE_DURATION = 500;
@@ -69,5 +77,3 @@ function setupSplashScreen(mainWindow, targetUrl) {
         setTimeout(() => doFadeAndLoad(), VIDEO_MAX_MS);
     });
 }
-
-module.exports = { setupSplashScreen };

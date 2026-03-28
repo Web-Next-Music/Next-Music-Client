@@ -1,18 +1,26 @@
-const { app, BrowserWindow, session, nativeTheme } = require("electron");
-const { createLoaderWindow } = require("../createLoaderWindow.js");
-const { applyAddons } = require("../../loadAddons.js");
-let { appIcon } = require("../../../config.js");
-const injector = require("../../injector.js");
-const path = require("path");
-const fs = require("fs");
+import { app, BrowserWindow, session, nativeTheme } from "electron";
+import { createLoaderWindow } from "../createLoaderWindow.js";
+import { applyAddons } from "../../loadAddons.js";
+import { appIcon } from "../../../config.js";
+import injector from "../../injector.js";
+import path from "path";
+import fs from "fs";
 
 // Version
-const { version: currentPkgVersion } = require("../../../../package.json");
+import pkg from "../../../../package.json" with { type: "json" };
+const CURRENT_VERSION = pkg.version;
+
+// ESM __dirname fix
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const titlebarFolder = path.resolve(__dirname, "..", "..", "titlebar");
 const apiFile = path.resolve(__dirname, "..", "..", "api.js");
 
-function createWindow(config) {
+let mainWindow;
+
+export function createWindow(config) {
     const startMinimized = config?.launchSettings?.startMinimized;
     const titleBarEnabled = config.windowSettings?.titleBar?.enable;
 
@@ -36,11 +44,11 @@ function createWindow(config) {
         roundedCorners: true,
         show: false,
         webPreferences: {
-            webSecurity: false, // Bypass CORS (CSP is also stripped below)
+            webSecurity: false,
             nodeIntegration: false,
             contextIsolation: true,
             preload: titleBarEnabled
-                ? path.join(__dirname, "preload.js")
+                ? path.join(__dirname, "preload.cjs")
                 : undefined,
         },
     });
@@ -58,7 +66,6 @@ function createWindow(config) {
 
     return mainWindow;
 
-    // Remove CSP headers to avoid content blocking
     function setupCSP() {
         session.defaultSession.webRequest.onHeadersReceived(
             (details, callback) => {
@@ -70,12 +77,13 @@ function createWindow(config) {
         );
     }
 
-    // Notify renderer on window maximize/unmaximize
     function setupTitleBarEvents() {
         if (!titleBarEnabled) return;
+
         mainWindow.on("maximize", () =>
             mainWindow.webContents.send("nmc-maximized"),
         );
+
         mainWindow.on("unmaximize", () =>
             mainWindow.webContents.send("nmc-unmaximized"),
         );
@@ -88,22 +96,18 @@ function createWindow(config) {
     }
 
     function setupLoadHandlers() {
-        // Самый ранний инджект — сразу после построения DOM, не дожидаясь всех ресурсов
-        mainWindow.webContents.on("dom-ready", () => {
+        mainWindow.webContents.on("did-finish-load", () => {
             const url = mainWindow.webContents.getURL();
             if (!url.includes("music.yandex.ru")) return;
 
             injector(mainWindow, config);
+
             if (config.programSettings.addons.enable) {
-                applyAddons(config);
+                applyAddons(mainWindow);
             } else {
                 console.log("Addons are disabled");
             }
-        });
 
-        mainWindow.webContents.on("did-finish-load", () => {
-            const url = mainWindow.webContents.getURL();
-            if (!url.includes("music.yandex.ru")) return;
             onFinishLoad();
         });
 
@@ -113,8 +117,8 @@ function createWindow(config) {
     function onFinishLoad() {
         if (titleBarEnabled) injectTitleBar();
         injectApi();
-        // injector и addons вызываются раньше в dom-ready
         closeLoaderWindow();
+
         if (!startMinimized) mainWindow.show();
     }
 
@@ -128,25 +132,32 @@ function createWindow(config) {
             path.join(titlebarFolder, "titlebar.css"),
             "utf-8",
         );
+
         const js = fs.readFileSync(
             path.join(titlebarFolder, "titlebar.js"),
             "utf-8",
         );
+
         const titleBarConfig = {
             showNextText: config.windowSettings?.titleBar?.nextText === true,
-            version: currentPkgVersion,
+            version: CURRENT_VERSION,
         };
+
         mainWindow.webContents
             .executeJavaScript(
-                `window.__nmcTitleBarConfig = ${JSON.stringify(titleBarConfig)};`,
+                `window.__nmcTitleBarConfig = ${JSON.stringify(
+                    titleBarConfig,
+                )};`,
             )
             .catch(console.error);
+
         mainWindow.webContents.insertCSS(css).catch(console.error);
         mainWindow.webContents.executeJavaScript(js).catch(console.error);
     }
 
     function closeLoaderWindow() {
         if (!config.launchSettings.loaderWindow || !loaderWindow) return;
+
         try {
             loaderWindow.close();
             loaderWindow = null;
@@ -155,7 +166,6 @@ function createWindow(config) {
         }
     }
 
-    // Load fallback page if the main frame fails to load
     function onFailLoad(
         event,
         errorCode,
@@ -181,5 +191,3 @@ function createWindow(config) {
         }
     }
 }
-
-module.exports = { createWindow };

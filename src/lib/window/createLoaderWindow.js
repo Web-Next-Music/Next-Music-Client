@@ -1,10 +1,17 @@
-const { BrowserWindow } = require("electron");
-const { appIcon } = require("../../config");
-const path = require("path");
+import { BrowserWindow } from "electron";
+import { appIcon } from "../../config.js";
+import path from "path";
+
+// __dirname fix for ESM
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const loaderPath = path.join(__dirname, "../../renderer/loader/loader.html");
 
-function createLoaderWindow() {
+let loaderWindow;
+
+export function createLoaderWindow() {
     loaderWindow = new BrowserWindow({
         width: 240,
         height: 280,
@@ -18,8 +25,7 @@ function createLoaderWindow() {
         roundedCorners: true,
         icon: appIcon,
     });
+
     loaderWindow.loadURL(`file://${loaderPath}`);
     return loaderWindow;
 }
-
-module.exports = { createLoaderWindow };

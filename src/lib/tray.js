@@ -1,4 +1,4 @@
-const {
+import {
     Tray,
     Menu,
     shell,
@@ -6,20 +6,28 @@ const {
     nativeImage,
     app,
     ipcMain,
-} = require("electron");
-const { checkForUpdates } = require("../lib/updater");
-const { version: CURRENT_VERSION } = require("../../package.json");
-const { trayIconPath, getPaths } = require("../config.js");
-const { getConfig } = require("../lib/configManager.js");
-const {
+} from "electron";
+
+import { checkForUpdates } from "../lib/updater.js";
+
+// Version
+import pkg from "../../package.json" with { type: "json" };
+const CURRENT_VERSION = pkg.version;
+
+import { trayIconPath, getPaths } from "../config.js";
+import { getConfig } from "../lib/configManager.js";
+
+import {
     createSettingsWindow,
     setTrayRebuilder,
-} = require("./window/settingsWindow/createSettingsWindow.js");
-const { initLanguages, t } = require("../lib/langManager.js");
-const { createInfoWindow } = require("./window/createInfoWindow.js");
-const { createInfoV2Window } = require("./window/createInfoV2Window.js");
-const config = getConfig();
-const path = require("path");
+} from "./window/settingsWindow/createSettingsWindow.js";
+
+import { initLanguages, t } from "../lib/langManager.js";
+
+import { createInfoWindow } from "./window/createInfoWindow.js";
+import { createInfoV2Window } from "./window/createInfoV2Window.js";
+
+import path from "path";
 
 let trayInstance = null;
 let mainWindowRef = null;
@@ -28,7 +36,7 @@ const trayIcon = nativeImage
     .createFromPath(trayIconPath)
     .resize({ width: 24, height: 24 });
 
-function setupLanguage() {
+export function setupLanguage() {
     const { languagesDirectory } = getPaths();
     const config = getConfig();
     const langCode = config?.programSettings?.language || "en";
@@ -130,7 +138,7 @@ function rebuildTrayMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
     );
 }
 
-function createTray(
+export function createTray(
     iconPath,
     mainWindow,
     nextMusicDirectory,
@@ -157,6 +165,8 @@ function createTray(
 }
 
 function selInfoVer() {
+    const config = getConfig();
+
     if (config?.labs?.nm_info_v2 == false) {
         createInfoWindow();
     } else {
@@ -174,5 +184,3 @@ ipcMain.on("get-lang-info", (event) => {
     const langCode = getConfig().programSettings?.language ?? "en";
     event.returnValue = { languagesDirectory, langCode };
 });
-
-module.exports = { createTray, setupLanguage, t };

@@ -1,6 +1,5 @@
-"use strict";
-const { Client } = require("@xhayper/discord-rpc");
-const WebSocket = require("ws");
+import { Client } from "@xhayper/discord-rpc";
+import WebSocket from "ws";
 
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
@@ -142,7 +141,11 @@ function updateActivity(data, config) {
                 `[RPC] 🔄 Updating timestamps for: ${title} — ${artist}`,
             );
             rpc.user
-                ?.setActivity({ ...lastActivity, startTimestamp, endTimestamp })
+                ?.setActivity({
+                    ...lastActivity,
+                    startTimestamp,
+                    endTimestamp,
+                })
                 .catch(console.error);
             lastActivity.startTimestamp = startTimestamp;
             lastActivity.endTimestamp = endTimestamp;
@@ -156,4 +159,4 @@ function presenceService(config) {
     initRPC();
 }
 
-module.exports = { initRPC, updateActivity, presenceService };
+export { initRPC, updateActivity, presenceService };

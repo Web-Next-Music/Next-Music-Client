@@ -1,6 +1,6 @@
-const { ipcMain } = require("electron");
+import { ipcMain } from "electron";
 
-module.exports = function registerEvents(mainWindow) {
+export default function registerEvents(mainWindow) {
     // Titlebar
     ipcMain.on("nmc-minimize", () => mainWindow.minimize());
 
@@ -14,4 +14,4 @@ module.exports = function registerEvents(mainWindow) {
     ipcMain.handle("nmc-is-maximized", () => {
         return mainWindow.isMaximized();
     });
-};
+}

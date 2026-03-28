@@ -1,6 +1,9 @@
-const { app, dialog, shell } = require("electron");
-const { version: CURRENT_VERSION } = require("../../package.json");
-const https = require("https");
+import { app, dialog, shell } from "electron";
+import https from "https";
+
+// Version
+import pkg from "../../package.json" with { type: "json" };
+const CURRENT_VERSION = pkg.version;
 
 const GITHUB_API_URL =
     "https://api.github.com/repos/Web-Next-Music/Next-Music-Client/releases/latest";
@@ -33,7 +36,7 @@ function getJson(url) {
     });
 }
 
-async function checkForUpdates() {
+export async function checkForUpdates() {
     try {
         const release = await getJson(GITHUB_API_URL);
         if (!release?.name) return;
@@ -127,7 +130,3 @@ function showUpdateDialog(version, releaseUrl) {
             }
         });
 }
-
-module.exports = {
-    checkForUpdates,
-};

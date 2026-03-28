@@ -1,6 +1,6 @@
-const express = require("express");
-const WebSocket = require("ws");
-const path = require("path");
+import express from "express";
+import WebSocket from "ws";
+import path from "path";
 
 let app = null;
 let server = null;
@@ -11,20 +11,15 @@ function log(...args) {
     console.log("[OBS-WIDGET]", ...args);
 }
 
-function startServer(options = {}) {
-    const { port = 4091, staticDir = path.join(__dirname, "public") } = options;
+export function startServer(options = {}) {
+    const { port = 4091, staticDir = path.join(process.cwd(), "public") } =
+        options;
 
-    if (server) {
-        log("Server already running");
-        return;
-    }
-
-    log("Starting server...");
+    if (server) return;
 
     app = express();
     app.use(express.static(staticDir));
 
-    // Слушаем на 0.0.0.0, чтобы OBS и внешние приложения могли подключиться
     server = app.listen(port, "0.0.0.0", () => {
         log(`HTTP server listening on http://0.0.0.0:${port}`);
     });
@@ -32,19 +27,12 @@ function startServer(options = {}) {
     wss = new WebSocket.Server({ server });
 
     wss.on("connection", (ws) => {
-        log("WebSocket client connected");
-
-        if (lastData) {
-            log("Sending cached track to new client");
-            ws.send(JSON.stringify(lastData));
-        }
+        if (lastData) ws.send(JSON.stringify(lastData));
 
         ws.on("message", (msg) => {
             try {
-                const data = JSON.parse(msg.toString());
-                lastData = data;
+                lastData = JSON.parse(msg.toString());
 
-                // Рассылаем всем клиентам
                 wss.clients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.send(JSON.stringify(lastData));
@@ -54,20 +42,11 @@ function startServer(options = {}) {
                 log("Invalid WS message", e);
             }
         });
-
-        ws.on("close", () => {
-            log("WebSocket client disconnected");
-        });
     });
 }
 
-function stopServer() {
-    if (!server) {
-        log("Server not running");
-        return;
-    }
-
-    log("Stopping server...");
+export function stopServer() {
+    if (!server) return;
 
     wss.close();
     server.close();
@@ -78,12 +57,6 @@ function stopServer() {
     lastData = null;
 }
 
-function getLastTrack() {
+export function getLastTrack() {
     return lastData;
 }
-
-module.exports = {
-    startServer,
-    stopServer,
-    getLastTrack,
-};

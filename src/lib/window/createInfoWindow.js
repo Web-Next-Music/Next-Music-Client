@@ -1,7 +1,10 @@
-const { BrowserWindow, ipcMain } = require("electron");
-const { trayIconPath } = require("../../config.js");
-const { nativeImage } = require("electron");
-const path = require("path");
+import { BrowserWindow, nativeImage } from "electron";
+import { trayIconPath } from "../../config.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const trayIcon = nativeImage
     .createFromPath(trayIconPath)
@@ -9,12 +12,11 @@ const trayIcon = nativeImage
 
 let infoWindow = null;
 
-function createInfoWindow() {
+export function createInfoWindow() {
     if (infoWindow) {
         infoWindow.focus();
         return;
     }
-
     infoWindow = new BrowserWindow({
         width: 585,
         height: 360,
@@ -29,13 +31,9 @@ function createInfoWindow() {
             contextIsolation: false,
         },
     });
-
     infoWindow.loadFile(path.join(__dirname, "../../renderer/info/info.html"));
     infoWindow.setMenu(null);
-
     infoWindow.on("closed", () => {
         infoWindow = null;
     });
 }
-
-module.exports = { createInfoWindow };

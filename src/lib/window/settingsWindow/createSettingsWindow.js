@@ -1,24 +1,31 @@
-const { BrowserWindow, ipcMain, shell, app } = require("electron");
-const path = require("path");
-const { getConfig, updateConfig } = require("../../configManager.js");
-const { getPaths } = require("../../../config.js");
-const {
+import { BrowserWindow, ipcMain, shell, app } from "electron";
+import { fileURLToPath } from "url";
+import path from "path";
+
+import { getConfig, updateConfig } from "../../configManager.js";
+import { getPaths } from "../../../config.js";
+
+import {
     loadLanguage,
     getAvailableLanguages,
     getAllStrings,
-} = require("../../langManager.js");
+} from "../../langManager.js";
+
+// ESM __dirname fix
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import pkg from "../../../../package.json" with { type: "json" };
 
 let settingsWindow = null;
-
 let _rebuildTray = null;
 
-function setTrayRebuilder(fn) {
+export function setTrayRebuilder(fn) {
     _rebuildTray = fn;
 }
 
 // Window factory
-
-function createSettingsWindow() {
+export function createSettingsWindow() {
     if (settingsWindow && !settingsWindow.isDestroyed()) {
         settingsWindow.focus();
         return;
@@ -37,7 +44,7 @@ function createSettingsWindow() {
         roundedCorners: true,
         backgroundColor: "#0d1117",
         webPreferences: {
-            preload: path.join(__dirname, "preload.js"),
+            preload: path.join(__dirname, "preload.cjs"),
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false,
@@ -53,6 +60,7 @@ function createSettingsWindow() {
     settingsWindow.on("maximize", () =>
         settingsWindow.webContents.send("settings:maximize-changed", true),
     );
+
     settingsWindow.on("unmaximize", () =>
         settingsWindow.webContents.send("settings:maximize-changed", false),
     );
@@ -62,26 +70,36 @@ function createSettingsWindow() {
     });
 }
 
-// IPC: config
+// ============================
+// IPC (guard against duplicates)
+// ============================
+if (!ipcMain.listenerCount("settings:get-versions")) {
+    ipcMain.handle("settings:get-versions", () => {
+        return {
+            app: pkg.version,
+            electron: process.versions.electron,
+            chromium: process.versions.chrome,
+            node: process.versions.node,
+        };
+    });
+}
 
-ipcMain.handle("settings:get-versions", () => {
-    const { version: app } = require("../../../../package.json");
-    return {
-        app,
-        electron: process.versions.electron,
-        chromium: process.versions.chrome,
-        node: process.versions.node,
-    };
-});
+if (!ipcMain.listenerCount("settings:load-config")) {
+    ipcMain.handle("settings:load-config", () => getConfig());
+}
 
-ipcMain.handle("settings:load-config", () => getConfig());
+if (!ipcMain.listenerCount("settings:save-config")) {
+    ipcMain.handle("settings:save-config", (_event, newConfig) => {
+        updateConfig(newConfig);
+    });
+}
 
-ipcMain.handle("settings:save-config", (_event, newConfig) => {
-    updateConfig(newConfig);
-});
-
+// ============================
+// WINDOW CONTROL
+// ============================
 ipcMain.on("settings:toggle-maximize", () => {
     if (!settingsWindow || settingsWindow.isDestroyed()) return;
+
     if (settingsWindow.isMaximized()) {
         settingsWindow.unmaximize();
     } else {
@@ -90,14 +108,20 @@ ipcMain.on("settings:toggle-maximize", () => {
 });
 
 ipcMain.on("settings:minimize", () => {
-    if (settingsWindow && !settingsWindow.isDestroyed())
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
         settingsWindow.minimize();
+    }
 });
 
 ipcMain.on("settings:close", () => {
-    if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close();
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.close();
+    }
 });
 
+// ============================
+// SYSTEM
+// ============================
 ipcMain.on("settings:open-addons-folder", () => {
     const { addonsDirectory } = getPaths();
     shell.openPath(addonsDirectory);
@@ -108,8 +132,9 @@ ipcMain.on("settings:restart-app", () => {
     app.exit(0);
 });
 
-// IPC: i18n
-
+// ============================
+// I18N
+// ============================
 ipcMain.handle("settings:load-lang-strings", () => {
     return getAllStrings?.() ?? {};
 });
@@ -122,18 +147,14 @@ ipcMain.handle("settings:get-lang-list", () => {
 ipcMain.on("settings:set-language", (_event, langCode) => {
     const { languagesDirectory } = getPaths();
 
-    // 1. Загрузить новую локаль в langManager
     loadLanguage(languagesDirectory, langCode);
 
-    // 2. Сохранить в конфиг
     const cfg = getConfig();
     cfg.programSettings.language = langCode;
     updateConfig(cfg);
 
-    // 3. Перестроить меню трея с новыми строками
     _rebuildTray?.();
 
-    // 4. Отправить новые строки обратно в окно настроек (обновит лейблы)
     if (settingsWindow && !settingsWindow.isDestroyed()) {
         settingsWindow.webContents.send(
             "settings:language-changed",
@@ -141,12 +162,9 @@ ipcMain.on("settings:set-language", (_event, langCode) => {
         );
     }
 
-    // 5. Уведомить все остальные окна (renderer) о смене языка
     BrowserWindow.getAllWindows().forEach((win) => {
         if (win !== settingsWindow) {
             win.webContents.send("change-language", langCode);
         }
     });
 });
-
-module.exports = { createSettingsWindow, setTrayRebuilder };

@@ -1,5 +1,6 @@
-const { getPaths, defaultConfig } = require("../config.js");
-const fs = require("fs");
+import { getPaths, defaultConfig } from "../config.js";
+import fs from "fs";
+
 let config;
 
 const CONFIG_EXTRA_KEYS_WHITELIST = new Set(["labs"]);
@@ -35,7 +36,7 @@ function reorderConfig(obj, defaultObj, isRoot = true) {
     return result;
 }
 
-function loadConfig() {
+export function loadConfig() {
     const {
         nextMusicDirectory,
         addonsDirectory,
@@ -85,14 +86,15 @@ function loadConfig() {
     return config;
 }
 
-function getConfig() {
+export function getConfig() {
     if (!config) return loadConfig();
     return config;
 }
 
-function saveConfig(newConfig) {
+export function saveConfig(newConfig) {
     const { configFilePath } = getPaths();
     config = reorderConfig(newConfig, defaultConfig);
+
     try {
         fs.writeFileSync(
             configFilePath,
@@ -104,15 +106,13 @@ function saveConfig(newConfig) {
     }
 }
 
-function setLanguage(langCode) {
+export function setLanguage(langCode) {
     const cfg = getConfig();
     if (!cfg.programSettings) cfg.programSettings = {};
     cfg.programSettings.language = langCode;
     saveConfig(cfg);
 }
 
-function updateConfig(newConfig) {
+export function updateConfig(newConfig) {
     saveConfig(newConfig);
 }
-
-module.exports = { getConfig, saveConfig, setLanguage, updateConfig };

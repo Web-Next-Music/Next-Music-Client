@@ -1,27 +1,35 @@
-const { app, BrowserWindow, protocol } = require("electron");
+import { app, BrowserWindow, protocol } from "electron";
+import path from "path";
 
-// App name
-app.setName("next-music");
+// ESM __dirname fix
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Config
-const { loadConfig } = require("./config");
-const { appIcon, getPaths } = require("./config.js");
+import { loadConfig } from "./config.js";
+import { appIcon, getPaths, APPNAME } from "./config.js";
+
 const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
 
 // Services
-const { createTray } = require("./lib/tray.js");
-const { checkForUpdates } = require("./lib/updater.js");
-const { presenceService } = require("./lib/richPresence.js");
-const { createWindow } = require("./lib/window/mainWindow/createWindow.js");
-const { setupSplashScreen } = require("./lib/splashScreen.js");
-const {
-    setupStorePage,
-    injectStoreHtml,
-} = require("./lib/storePage/storePage.js");
-const obsWidgetService = require("./lib/obsWidget/obsWidget.js");
+import { createTray } from "./lib/tray.js";
+import { checkForUpdates } from "./lib/updater.js";
+import { presenceService } from "./lib/richPresence.js";
+import { createWindow } from "./lib/window/mainWindow/createWindow.js";
+import { setupSplashScreen } from "./lib/splashScreen.js";
+import { setupStorePage, injectStoreHtml } from "./lib/storePage/storePage.js";
+import {
+    startServer,
+    stopServer,
+    getLastTrack,
+} from "./lib/obsWidget/obsWidget.js";
+
+// App name
+app.setName(APPNAME);
 
 // IPC
-const setupIpcEvents = require("./events");
+import setupIpcEvents from "./events.js";
 
 // Flags & Fixes
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
@@ -34,7 +42,7 @@ if (process.platform === "linux") {
 // Normalize color profile across platforms
 app.commandLine.appendSwitch("force-color-profile", "srgb");
 
-// Register nextstore:// as a privileged scheme before app is ready
+// Register custom protocol BEFORE ready
 protocol.registerSchemesAsPrivileged([
     {
         scheme: "nextstore",
@@ -47,7 +55,7 @@ protocol.registerSchemesAsPrivileged([
     },
 ]);
 
-// Allow self-signed/spoofed certificates
+// Allow self-signed certificates
 app.on(
     "certificate-error",
     (event, _webContents, _url, _error, _cert, callback) => {
@@ -58,56 +66,63 @@ app.on(
 
 // Single Instance Lock
 const isSingleInstance = app.requestSingleInstanceLock();
+
 if (!isSingleInstance) {
     app.quit();
-    return;
+    process.exit(0);
 }
 
-// When a second instance is launched, focus the existing window instead
+// second instance focus
 app.on("second-instance", () => {
-    if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
+    if (!global.mainWindow) return;
+
+    const win = global.mainWindow;
+
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
 });
 
 // Window Lifecycle
-let mainWindow;
-
-// Quit app when all windows are closed (except on macOS)
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
 });
 
-// Re-create window on dock/taskbar click if no windows exist
-app.on("activate", () => {
+app.on("activate", async () => {
     const hasNoWindows = BrowserWindow.getAllWindows().length === 0;
-    if (hasNoWindows) {
-        mainWindow = createWindow();
+
+    if (hasNoWindows && global.mainWindow) {
+        global.mainWindow = createWindow();
     }
 });
 
 // App Initialization
+let mainWindow;
+
 app.whenReady().then(() => {
     const config = loadConfig();
+
     mainWindow = createWindow(config);
+    global.mainWindow = mainWindow;
 
     const listenAlong = config?.experiments?.listenAlong;
     let targetUrl = "https://music.yandex.ru/";
 
     if (listenAlong?.enable) {
         const params = new URLSearchParams({
-            __blackIsland: listenAlong.blackIsland || null,
+            __blackIsland: listenAlong.blackIsland || "",
             __wss: listenAlong.host
-                ? `${listenAlong.host}:${listenAlong.port || null}`
+                ? `${listenAlong.host}:${listenAlong.port || ""}`
                 : "",
             __room: listenAlong.roomId || "",
             __clientId: listenAlong.clientId || "",
             __avatarUrl: listenAlong.avatarUrl || "",
         });
+
         targetUrl = "https://music.yandex.ru/?" + params.toString();
     }
 
+    // Splash screen or direct load
     if (
         config.launchSettings?.splashScreen &&
         !config.launchSettings?.startMinimized &&
@@ -118,15 +133,19 @@ app.whenReady().then(() => {
         mainWindow.loadURL(targetUrl);
     }
 
+    // Addons store page
     if (config.programSettings?.addons?.enable) {
         setupStorePage();
-        mainWindow.webContents.on("did-finish-load", () =>
-            injectStoreHtml(mainWindow),
-        );
+
+        mainWindow.webContents.on("did-finish-load", () => {
+            injectStoreHtml(mainWindow);
+        });
     }
 
+    // IPC
     setupIpcEvents(mainWindow);
 
+    // Tray
     createTray(
         appIcon,
         mainWindow,
@@ -136,14 +155,17 @@ app.whenReady().then(() => {
         config,
     );
 
+    // Updates
     if (config.programSettings?.checkUpdates) {
         checkForUpdates();
     }
 
+    // OBS widget
     if (config?.programSettings?.obsWidget) {
-        obsWidgetService.startServer({ port: 4091 });
+        startServer({ port: 4091 });
     }
 
+    // Discord rich presence
     if (config?.programSettings?.richPresence?.enable) {
         presenceService(config);
     }

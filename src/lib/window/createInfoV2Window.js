@@ -1,8 +1,13 @@
-const { BrowserWindow } = require("electron");
-const { trayIconPath, getPaths } = require("../../config.js");
-const { getConfig } = require("../../lib/configManager.js");
-const { nativeImage } = require("electron");
-const path = require("path");
+import { BrowserWindow, nativeImage } from "electron";
+import path from "path";
+
+import { trayIconPath, getPaths } from "../../config.js";
+import { getConfig } from "../../lib/configManager.js";
+
+// __dirname fix for ESM
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const trayIcon = nativeImage
     .createFromPath(trayIconPath)
@@ -10,7 +15,7 @@ const trayIcon = nativeImage
 
 let infoWindow = null;
 
-function createInfoV2Window() {
+export function createInfoV2Window() {
     if (infoWindow) {
         infoWindow.focus();
         return;
@@ -36,12 +41,13 @@ function createInfoV2Window() {
     infoWindow.loadFile(
         path.join(__dirname, "../../renderer/info_v2/index.html"),
     );
+
     infoWindow.setMenu(null);
 
-    // Отправляем пути ПОСЛЕ загрузки страницы
     infoWindow.webContents.on("did-finish-load", () => {
         const { languagesDirectory } = getPaths();
         const langCode = getConfig().programSettings?.language ?? "en";
+
         infoWindow.webContents.send("init-lang", {
             languagesDirectory,
             langCode,
@@ -52,5 +58,3 @@ function createInfoV2Window() {
         infoWindow = null;
     });
 }
-
-module.exports = { createInfoV2Window };
