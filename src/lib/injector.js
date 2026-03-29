@@ -9,10 +9,7 @@ const __dirname = path.dirname(__filename);
 
 export default function injector(mainWindow, config) {
     try {
-        const injectDir = path.join(
-            path.dirname(new URL(import.meta.url).pathname),
-            "../inject",
-        );
+        const injectDir = path.join(__dirname, "../inject");
 
         for (const item of injectList) {
             const { file, condition } = item;
