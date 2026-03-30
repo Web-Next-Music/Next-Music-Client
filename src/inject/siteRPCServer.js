@@ -25,13 +25,13 @@
         ws = new WebSocket(WS_URL);
 
         ws.onopen = () => {
-            console.log("[WS] ✅ Connected to", WS_URL);
+            console.log("[WS] Connected to", WS_URL);
 
             // отправляем все pending данные, которые могли накопиться
             pendingData.forEach((data, index) => {
                 const payload = { playerIndex: index, ...data };
                 ws.send(JSON.stringify(payload));
-                log(index, "📤 Sent pending on reconnect", payload);
+                log(index, "Sent pending on reconnect", payload);
                 pendingData.delete(index);
             });
         };
@@ -109,7 +109,7 @@
         const last = lastSentState.get(index);
         if (!last) {
             lastSentState.set(index, { ...data, timeCurrent: undefined });
-            log(index, "🆕 First state detected");
+            log(index, "First state detected");
             return true;
         }
         const { timeCurrent, ...rest } = data;
@@ -136,7 +136,7 @@
             if (pending && ws && ws.readyState === WebSocket.OPEN) {
                 const payload = { playerIndex: index, ...pending };
                 ws.send(JSON.stringify(payload));
-                log(index, "📤 Sent after cooldown", payload);
+                log(index, "Sent after cooldown", payload);
             }
             pendingData.delete(index);
             cooldownTimers.delete(index);
@@ -156,9 +156,7 @@
 
         log(
             index,
-            timeJump
-                ? "⏩ Triggered (time jump)"
-                : "📤 Triggered (state change)",
+            timeJump ? "Triggered (time jump)" : "Triggered (state change)",
             data,
         );
         scheduleSend(playerEl, index, data);
@@ -174,7 +172,7 @@
         if (activeObservers.has(playerEl)) return; // уже наблюдается
 
         const index = playerCounter++;
-        log(index, "👀 Player observer initialized");
+        log(index, "Player observer initialized");
 
         const playerObserve = new MutationObserver(() =>
             sendPlayerData(playerEl, index),

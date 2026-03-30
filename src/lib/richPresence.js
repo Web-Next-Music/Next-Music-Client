@@ -16,7 +16,7 @@ function initRPC() {
     rpc = new Client({ clientId: CLIENT_ID, transport: { type: "ipc" } });
 
     rpc.on("ready", () => {
-        console.log("[RPC] ✅ Connected to Discord!");
+        console.log("[RPC] Connected to Discord!");
         isReady = true;
     });
 
@@ -33,13 +33,11 @@ function initRPC() {
 
 // --- WebSocket server ---
 const wss = new WebSocket.Server({ port: WSPORT }, () =>
-    console.log(
-        `[WS] ✅ WebSocket server listening at ws://127.0.0.1:${WSPORT}`,
-    ),
+    console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 );
 
 wss.on("connection", (ws) => {
-    console.log("[WS] 🔌 New connection");
+    console.log("[WS] New connection");
 
     ws.on("message", (msg) => {
         try {
@@ -111,7 +109,7 @@ function updateActivity(data, config) {
     const playerState = data.playerState?.toLowerCase() || "";
 
     if (playerState.includes("play")) {
-        console.log(`[RPC] ⏸ Clearing activity (pause)`);
+        console.log(`[RPC] Clearing activity (pause)`);
         rpc.user?.clearActivity().catch(console.error);
         lastPlayerState = "pause";
         return;
@@ -132,14 +130,12 @@ function updateActivity(data, config) {
             : Infinity;
 
         if (hasChanged) {
-            console.log(`[RPC] 🎧 Setting new activity: ${title} — ${artist}`);
+            console.log(`[RPC] Setting new activity: ${title} — ${artist}`);
             rpc.user?.setActivity(activityObject).catch(console.error);
             lastActivity = activityObject;
             lastPlayerState = "play";
         } else if (timestampDiff > 1) {
-            console.log(
-                `[RPC] 🔄 Updating timestamps for: ${title} — ${artist}`,
-            );
+            console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
             rpc.user
                 ?.setActivity({
                     ...lastActivity,

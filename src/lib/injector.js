@@ -15,7 +15,7 @@ export default function injector(mainWindow, config) {
             const { file, condition } = item;
 
             if (typeof condition === "function" && !condition(config)) {
-                console.log("[Injector] ⏭ Skipped by config:", file);
+                console.log("[Injector] Skipped by config:", file);
                 continue;
             }
 
@@ -59,7 +59,7 @@ export default function injector(mainWindow, config) {
             mainWindow.webContents
                 .executeJavaScript(injectScript)
                 .then(() => {
-                    console.log("[Injector] ✅ Injected:", file);
+                    console.log("[Injector] Injected:", file);
                 })
                 .catch((err) => {
                     console.error("[Injector] ❌ Failed to inject:", file, err);

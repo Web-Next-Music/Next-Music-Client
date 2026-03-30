@@ -66,6 +66,6 @@
     };
 
     console.log(
-        "✅ Page-wide audio normalizer active (asymmetric gain: fast down, slow up)",
+        "Page-wide audio normalizer active (asymmetric gain: fast down, slow up)",
     );
 })();

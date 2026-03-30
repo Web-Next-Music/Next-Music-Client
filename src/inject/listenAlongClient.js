@@ -76,7 +76,7 @@
             const p = getAlbumPath();
             if (p) lastSentPath = p;
         }
-        console.log("✅ Initialization complete — lastSentPath:", lastSentPath);
+        console.log("Initialization complete — lastSentPath:", lastSentPath);
     }
 
     const XLINK = "http://www.w3.org/1999/xlink";
@@ -625,7 +625,7 @@
                     roomId: ROOM_ID,
                 }),
             );
-            console.log(`📤 Sending avatar URL to server: ${AVATAR_URL}`);
+            console.log(`Sending avatar URL to server: ${AVATAR_URL}`);
         }
     }
 
@@ -717,7 +717,7 @@
             // Это защита от устаревших state_sync-ов в очереди.
             if (serverState && serverState.path !== targetPath) {
                 console.warn(
-                    `🚫 Nav cancelled: msg.path="${targetPath}" != serverState.path="${serverState.path}"`,
+                    `Nav cancelled: msg.path="${targetPath}" != serverState.path="${serverState.path}"`,
                 );
                 // Применяем актуальный serverState вместо устаревшего
                 applySyncState(serverState, force);
@@ -749,7 +749,7 @@
                 const diff = Math.abs(parseInt(slider.value) - targetPos);
                 if (force || diff > SYNC_THRESHOLD_SEC) {
                     console.log(
-                        `🔄 Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
+                        `Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
                     );
                     isSeekingTimeline = true;
                     _suppressSeekSend = true;
@@ -786,7 +786,7 @@
         wss = new WebSocket(url);
 
         wss.onopen = () => {
-            console.log(`🔌 Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
+            console.log(`Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
             islandSetConnected(serverName || serverHost);
 
             if (!islandAvatars.has(CLIENT_ID)) upsertAvatar(CLIENT_ID, null);
@@ -863,10 +863,10 @@
             isInitializing = true;
             serverState = null;
             if (e.code === 4001) {
-                console.error(`🚫 Room [${ROOM_ID}] not found on server`);
+                console.error(`Room [${ROOM_ID}] not found on server`);
                 return;
             }
-            console.warn("🔌 WS disconnected, reconnecting in 3s...");
+            console.warn("WS disconnected, reconnecting in 3s...");
             setTimeout(connect, 3000);
         };
     }
@@ -902,7 +902,7 @@
         // Если сервер уже переключился на другой трек — не идём на старый.
         if (serverState && serverState.path && serverState.path !== p) {
             console.warn(
-                `🚫 Nav to "${p}" aborted — server now wants "${serverState.path}"`,
+                `Nav to "${p}" aborted — server now wants "${serverState.path}"`,
             );
             // Запускаем навигацию к актуальному пути
             pendingPath = serverState.path;
@@ -913,7 +913,7 @@
         // ── ПРОВЕРКА 3: вдруг мы уже на нужном треке ────────────────────
         const currentPath = getAlbumPath();
         if (currentPath === p) {
-            console.log(`✅ Already on "${p}", skip navigation`);
+            console.log(`Already on "${p}", skip navigation`);
             _suppressSend = p;
             lastSentPath = p;
             // Просто применяем play/seek если нужно
@@ -925,7 +925,7 @@
 
         _navigatingToPath = p;
         isNavigating = true;
-        console.log("🔗 Navigate:", p);
+        console.log("Navigate:", p);
         if (window.location.pathname !== p) window.next.router.push(p);
         waitForTrackAndPlay(p);
     }
@@ -936,7 +936,7 @@
         processNext();
         if (_pendingSyncAfterNav && serverState) {
             _pendingSyncAfterNav = false;
-            console.log("🔄 Applying deferred server state after navigation");
+            console.log("Applying deferred server state after navigation");
             setTimeout(() => applySyncState(serverState, true), 300);
         }
     }
@@ -948,7 +948,7 @@
             if (pendingPath && pendingPath !== expectedPath) {
                 clearInterval(wait);
                 console.warn(
-                    `🔀 Nav interrupted: new path "${pendingPath}" overrides "${expectedPath}"`,
+                    `Nav interrupted: new path "${pendingPath}" overrides "${expectedPath}"`,
                 );
                 isNavigating = false;
                 _navigatingToPath = null;
@@ -965,7 +965,7 @@
             ) {
                 clearInterval(wait);
                 console.warn(
-                    `🚫 waitForTrackAndPlay: server switched to "${serverState.path}" while waiting for "${expectedPath}"`,
+                    `waitForTrackAndPlay: server switched to "${serverState.path}" while waiting for "${expectedPath}"`,
                 );
                 isNavigating = false;
                 _navigatingToPath = null;
@@ -1004,7 +1004,7 @@
                         serverState.path !== expectedPath
                     ) {
                         console.warn(
-                            `🚫 Pre-click check failed: server now wants "${serverState.path}", not "${expectedPath}"`,
+                            `Pre-click check failed: server now wants "${serverState.path}", not "${expectedPath}"`,
                         );
                         isNavigating = false;
                         _navigatingToPath = null;
@@ -1061,7 +1061,7 @@
         lastSentPlayHref = href;
         wss.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
         setActiveSender(CLIENT_ID);
-        console.log("📤 playstate →server (instant):", href);
+        console.log("playstate →server (instant):", href);
     }
 
     function applyPlayState(wantPlay) {
@@ -1216,7 +1216,7 @@
                     }),
                 );
                 setActiveSender(CLIENT_ID);
-                console.log("📤 seek →server (instant):", val);
+                console.log("seek →server (instant):", val);
             }
         }
 
@@ -1250,7 +1250,7 @@
                 JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
             );
             setActiveSender(CLIENT_ID);
-            console.log("📤 navigate →server (debounced):", p);
+            console.log("navigate →server (debounced):", p);
         }, SEND_DELAY_MS);
     }
 
@@ -1297,7 +1297,7 @@
             }
 
             if (p && isSyncPaused && !isNavigating && !_userPausedSync) {
-                console.log("✅ Album href appeared — auto-resuming sync");
+                console.log("Album href appeared — auto-resuming sync");
                 resumeSync();
             }
 
@@ -1320,7 +1320,7 @@
                 if (p) {
                     if (isSyncPaused && !isNavigating && !_userPausedSync) {
                         console.log(
-                            "✅ Album href appeared (observer) — auto-resuming sync",
+                            "Album href appeared (observer) — auto-resuming sync",
                         );
                         resumeSync();
                     } else if (!isSyncPaused) {
@@ -1346,7 +1346,7 @@
                 if (p) {
                     if (isSyncPaused && !isNavigating && !_userPausedSync) {
                         console.log(
-                            "✅ Album href appeared (bar observer) — auto-resuming sync",
+                            "Album href appeared (bar observer) — auto-resuming sync",
                         );
                         resumeSync();
                     } else if (!isSyncPaused) {
