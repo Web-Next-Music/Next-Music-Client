@@ -7,7 +7,7 @@ const WSPORT = 6972;
 
 let rpc;
 let isReady = false;
-let lastActivity;
+let lastActivity = null;
 let lastPlayerState = null;
 let globalConfig = null;
 
@@ -38,7 +38,6 @@ const wss = new WebSocket.Server({ port: WSPORT }, () =>
 
 wss.on("connection", (ws) => {
     console.log("[WS] New connection");
-
     ws.on("message", (msg) => {
         try {
             const data = JSON.parse(msg.toString());
@@ -49,17 +48,6 @@ wss.on("connection", (ws) => {
     });
 });
 
-// --- Parse time hh:mm:ss or mm:ss ---
-function parseTime(timeString) {
-    if (!timeString) return 0;
-    const parts = timeString.split(":").map(Number);
-    return parts.length === 2
-        ? parts[0] * 60 + parts[1]
-        : parts.length === 3
-          ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-          : 0;
-}
-
 // --- Update Discord activity ---
 function updateActivity(data, config) {
     if (!rpc || !isReady) return;
@@ -67,14 +55,17 @@ function updateActivity(data, config) {
     const title = data.title || "";
     const artist = data.artists || "";
     const img = data.img || "icon";
-    const albumUrl = data.albumUrl || "";
+    const albumUrl = data.albumUrl || ""; // пусто для приватных треков
     const artistUrl = data.artistUrl || "";
 
+    // Позиция и длительность в секундах (поля из siteRPCServer)
+    const positionSec = data.positionSec ?? 0;
+    const durationSec = data.durationSec ?? 0;
+    const hasTimestamps = durationSec > 0 && positionSec > 0;
+
     const now = Math.floor(Date.now() / 1000);
-    const current = parseTime(data.timeCurrent);
-    const total = parseTime(data.timeEnd);
-    const startTimestamp = now - current;
-    const endTimestamp = startTimestamp + total;
+    const startTimestamp = now - Math.floor(positionSec);
+    const endTimestamp = startTimestamp + Math.floor(durationSec);
 
     const activityObject = {
         name: config?.programSettings?.richPresence?.rpcTitle || "Next Music",
@@ -87,11 +78,9 @@ function updateActivity(data, config) {
         instance: false,
         ...(albumUrl ? { detailsUrl: albumUrl } : {}),
         ...(artistUrl ? { stateUrl: artistUrl } : {}),
-        ...((data.timeCurrent && data.timeCurrent !== "00:00") ||
-        (data.timeEnd && data.timeEnd !== "00:00")
-            ? { startTimestamp, endTimestamp }
-            : {}),
+        ...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
         buttons: [
+            // Кнопка трека — только если albumUrl есть (скрываем для приватных треков)
             ...(config?.programSettings?.richPresence?.buttons?.trackButton &&
             albumUrl
                 ? [{ label: "Open in Yandex Music", url: albumUrl }]
@@ -102,50 +91,52 @@ function updateActivity(data, config) {
         ],
     };
 
-    if (!activityObject.startTimestamp || !activityObject.endTimestamp) {
-        lastActivity = null;
-    }
+    const playerState = (data.playerState || "").toLowerCase();
 
-    const playerState = data.playerState?.toLowerCase() || "";
-
-    if (playerState.includes("play")) {
-        console.log(`[RPC] Clearing activity (pause)`);
-        rpc.user?.clearActivity().catch(console.error);
-        lastPlayerState = "pause";
+    // Пауза / стоп — очищаем активность
+    if (playerState !== "playing") {
+        if (lastPlayerState !== "pause") {
+            console.log(
+                `[RPC] Clearing activity (${playerState || "unknown"})`,
+            );
+            rpc.user?.clearActivity().catch(console.error);
+            lastPlayerState = "pause";
+            lastActivity = null;
+        }
         return;
     }
 
-    if (playerState.includes("pause") || playerState.includes("playing")) {
-        const hasChanged =
-            !lastActivity ||
-            lastActivity.details !== activityObject.details ||
-            lastActivity.state !== activityObject.state ||
-            lastActivity.largeImageKey !== activityObject.largeImageKey ||
-            lastPlayerState !== "play";
+    // Трек играет
+    const hasChanged =
+        !lastActivity ||
+        lastActivity.details !== activityObject.details ||
+        lastActivity.state !== activityObject.state ||
+        lastActivity.largeImageKey !== activityObject.largeImageKey ||
+        lastPlayerState !== "play";
 
-        const timestampDiff = lastActivity
+    const timestampDiff =
+        lastActivity?.startTimestamp != null
             ? Math.abs(
                   activityObject.startTimestamp - lastActivity.startTimestamp,
               )
             : Infinity;
 
-        if (hasChanged) {
-            console.log(`[RPC] Setting new activity: ${title} — ${artist}`);
-            rpc.user?.setActivity(activityObject).catch(console.error);
-            lastActivity = activityObject;
-            lastPlayerState = "play";
-        } else if (timestampDiff > 1) {
-            console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
-            rpc.user
-                ?.setActivity({
-                    ...lastActivity,
-                    startTimestamp,
-                    endTimestamp,
-                })
-                .catch(console.error);
-            lastActivity.startTimestamp = startTimestamp;
-            lastActivity.endTimestamp = endTimestamp;
-        }
+    if (hasChanged) {
+        console.log(`[RPC] Setting new activity: ${title} — ${artist}`);
+        rpc.user?.setActivity(activityObject).catch(console.error);
+        lastActivity = { ...activityObject };
+        lastPlayerState = "play";
+    } else if (hasTimestamps && timestampDiff > 1) {
+        console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
+        rpc.user
+            ?.setActivity({
+                ...lastActivity,
+                startTimestamp,
+                endTimestamp,
+            })
+            .catch(console.error);
+        lastActivity.startTimestamp = startTimestamp;
+        lastActivity.endTimestamp = endTimestamp;
     }
 }
 

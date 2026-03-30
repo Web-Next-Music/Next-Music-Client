@@ -3,17 +3,19 @@
 
     const WSPORT = 6972;
     const WS_URL = `ws://127.0.0.1:${WSPORT}`;
+    const POLL_INTERVAL = 1000; // ms
     let ws;
 
-    const lastSentState = new Map();
-    const lastTimeCurrent = new Map();
     const pendingData = new Map();
     const cooldownDuration = 2000;
     const cooldownTimers = new Map();
 
-    function log(index, msg, data) {
+    let lastSentData = null;
+    let lastPosition = null;
+
+    function log(msg, data) {
         console.log(
-            `%c[PLAYER ${index}] ${msg}`,
+            `%c[PLAYER] ${msg}`,
             "color:#4caf50;font-weight:bold;",
             data ?? "",
         );
@@ -26,12 +28,10 @@
 
         ws.onopen = () => {
             console.log("[WS] Connected to", WS_URL);
-
-            // отправляем все pending данные, которые могли накопиться
             pendingData.forEach((data, index) => {
                 const payload = { playerIndex: index, ...data };
                 ws.send(JSON.stringify(payload));
-                log(index, "Sent pending on reconnect", payload);
+                log("Sent pending on reconnect", payload);
                 pendingData.delete(index);
             });
         };
@@ -48,95 +48,76 @@
 
     /* ===================== DATA EXTRACTION ===================== */
 
-    function getPlayerData(playerEl) {
-        if (!playerEl) return null;
-        return {
-            img:
-                playerEl.querySelector(
-                    `[class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img`,
-                )?.src ?? null,
-            albumUrl:
-                playerEl
-                    .querySelector(`[class*="Meta_albumLink"]`)
-                    ?.href?.trim() ?? null,
-            artistUrl:
-                playerEl.querySelector(`[class*="Meta_link"]`)?.href?.trim() ??
-                null,
-            title:
-                playerEl
-                    .querySelector(`[class*="Meta_title"]`)
-                    ?.textContent?.trim() ?? null,
-            artists:
-                playerEl
-                    .querySelector(`[class*="SeparatedArtists_root_clamp"]`)
-                    ?.textContent?.trim() ?? null,
-            timeCurrent:
-                playerEl.querySelector(
-                    `[class*="TimecodeGroup_timecode_current_animation"] > span`,
-                )?.textContent ?? null,
-            timeEnd:
-                playerEl.querySelector(
-                    `[class*="TimecodeGroup_timecode_end"] > span`,
-                )?.textContent ?? null,
-            playerState:
-                playerEl.querySelector(
-                    '[class*="BaseSonataControlsDesktop_playButtonIcon"] > use',
-                )?.href?.baseVal ?? null,
-        };
-    }
+    function getPlayerData() {
+        const api = window.nextMusic;
+        if (!api) return null;
 
-    function parseTimeToSec(time) {
-        if (!time) return 0;
-        const p = time.split(":").map(Number);
-        return p.length === 2
-            ? p[0] * 60 + p[1]
-            : p.length === 3
-              ? p[0] * 3600 + p[1] * 60 + p[2]
-              : 0;
+        const track = api.getCurrentTrack();
+        const state = api.getState();
+        if (!track || !state) return null;
+
+        // artists — массив объектов [{id, name}], берём строку из artistNames
+        const artistsStr = track.artistNames?.join(", ") ?? "";
+
+        // artistUrl из первого artistId
+        const artistUrl = track.artistIds?.[0]
+            ? `https://music.yandex.ru/artist/${track.artistIds[0]}`
+            : null;
+
+        // albumUrl из albumId — null для приватных треков
+        const albumUrl = track.albumId
+            ? `https://music.yandex.ru/album/${track.albumId}`
+            : null;
+
+        return {
+            trackId: track.id ?? null,
+            title: track.title ?? null,
+            artists: artistsStr,
+            img: track.coverUrl ?? null,
+            albumUrl,
+            artistUrl,
+            trackUrl: track.trackUrl ?? null,
+            positionSec: state.progress?.position ?? 0,
+            durationSec: (track.durationMs ?? 0) / 1000,
+            playerState: state.status ?? null, // "playing" | "paused"
+        };
     }
 
     /* ===================== CHANGE DETECTION ===================== */
 
-    function isTimeJump(index, data) {
-        const current = parseTimeToSec(data.timeCurrent || "");
-        const last = lastTimeCurrent.get(index);
-        lastTimeCurrent.set(index, current);
-        if (last == null) return false;
-        return Math.abs(current - last) > 1;
+    function isSeekJump(positionSec) {
+        const last = lastPosition;
+        const expected = last != null ? last + POLL_INTERVAL / 1000 : null;
+        lastPosition = positionSec;
+        if (expected == null) return false;
+        return Math.abs(positionSec - expected) > 2;
     }
 
-    function isStateChanged(index, data) {
-        const last = lastSentState.get(index);
-        if (!last) {
-            lastSentState.set(index, { ...data, timeCurrent: undefined });
-            log(index, "First state detected");
-            return true;
-        }
-        const { timeCurrent, ...rest } = data;
-        const { timeCurrent: _, ...lastRest } = last;
-        const changed = Object.keys(rest).some((k) => rest[k] !== lastRest[k]);
-        if (changed)
-            lastSentState.set(index, { ...data, timeCurrent: undefined });
-        return changed;
+    function isStateChanged(data) {
+        if (!lastSentData) return true;
+        return (
+            data.trackId !== lastSentData.trackId ||
+            data.title !== lastSentData.title ||
+            data.artists !== lastSentData.artists ||
+            data.playerState !== lastSentData.playerState ||
+            data.img !== lastSentData.img
+        );
     }
 
     /* ===================== SEND LOGIC ===================== */
 
-    function scheduleSend(playerEl, index, data) {
+    function scheduleSend(data) {
+        const index = 0;
         pendingData.set(index, data);
 
-        // если уже есть таймер, сбрасываем его
-        if (cooldownTimers.has(index)) {
-            clearTimeout(cooldownTimers.get(index));
-        }
+        if (cooldownTimers.has(index)) clearTimeout(cooldownTimers.get(index));
 
-        // ставим новый таймер
         const timer = setTimeout(() => {
             const pending = pendingData.get(index);
             if (pending && ws && ws.readyState === WebSocket.OPEN) {
                 const payload = { playerIndex: index, ...pending };
                 ws.send(JSON.stringify(payload));
-                log(index, "Sent after cooldown", payload);
+                log("Sent after cooldown", payload);
             }
             pendingData.delete(index);
             cooldownTimers.delete(index);
@@ -145,116 +126,46 @@
         cooldownTimers.set(index, timer);
     }
 
-    function sendPlayerData(playerEl, index) {
-        const data = getPlayerData(playerEl);
-        if (!data || data.timeCurrent === "00:00") return;
-
-        const timeJump = isTimeJump(index, data);
-        const stateChanged = isStateChanged(index, data);
-
-        if (!timeJump && !stateChanged) return;
-
-        log(
-            index,
-            timeJump ? "Triggered (time jump)" : "Triggered (state change)",
-            data,
-        );
-        scheduleSend(playerEl, index, data);
-    }
-
-    /* ===================== OBSERVER ===================== */
-
-    // Карта активных наблюдателей: el -> { observer, index }
-    const activeObservers = new Map();
-    let playerCounter = 0;
-
-    function attachObserver(playerEl) {
-        if (activeObservers.has(playerEl)) return; // уже наблюдается
-
-        const index = playerCounter++;
-        log(index, "Player observer initialized");
-
-        const playerObserve = new MutationObserver(() =>
-            sendPlayerData(playerEl, index),
-        );
-        playerObserve.observe(playerEl, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-        });
-        activeObservers.set(playerEl, { observer: playerObserve, index });
-
-        const slider = playerEl.querySelector(
-            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
-        );
-        if (slider) {
-            const trigger = () => sendPlayerData(playerEl, index);
-            slider.addEventListener("mouseup", trigger);
-            slider.addEventListener("touchend", trigger);
-        }
-    }
-
-    function detachObserver(playerEl) {
-        const entry = activeObservers.get(playerEl);
-        if (!entry) return;
-
-        const { observer, index } = entry;
-        log(index, "🗑️ Player removed from DOM, sending null state");
-
-        // Уведомляем сервер, что плеер пропал
+    function sendImmediate(data) {
+        const index = 0;
         if (ws && ws.readyState === WebSocket.OPEN) {
-            const payload = {
-                playerIndex: index,
-                playerState: null,
-                removed: true,
-            };
+            const payload = { playerIndex: index, ...data };
             ws.send(JSON.stringify(payload));
+            log("Sent immediately (seek)", payload);
         } else {
-            // Если WS не готов — ставим в pending
-            pendingData.set(index, { playerState: null, removed: true });
-        }
-
-        observer.disconnect();
-        activeObservers.delete(playerEl);
-        lastSentState.delete(index);
-        lastTimeCurrent.delete(index);
-        pendingData.delete(index);
-
-        const timer = cooldownTimers.get(index);
-        if (timer) {
-            clearTimeout(timer);
-            cooldownTimers.delete(index);
+            pendingData.set(index, data);
         }
     }
 
-    // Первоначальная инициализация уже существующих плееров
-    document
-        .querySelectorAll(`[class*="PlayerBar_root"]`)
-        .forEach(attachObserver);
+    /* ===================== POLL LOOP ===================== */
 
-    // Глобальный наблюдатель за появлением/исчезновением плееров в DOM
-    const domObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            for (const node of mutation.addedNodes) {
-                if (node.nodeType !== Node.ELEMENT_NODE) continue;
-                if (node.matches?.(`[class*="PlayerBar_root"]`)) {
-                    attachObserver(node);
-                }
-                node.querySelectorAll?.(`[class*="PlayerBar_root"]`).forEach(
-                    attachObserver,
-                );
-            }
-            for (const node of mutation.removedNodes) {
-                if (node.nodeType !== Node.ELEMENT_NODE) continue;
-                if (node.matches?.(`[class*="PlayerBar_root"]`)) {
-                    detachObserver(node);
-                }
-                node.querySelectorAll?.(`[class*="PlayerBar_root"]`).forEach(
-                    detachObserver,
-                );
-            }
+    function poll() {
+        const data = getPlayerData();
+        if (!data) return;
+
+        const seeked = isSeekJump(data.positionSec);
+        const changed = isStateChanged(data);
+
+        if (!changed && !seeked) return;
+
+        log(changed ? "Triggered (state change)" : "Triggered (seek)", data);
+
+        if (changed) {
+            lastSentData = { ...data };
+            scheduleSend(data);
+        } else if (seeked) {
+            sendImmediate(data);
         }
-    });
+    }
 
-    domObserver.observe(document.body, { childList: true, subtree: true });
+    function waitForApi() {
+        if (window.nextMusic) {
+            log("window.nextMusic API found, starting poll loop");
+            setInterval(poll, POLL_INTERVAL);
+        } else {
+            setTimeout(waitForApi, 500);
+        }
+    }
+
+    waitForApi();
 })();
