@@ -148,6 +148,11 @@
 
         if (!changed && !seeked) return;
 
+        if (seeked && !changed && window.__liSyncSeeking) {
+            log("Seek suppressed (listenAlong sync)", data);
+            return;
+        }
+
         log(changed ? "Triggered (state change)" : "Triggered (seek)", data);
 
         if (changed) {

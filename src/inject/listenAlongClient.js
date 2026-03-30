@@ -14,11 +14,6 @@
             'input[class*="FullscreenPlayerDesktopContent_slider"]',
         // Строка синхронизированного текста (клик = перемотка)
         lyricsLine: '[class*="SyncLyricsLine_root"]',
-        // Модалка трека
-        trackModal: '[class*="TrackModal_modalContent"]',
-        // Кнопка play в модалке трека
-        trackModalPlayBtn:
-            '[class*="TrackModal_modalContent"] * [class*="TrackModalControls_controlsContainer"] > button',
         // Элементы, клик/drag по которым считается перемоткой и отправляется seek
         seekSources: [
             '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
@@ -42,7 +37,7 @@
     const ROOM_ID = _qs.get("__room") || null;
     const CLIENT_ID = _qs.get("__clientId") || null;
     const AVATAR_URL = _qs.get("__avatarUrl") || null;
-    const SYNC_THRESHOLD_SEC = 1;
+    const SYNC_THRESHOLD_SEC = 3;
 
     let wss = null;
     let serverName = null;
@@ -70,10 +65,10 @@
         isInitializing = false;
         const href = getPlayIconHref();
         if (href) lastSentPlayHref = href;
-        if (serverState && serverState.path) {
-            lastSentPath = serverState.path;
+        if (serverState && (serverState.trackId ?? serverState.path)) {
+            lastSentPath = serverState.trackId ?? serverState.path;
         } else {
-            const p = getAlbumPath();
+            const p = getTrackId();
             if (p) lastSentPath = p;
         }
         console.log("Initialization complete — lastSentPath:", lastSentPath);
@@ -402,9 +397,9 @@
             if (avRow) avRow.className = "visible";
         });
         if (serverState) {
-            const currentPath = getAlbumPath();
-            const needsNav =
-                serverState.path && serverState.path !== currentPath;
+            const currentId = getTrackId();
+            const srvId = serverState.trackId ?? serverState.path;
+            const needsNav = srvId && srvId !== currentId;
             if (needsNav) {
                 _pendingSyncAfterNav = true;
             }
@@ -682,6 +677,8 @@
         setter.call(slider, value);
         slider.dispatchEvent(new Event("input", { bubbles: true }));
         _isSyntheticSeek = true;
+        // Сообщаем siteRPCServer что это синтетический seek — не пользовательский
+        window.__liSyncSeeking = true;
         slider.dispatchEvent(
             new PointerEvent("pointerup", { bubbles: true, cancelable: true }),
         );
@@ -690,15 +687,17 @@
         );
         _isSyntheticSeek = false;
         slider.dispatchEvent(new Event("change", { bubbles: true }));
+        // Снимаем флаг после того как siteRPCServer успеет обработать тик
+        setTimeout(() => {
+            window.__liSyncSeeking = false;
+        }, 1500);
         console.log(`⏱️ Seek → ${value}/${slider.max}`);
     }
 
     // ─── Apply state from server ────────────────────────────────────────
 
     function applySyncState(msg, force = false) {
-        // Снимаем snapshot, чтобы гонки с новыми state_sync не влияли
-        // на уже начавшуюся навигацию
-        const targetPath = msg.path;
+        const targetPath = msg.trackId ?? msg.path ?? null; // совместимость со старым полем
         const targetPlaying = msg.playing;
         const targetPosition = msg.position;
         const targetServerTime = msg.serverTime;
@@ -712,14 +711,13 @@
             !isNavigating;
 
         if (needNav) {
-            // Дополнительная проверка: убеждаемся что serverState на момент
-            // запуска навигации всё ещё указывает на тот же path.
-            // Это защита от устаревших state_sync-ов в очереди.
-            if (serverState && serverState.path !== targetPath) {
+            if (
+                serverState &&
+                (serverState.trackId ?? serverState.path) !== targetPath
+            ) {
                 console.warn(
-                    `Nav cancelled: msg.path="${targetPath}" != serverState.path="${serverState.path}"`,
+                    `Nav cancelled: msg.trackId="${targetPath}" != serverState.trackId="${serverState.trackId ?? serverState.path}"`,
                 );
-                // Применяем актуальный serverState вместо устаревшего
                 applySyncState(serverState, force);
                 return;
             }
@@ -756,7 +754,7 @@
                     seekTo(Math.round(targetPos));
                     setTimeout(() => {
                         isSeekingTimeline = false;
-                    }, 1000);
+                    }, 2000);
                 }
             }
         }
@@ -891,32 +889,31 @@
     }
 
     function navigateAndPlay(p) {
-        // ── ПРОВЕРКА 1: не дублировать навигацию к тому же пути ──────────
+        // ── ПРОВЕРКА 1: не дублировать навигацию к тому же треку ─────────
         if (_navigatingToPath === p) {
-            console.log(`⏭️ Already navigating to "${p}", skip duplicate`);
+            console.log(
+                `⏭️ Already navigating to trackId "${p}", skip duplicate`,
+            );
             return;
         }
 
-        // ── ПРОВЕРКА 2: актуальность — сервер всё ещё хочет этот трек ───
-        // serverState мог обновиться пока мы ждали дебаунс/processNext.
-        // Если сервер уже переключился на другой трек — не идём на старый.
-        if (serverState && serverState.path && serverState.path !== p) {
-            console.warn(
-                `Nav to "${p}" aborted — server now wants "${serverState.path}"`,
-            );
-            // Запускаем навигацию к актуальному пути
-            pendingPath = serverState.path;
+        // ── ПРОВЕРКА 2: актуальность ──────────────────────────────────────
+        const srvId = serverState
+            ? (serverState.trackId ?? serverState.path)
+            : null;
+        if (srvId && srvId !== p) {
+            console.warn(`Nav to "${p}" aborted — server now wants "${srvId}"`);
+            pendingPath = srvId;
             processNext();
             return;
         }
 
-        // ── ПРОВЕРКА 3: вдруг мы уже на нужном треке ────────────────────
-        const currentPath = getAlbumPath();
-        if (currentPath === p) {
-            console.log(`Already on "${p}", skip navigation`);
+        // ── ПРОВЕРКА 3: вдруг уже играет нужный трек ─────────────────────
+        const currentId = getTrackId();
+        if (currentId === p) {
+            console.log(`Already on trackId "${p}", skip navigation`);
             _suppressSend = p;
             lastSentPath = p;
-            // Просто применяем play/seek если нужно
             if (serverState) {
                 setTimeout(() => applySyncState(serverState, true), 200);
             }
@@ -925,8 +922,10 @@
 
         _navigatingToPath = p;
         isNavigating = true;
-        console.log("Navigate:", p);
-        if (window.location.pathname !== p) window.next.router.push(p);
+        console.log("▶️ playTrackById:", p);
+
+        // Запускаем трек через nextMusic API — без роутера и виртуальных кликов
+        window.nextMusic.playTrackById(p);
         waitForTrackAndPlay(p);
     }
 
@@ -941,14 +940,14 @@
         }
     }
 
-    function waitForTrackAndPlay(expectedPath) {
+    function waitForTrackAndPlay(expectedId) {
         let attempts = 0;
         const wait = setInterval(() => {
-            // ── ПРОВЕРКА A: пришёл новый pendingPath — прерываем текущий wait ──
-            if (pendingPath && pendingPath !== expectedPath) {
+            // ── ПРОВЕРКА A: пришёл новый pendingPath ──────────────────────
+            if (pendingPath && pendingPath !== expectedId) {
                 clearInterval(wait);
                 console.warn(
-                    `Nav interrupted: new path "${pendingPath}" overrides "${expectedPath}"`,
+                    `Nav interrupted: new trackId "${pendingPath}" overrides "${expectedId}"`,
                 );
                 isNavigating = false;
                 _navigatingToPath = null;
@@ -956,95 +955,39 @@
                 return;
             }
 
-            // ── ПРОВЕРКА B: serverState изменился пока мы ждали ────────────
-            // Если сервер переключился на другой трек — прерываем и идём туда
-            if (
-                serverState &&
-                serverState.path &&
-                serverState.path !== expectedPath
-            ) {
+            // ── ПРОВЕРКА B: serverState изменился пока ждали ──────────────
+            const srvId = serverState
+                ? (serverState.trackId ?? serverState.path)
+                : null;
+            if (srvId && srvId !== expectedId) {
                 clearInterval(wait);
                 console.warn(
-                    `waitForTrackAndPlay: server switched to "${serverState.path}" while waiting for "${expectedPath}"`,
+                    `waitForTrackAndPlay: server switched to "${srvId}" while waiting for "${expectedId}"`,
                 );
                 isNavigating = false;
                 _navigatingToPath = null;
-                pendingPath = serverState.path;
+                pendingPath = srvId;
                 processNext();
                 return;
             }
 
-            const urlMatch = window.location.pathname === expectedPath;
-            const playerBarPath = getAlbumPath();
-            const currentHref = getPlayIconHref() || "";
+            const currentId = getTrackId();
+            const state = window.nextMusic?.getState?.();
+            const isPlaying = state?.status === "playing";
 
-            const alreadyPlayingRight =
-                playerBarPath === expectedPath &&
-                (currentHref.includes("pause") ||
-                    currentHref.includes("Pause"));
-
-            if (alreadyPlayingRight) {
+            if (currentId === expectedId) {
                 clearInterval(wait);
-                console.log("▶️ Already playing right track:", expectedPath);
-                setTimeout(() => {
-                    finishNavigation();
-                }, 500);
-                return;
-            }
-
-            const btn = document.querySelector(SEL.trackModalPlayBtn);
-            if (urlMatch && btn) {
-                clearInterval(wait);
-                setTimeout(() => {
-                    // ── ПРОВЕРКА C: финальная проверка перед кликом ──────────
-                    // serverState мог измениться пока мы ждали 300мс до клика
-                    if (
-                        serverState &&
-                        serverState.path &&
-                        serverState.path !== expectedPath
-                    ) {
-                        console.warn(
-                            `Pre-click check failed: server now wants "${serverState.path}", not "${expectedPath}"`,
-                        );
-                        isNavigating = false;
-                        _navigatingToPath = null;
-                        pendingPath = serverState.path;
-                        processNext();
-                        return;
-                    }
-
-                    const href = getPlayIconHref() || "";
-                    const pbPath = getAlbumPath();
-                    const playing =
-                        href.includes("pause") || href.includes("Pause");
-
-                    if (playing && pbPath === expectedPath) {
-                        console.log("▶️ Track already playing:", expectedPath);
-                    } else {
-                        btn.click();
-                        console.log("▶️ Track started:", expectedPath);
-                    }
-
-                    setTimeout(() => {
-                        // ── ПРОВЕРКА D: после клика — убеждаемся что путь совпал ──
-                        const finalPath = getAlbumPath();
-                        if (finalPath && finalPath !== expectedPath) {
-                            console.warn(
-                                `⚠️ Post-click path mismatch: got "${finalPath}", expected "${expectedPath}"`,
-                            );
-                            // Не паникуем — finishNavigation запустит processNext
-                            // который подхватит serverState.path если он есть
-                        }
-                        finishNavigation();
-                    }, 1000);
-                }, 300);
+                console.log(
+                    `✅ Track "${expectedId}" is now active (playing=${isPlaying})`,
+                );
+                setTimeout(() => finishNavigation(), 400);
                 return;
             }
 
             if (++attempts >= 40) {
                 clearInterval(wait);
                 console.warn(
-                    `⚠️ Timed out waiting for track "${expectedPath}"`,
+                    `⚠️ Timed out waiting for trackId "${expectedId}" (got "${currentId}")`,
                 );
                 finishNavigation();
             }
@@ -1226,14 +1169,28 @@
         document.addEventListener("mouseup", onSeekEnd, true);
     }
 
-    // ─── Path observer ───────────────────────────────────────────────────
+    // ─── Track ID helpers (via nextMusic API) ────────────────────────────
 
+    const UUID_RE =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    /**
+     * Возвращает числовой id текущего трека через nextMusic API.
+     * Локальные треки (UUID вида xxxxxxxx-xxxx-...) считаются как "нет трека" → null.
+     */
+    function getTrackId() {
+        if (typeof window.nextMusic?.getCurrentTrack !== "function")
+            return null;
+        const track = window.nextMusic.getCurrentTrack();
+        if (!track || !track.id) return null;
+        if (UUID_RE.test(String(track.id))) return null; // локальный трек
+        return String(track.id);
+    }
+
+    // Оставляем заглушку getAlbumPath для совместимости с UI-логикой (sync pause/resume),
+    // но теперь она опирается на getTrackId, а не на DOM-ссылку.
     function getAlbumPath() {
-        const bar = document.querySelector(SEL.playerBar);
-        if (!bar) return null;
-        const link = bar.querySelector(SEL.albumLink);
-        if (!link) return null;
-        return link.getAttribute("href") || null;
+        return getTrackId();
     }
 
     // ─── Send debounce ───────────────────────────────────────────────────
@@ -1247,10 +1204,14 @@
             if (!wss || wss.readyState !== WebSocket.OPEN) return;
             lastSentPath = p;
             wss.send(
-                JSON.stringify({ type: "navigate", path: p, roomId: ROOM_ID }),
+                JSON.stringify({
+                    type: "navigate",
+                    trackId: p,
+                    roomId: ROOM_ID,
+                }),
             );
             setActiveSender(CLIENT_ID);
-            console.log("navigate →server (debounced):", p);
+            console.log("navigate →server (debounced) trackId:", p);
         }, SEND_DELAY_MS);
     }
 
@@ -1261,7 +1222,9 @@
             lastSentPath = p;
             return;
         }
-        const serverPath = serverState ? serverState.path : null;
+        const serverPath = serverState
+            ? (serverState.trackId ?? serverState.path)
+            : null;
         if (p === lastSentPath) return;
         if (p === serverPath) {
             lastSentPath = p;
