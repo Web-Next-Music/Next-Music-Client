@@ -107,7 +107,34 @@
         return entityList[idx]?.entity?.entityData?.meta ?? null;
     }
 
-    window.nextMusic = {
+    window.nextmusicApi = {
+        // ── скачивание ассета ─────────────────────────────────────────────
+        /**
+         * Скачивает файл по URL и сохраняет его в папку assets темы.
+         * @param {string} url        - URL файла для скачивания
+         * @param {string} fileName   - Имя файла для сохранения (например, "icon.png")
+         * @param {string} addonName  - Имя папки аддона (темы), куда класть файл
+         * @returns {Promise<{ok: boolean, fileName: string, path: string}>}
+         */
+        async downloadAsset(url, fileName, addonName) {
+            const port = window.__nextmusicApiAssetPort ?? 2007;
+            const res = await fetch(
+                `http://127.0.0.1:${port}/download_asset?name=${encodeURIComponent(addonName)}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url, fileName }),
+                },
+            );
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(
+                    `[downloadAsset] Server error ${res.status}: ${text}`,
+                );
+            }
+            return res.json();
+        },
+
         // ── текст в TitleBar ──────────────────────────────────────────
         nextText(text) {
             let el = document.querySelector(".TitleBar_nextText");
@@ -148,7 +175,7 @@
                     player.play();
                 } else {
                     console.warn(
-                        "[nextMusic] Track not found in queue:",
+                        "[nextmusicApi] Track not found in queue:",
                         trackId,
                     );
                 }
@@ -220,6 +247,6 @@
         },
     };
 
-    console.log("[nextMusic] Ready!");
-    console.log("API:", Object.keys(window.nextMusic));
+    console.log("[nextmusicApi] Ready!");
+    console.log("API:", Object.keys(window.nextmusicApi));
 }

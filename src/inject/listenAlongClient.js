@@ -924,8 +924,8 @@
         isNavigating = true;
         console.log("▶️ playTrackById:", p);
 
-        // Запускаем трек через nextMusic API — без роутера и виртуальных кликов
-        window.nextMusic.playTrackById(p);
+        // Запускаем трек через nextmusicApi — без роутера и виртуальных кликов
+        window.nextmusicApi.playTrackById(p);
         waitForTrackAndPlay(p);
     }
 
@@ -972,7 +972,7 @@
             }
 
             const currentId = getTrackId();
-            const state = window.nextMusic?.getState?.();
+            const state = window.nextmusicApi?.getState?.();
             const isPlaying = state?.status === "playing";
 
             if (currentId === expectedId) {
@@ -1169,19 +1169,19 @@
         document.addEventListener("mouseup", onSeekEnd, true);
     }
 
-    // ─── Track ID helpers (via nextMusic API) ────────────────────────────
+    // ─── Track ID helpers (via nextmusicApi) ────────────────────────────
 
     const UUID_RE =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     /**
-     * Возвращает числовой id текущего трека через nextMusic API.
+     * Возвращает числовой id текущего трека через nextmusicApi.
      * Локальные треки (UUID вида xxxxxxxx-xxxx-...) считаются как "нет трека" → null.
      */
     function getTrackId() {
-        if (typeof window.nextMusic?.getCurrentTrack !== "function")
+        if (typeof window.nextmusicApi?.getCurrentTrack !== "function")
             return null;
-        const track = window.nextMusic.getCurrentTrack();
+        const track = window.nextmusicApi.getCurrentTrack();
         if (!track || !track.id) return null;
         if (UUID_RE.test(String(track.id))) return null; // локальный трек
         return String(track.id);

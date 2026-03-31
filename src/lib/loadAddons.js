@@ -218,6 +218,84 @@ function startAssetServer(preferredPort = 2007, attempt = 0) {
             return;
         }
 
+        // ── download_asset ───────────────────────────────────────────────────
+        if (pathname === "/download_asset" && req.method === "POST") {
+            if (!name) return send(400, "Missing name parameter");
+            const addonDir = path.join(addonsDirectory, name);
+            let assetsRoot = findAssetsDir(addonDir);
+            // Если папки assets ещё нет — создаём её
+            if (!assetsRoot) {
+                assetsRoot = path.join(addonDir, "assets");
+                try {
+                    fs.mkdirSync(assetsRoot, { recursive: true });
+                } catch (err) {
+                    console.error(
+                        "[download_asset] Cannot create assets dir:",
+                        err,
+                    );
+                    return send(500, "Cannot create assets directory");
+                }
+            }
+            let body = "";
+            req.on("data", (chunk) => (body += chunk));
+            req.on("end", async () => {
+                let url, fileName;
+                try {
+                    ({ url, fileName } = JSON.parse(body));
+                } catch {
+                    return send(400, "Invalid JSON body");
+                }
+                if (!url || typeof url !== "string")
+                    return send(400, "Missing url");
+                if (!fileName || typeof fileName !== "string")
+                    return send(400, "Missing fileName");
+                const safeFileName = path.basename(fileName);
+                if (!safeFileName) return send(400, "Invalid fileName");
+                const destPath = safeResolve(assetsRoot, safeFileName);
+                if (!destPath)
+                    return send(400, "Invalid fileName (traversal detected)");
+                try {
+                    const controller = new AbortController();
+                    const timer = setTimeout(
+                        () => controller.abort(),
+                        FETCH_TIMEOUT_MS,
+                    );
+                    let fetchRes;
+                    try {
+                        fetchRes = await fetch(url, {
+                            signal: controller.signal,
+                        });
+                    } finally {
+                        clearTimeout(timer);
+                    }
+                    if (!fetchRes.ok) {
+                        return send(
+                            502,
+                            `Fetch failed: HTTP ${fetchRes.status}`,
+                        );
+                    }
+                    const buffer = Buffer.from(await fetchRes.arrayBuffer());
+                    fs.writeFileSync(destPath, buffer);
+                    console.log(
+                        `[download_asset] Saved '${safeFileName}' → ${destPath}`,
+                    );
+                    res.writeHead(200, { "Content-Type": "application/json" });
+                    res.end(
+                        JSON.stringify({
+                            ok: true,
+                            fileName: safeFileName,
+                            path: destPath,
+                        }),
+                    );
+                } catch (err) {
+                    console.error("[download_asset] Error:", err);
+                    if (!res.headersSent)
+                        send(500, `Download error: ${err.message}`);
+                }
+            });
+            return;
+        }
+
         // ── GET /get_handle?name=<addon> ─────────────────────────────────────
 
         if (pathname === "/get_handle") {

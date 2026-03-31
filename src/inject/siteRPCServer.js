@@ -49,7 +49,7 @@
     /* ===================== DATA EXTRACTION ===================== */
 
     function getPlayerData() {
-        const api = window.nextMusic;
+        const api = window.nextmusicApi;
         if (!api) return null;
 
         const track = api.getCurrentTrack();
@@ -164,8 +164,8 @@
     }
 
     function waitForApi() {
-        if (window.nextMusic) {
-            log("window.nextMusic API found, starting poll loop");
+        if (window.nextmusicApi) {
+            log("window.nextmusicApi found, starting poll loop");
             setInterval(poll, POLL_INTERVAL);
         } else {
             setTimeout(waitForApi, 500);
