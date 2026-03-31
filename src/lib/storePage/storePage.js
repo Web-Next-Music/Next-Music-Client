@@ -43,6 +43,21 @@ export function setupStorePage() {
                 .arrayBuffer()
                 .then((ab) => Buffer.from(ab).toString("utf8"));
 
+        // Determine which BrowserWindow sent this request so that /api/reload
+        // can restart the correct main window (not a random other window).
+        let senderWcId = null;
+        try {
+            const allWins = BrowserWindow.getAllWindows();
+            for (const w of allWins) {
+                if (w.webContents.getURL().startsWith("nextstore://")) {
+                    senderWcId = w.webContents.id;
+                    break;
+                }
+            }
+        } catch {
+            // ignore – fallback to old behaviour
+        }
+
         try {
             const result = await handleRequest(
                 method,
@@ -50,6 +65,7 @@ export function setupStorePage() {
                 qp,
                 getBody,
                 PUBLIC_DIR,
+                senderWcId,
             );
             return new Response(result.body, {
                 status: result.status,
