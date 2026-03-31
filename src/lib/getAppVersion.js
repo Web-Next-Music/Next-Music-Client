@@ -6,6 +6,10 @@ const require = createRequire(import.meta.url);
 const { version } = require("../../package.json");
 
 function parsePackageVersion() {
+    return version;
+}
+
+function parsePackageVersionWV() {
     return version.startsWith("v") ? version : `v${version}`;
 }
 
@@ -30,4 +34,8 @@ function parseGitCommit() {
  */
 export function getCurrentVersion() {
     return app.isPackaged ? parsePackageVersion() : parseGitCommit();
+}
+
+export function getCurrentVersionWV() {
+    return app.isPackaged ? parsePackageVersionWV() : parseGitCommit();
 }

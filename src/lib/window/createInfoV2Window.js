@@ -1,5 +1,5 @@
 import { BrowserWindow, nativeImage, ipcMain } from "electron";
-import { getCurrentVersion } from "../../lib/getAppVersion.js";
+import { getCurrentVersionWV } from "../../lib/getAppVersion.js";
 import { trayIconPath, getPaths } from "../../config.js";
 import { getConfig } from "../../lib/configManager.js";
 import path from "path";
@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 if (!ipcMain.listenerCount("get-app-version")) {
     ipcMain.on("get-app-version", (event) => {
-        event.returnValue = getCurrentVersion();
+        event.returnValue = getCurrentVersionWV();
     });
 }
 
