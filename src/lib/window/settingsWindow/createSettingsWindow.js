@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, shell, app } from "electron";
 import { fileURLToPath } from "url";
 import path from "path";
-
+import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, updateConfig } from "../../configManager.js";
 import { getPaths } from "../../../config.js";
 
@@ -76,7 +76,7 @@ export function createSettingsWindow() {
 if (!ipcMain.listenerCount("settings:get-versions")) {
     ipcMain.handle("settings:get-versions", () => {
         return {
-            app: pkg.version,
+            app: getCurrentVersion(),
             electron: process.versions.electron,
             chromium: process.versions.chrome,
             node: process.versions.node,

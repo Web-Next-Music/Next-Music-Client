@@ -2,11 +2,7 @@ const { shell, ipcRenderer } = require("electron");
 const { t, loadLanguage, initLanguages } = require("../../lib/langManager");
 
 // Version
-const { version: currentPkgVersion } = require("../../../package.json");
-
-const CURRENT_VERSION = currentPkgVersion.startsWith("v")
-    ? currentPkgVersion
-    : `v${currentPkgVersion}`;
+const CURRENT_VERSION = ipcRenderer.sendSync("get-app-version");
 
 document.querySelector(".version").textContent = CURRENT_VERSION;
 document.querySelector(".nm_title").textContent =

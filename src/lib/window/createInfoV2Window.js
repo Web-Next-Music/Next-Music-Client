@@ -1,13 +1,19 @@
-import { BrowserWindow, nativeImage } from "electron";
-import path from "path";
-
+import { BrowserWindow, nativeImage, ipcMain } from "electron";
+import { getCurrentVersion } from "../../lib/getAppVersion.js";
 import { trayIconPath, getPaths } from "../../config.js";
 import { getConfig } from "../../lib/configManager.js";
+import path from "path";
 
 // __dirname fix for ESM
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+if (!ipcMain.listenerCount("get-app-version")) {
+    ipcMain.on("get-app-version", (event) => {
+        event.returnValue = getCurrentVersion();
+    });
+}
 
 const trayIcon = nativeImage
     .createFromPath(trayIconPath)

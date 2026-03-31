@@ -7,26 +7,17 @@ import {
     app,
     ipcMain,
 } from "electron";
-
 import { checkForUpdates } from "../lib/updater.js";
-
-// Version
-import pkg from "../../package.json" with { type: "json" };
-const CURRENT_VERSION = pkg.version;
-
+import { getCurrentVersion } from "./getAppVersion.js";
 import { trayIconPath, getPaths } from "../config.js";
 import { getConfig } from "../lib/configManager.js";
-
+import { initLanguages, t } from "../lib/langManager.js";
+import { createInfoWindow } from "./window/createInfoWindow.js";
+import { createInfoV2Window } from "./window/createInfoV2Window.js";
 import {
     createSettingsWindow,
     setTrayRebuilder,
 } from "./window/settingsWindow/createSettingsWindow.js";
-
-import { initLanguages, t } from "../lib/langManager.js";
-
-import { createInfoWindow } from "./window/createInfoWindow.js";
-import { createInfoV2Window } from "./window/createInfoV2Window.js";
-
 import path from "path";
 
 let trayInstance = null;
@@ -48,7 +39,7 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
 
     return Menu.buildFromTemplate([
         {
-            label: t("tray.appTitle", { version: CURRENT_VERSION }),
+            label: t("tray.appTitle", { version: getCurrentVersion() }),
             enabled: false,
         },
         { type: "separator" },
