@@ -288,15 +288,54 @@ function renderNodes(nodes, container, depth) {
                 langSelects.push(control);
             }
         } else if (node.kind === "group") {
+            const enableFieldIdx = node.children.findIndex(
+                (c) =>
+                    c.kind === "field" && c.path.split(".").pop() === "enable",
+            );
+
             if (depth === 0) {
-                // First level: classic section title
-                const h = document.createElement("div");
-                h.className = "sec-title";
-                h.textContent = sectionName(node.key);
-                container.append(h);
-                renderNodes(node.children, container, depth + 1);
+                if (enableFieldIdx !== -1) {
+                    const enableField = node.children[enableFieldIdx];
+                    const remainingChildren = node.children.filter(
+                        (_, i) => i !== enableFieldIdx,
+                    );
+
+                    const secRow = document.createElement("div");
+                    secRow.className = "sec-title-row";
+                    const secLabel = document.createElement("span");
+                    secLabel.className = "sec-title-label";
+                    secLabel.textContent = sectionName(node.key);
+                    secRow.append(secLabel);
+
+                    const toggle = mkToggle(enableField.path);
+                    toggle.classList.add("group-head-toggle");
+                    secRow.append(toggle);
+                    container.append(secRow);
+
+                    const bodyWrap = document.createElement("div");
+                    bodyWrap.className = "sec-body-wrap";
+
+                    const applyDisabled = () => {
+                        const enabled = !!getPath(CONFIG, enableField.path);
+                        bodyWrap.classList.toggle(
+                            "group-body--disabled",
+                            !enabled,
+                        );
+                    };
+                    toggle
+                        .querySelector("input")
+                        .addEventListener("change", applyDisabled);
+                    renderNodes(remainingChildren, bodyWrap, depth + 1);
+                    applyDisabled();
+                    container.append(bodyWrap);
+                } else {
+                    const h = document.createElement("div");
+                    h.className = "sec-title";
+                    h.textContent = sectionName(node.key);
+                    container.append(h);
+                    renderNodes(node.children, container, depth + 1);
+                }
             } else {
-                // Deeper levels: card with header
                 const card = document.createElement("div");
                 card.className = depth === 1 ? "group-card" : "group-card deep";
 
@@ -306,12 +345,41 @@ function renderNodes(nodes, container, depth) {
                 cardTitle.className = "group-card-title";
                 cardTitle.textContent = sectionName(node.key);
                 cardHead.append(cardTitle);
-                card.append(cardHead);
 
-                const cardBody = document.createElement("div");
-                cardBody.className = "group-card-body";
-                renderNodes(node.children, cardBody, depth + 1);
-                card.append(cardBody);
+                if (enableFieldIdx !== -1) {
+                    const enableField = node.children[enableFieldIdx];
+                    const remainingChildren = node.children.filter(
+                        (_, i) => i !== enableFieldIdx,
+                    );
+
+                    const toggle = mkToggle(enableField.path);
+                    toggle.classList.add("group-head-toggle");
+                    cardHead.append(toggle);
+                    card.append(cardHead);
+
+                    const cardBody = document.createElement("div");
+                    cardBody.className = "group-card-body";
+
+                    const applyDisabled = () => {
+                        const enabled = !!getPath(CONFIG, enableField.path);
+                        cardBody.classList.toggle(
+                            "group-body--disabled",
+                            !enabled,
+                        );
+                    };
+                    toggle
+                        .querySelector("input")
+                        .addEventListener("change", applyDisabled);
+                    renderNodes(remainingChildren, cardBody, depth + 1);
+                    applyDisabled();
+                    card.append(cardBody);
+                } else {
+                    card.append(cardHead);
+                    const cardBody = document.createElement("div");
+                    cardBody.className = "group-card-body";
+                    renderNodes(node.children, cardBody, depth + 1);
+                    card.append(cardBody);
+                }
 
                 container.append(card);
             }
