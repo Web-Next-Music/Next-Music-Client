@@ -562,6 +562,7 @@ body {
     margin: 18px 0 10px;
     padding-bottom: 6px;
     border-bottom: 1px solid var(--line);
+    padding: 0 13px 10px 10px;
 }
 
 .sec-title-row:first-child {

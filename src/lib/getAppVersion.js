@@ -30,7 +30,7 @@ function parseGitCommit() {
 /**
  * Возвращает версию приложения:
  * - билд (app.isPackaged):    "v1.2.3"      из package.json
- * - исходники:                "dev-a1b2c3d"  последний git-коммит
+ * - исходники:                "a1b2c3d"  последний git-коммит
  */
 export function getCurrentVersion() {
     return app.isPackaged ? parsePackageVersion() : parseGitCommit();
