@@ -182,12 +182,28 @@
             }, 100);
         },
 
+        setSpeed(speed) {
+            getMainPlayer()?.setSpeed(speed);
+        },
+
+        setProgress(progress) {
+            getMainPlayer()?.setProgress(progress);
+        },
+
+        setVolume(volume) {
+            getMainPlayer()?.setVolume(volume);
+        },
+
         play() {
             getMainPlayer()?.play();
         },
 
         pause() {
             getMainPlayer()?.pause();
+        },
+
+        resume() {
+            getMainPlayer()?.resume();
         },
 
         togglePause() {
