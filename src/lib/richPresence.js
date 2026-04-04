@@ -52,6 +52,7 @@ wss.on("connection", (ws) => {
 function updateActivity(data, config) {
     if (!rpc || !isReady) return;
 
+    const trackId = data.trackId || "";
     const title = data.title || "";
     const artist = data.artists || "";
     const img = data.img || "icon";
@@ -80,10 +81,14 @@ function updateActivity(data, config) {
         ...(artistUrl ? { stateUrl: artistUrl } : {}),
         ...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
         buttons: [
-            // Кнопка трека — только если albumUrl есть (скрываем для приватных треков)
             ...(config?.programSettings?.richPresence?.buttons?.trackButton &&
             albumUrl
-                ? [{ label: "Open in Yandex Music", url: albumUrl }]
+                ? [
+                      {
+                          label: "Open in Yandex Music",
+                          url: albumUrl + "/track/" + trackId,
+                      },
+                  ]
                 : []),
             ...(config?.programSettings?.richPresence?.buttons?.githubButton
                 ? [{ label: "Next Music Project", url: GITHUB_LINK }]
