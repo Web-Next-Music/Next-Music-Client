@@ -11,6 +11,9 @@ let lastActivity = null;
 let lastPlayerState = null;
 let globalConfig = null;
 
+// Last raw payload from the addon — sent to newly connected site clients
+let lastRawData = null;
+
 // --- Initialize RPC ---
 function initRPC() {
     rpc = new Client({ clientId: CLIENT_ID, transport: { type: "ipc" } });
@@ -36,11 +39,37 @@ const wss = new WebSocket.Server({ port: WSPORT }, () =>
     console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 );
 
+// Broadcast raw addon data to all site clients EXCEPT the sender
+function broadcastToSiteClients(data, sender) {
+    const msg = JSON.stringify(data);
+    wss.clients.forEach((client) => {
+        if (client !== sender && client.readyState === WebSocket.OPEN) {
+            client.send(msg);
+        }
+    });
+}
+
 wss.on("connection", (ws) => {
     console.log("[WS] New connection");
+
+    // Immediately send last known raw state to newly connected site client
+    if (lastRawData) {
+        try {
+            ws.send(JSON.stringify(lastRawData));
+        } catch {}
+    }
+
     ws.on("message", (msg) => {
         try {
             const data = JSON.parse(msg.toString());
+
+            // Save raw data for future connections
+            lastRawData = data;
+
+            // Broadcast raw data to all other connected clients (site browsers)
+            broadcastToSiteClients(data, ws);
+
+            // Update Discord RPC
             updateActivity(data, globalConfig);
         } catch (e) {
             console.error("[WS] ❌ Error parsing data:", e);
@@ -56,10 +85,9 @@ function updateActivity(data, config) {
     const title = data.title || "";
     const artist = data.artists || "";
     const img = data.img || "icon";
-    const albumUrl = data.albumUrl || ""; // пусто для приватных треков
+    const albumUrl = data.albumUrl || "";
     const artistUrl = data.artistUrl || "";
 
-    // Позиция и длительность в секундах (поля из siteRPCServer)
     const positionSec = data.positionSec ?? 0;
     const durationSec = data.durationSec ?? 0;
     const hasTimestamps = durationSec > 0 && positionSec > 0;
@@ -98,7 +126,6 @@ function updateActivity(data, config) {
 
     const playerState = (data.playerState || "").toLowerCase();
 
-    // Пауза / стоп — очищаем активность
     if (playerState !== "playing") {
         if (lastPlayerState !== "pause") {
             console.log(
@@ -111,7 +138,6 @@ function updateActivity(data, config) {
         return;
     }
 
-    // Трек играет
     const hasChanged =
         !lastActivity ||
         lastActivity.details !== activityObject.details ||
@@ -134,11 +160,7 @@ function updateActivity(data, config) {
     } else if (hasTimestamps && timestampDiff > 1) {
         console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
         rpc.user
-            ?.setActivity({
-                ...lastActivity,
-                startTimestamp,
-                endTimestamp,
-            })
+            ?.setActivity({ ...lastActivity, startTimestamp, endTimestamp })
             .catch(console.error);
         lastActivity.startTimestamp = startTimestamp;
         lastActivity.endTimestamp = endTimestamp;
