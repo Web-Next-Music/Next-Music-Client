@@ -110,11 +110,11 @@ function updateActivity(data, config) {
         ...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
         buttons: [
             ...(config?.programSettings?.richPresence?.buttons?.trackButton &&
-            albumUrl
+            trackId
                 ? [
                       {
                           label: "Open in Yandex Music",
-                          url: albumUrl + "/track/" + trackId,
+                          url: `https://music.yandex.ru/track/${trackId}`,
                       },
                   ]
                 : []),

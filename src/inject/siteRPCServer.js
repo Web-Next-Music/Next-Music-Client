@@ -53,16 +53,11 @@
             ? `https://music.yandex.ru/artist/${track.artistIds[0]}`
             : null;
 
-        const albumUrl = track.albumId
-            ? `https://music.yandex.ru/album/${track.albumId}`
-            : null;
-
         return {
             trackId: track.id ?? null,
             title: track.title ?? null,
             artists: artistsStr,
             img: track.coverUrl ?? null,
-            albumUrl,
             artistUrl,
             trackUrl: track.trackUrl ?? null,
             positionSec: state.progress?.position ?? 0,
