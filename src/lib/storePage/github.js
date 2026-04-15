@@ -135,6 +135,69 @@ export async function loadGitmodules(owner, repo) {
     return {};
 }
 
+// ── Image helpers ──
+
+function isImg(n) {
+    return /\.(png|jpe?g|gif|webp|svg)$/i.test(n);
+}
+
+function pickImg(list) {
+    return (
+        list.find(
+            (i) =>
+                i.type === "file" &&
+                /^(image|icon|logo|preview)\./i.test(i.name) &&
+                isImg(i.name),
+        )?.download_url ||
+        list.find((i) => i.type === "file" && isImg(i.name))?.download_url ||
+        null
+    );
+}
+
+async function findLogoRecursive(owner, repo, dirPath, depth = 0) {
+    if (depth > 5) return null;
+    try {
+        const items = await ghContents(owner, repo, dirPath);
+        const logo = pickImg(items);
+        if (logo) return logo;
+        for (const sub of items.filter((i) => i.type === "dir")) {
+            const found = await findLogoRecursive(
+                owner,
+                repo,
+                sub.path,
+                depth + 1,
+            );
+            if (found) return found;
+        }
+    } catch {
+        /* skip */
+    }
+    return null;
+}
+
+async function findBrandingDir(owner, repo, items, depth = 0) {
+    const branding = items.find(
+        (i) => i.type === "dir" && /^branding$/i.test(i.name),
+    );
+    if (branding) return branding.path;
+    if (depth >= 3) return null;
+    for (const sub of items.filter((i) => i.type === "dir")) {
+        try {
+            const subItems = await ghContents(owner, repo, sub.path);
+            const found = await findBrandingDir(
+                owner,
+                repo,
+                subItems,
+                depth + 1,
+            );
+            if (found) return found;
+        } catch {
+            /* skip */
+        }
+    }
+    return null;
+}
+
 // ── Section listing ──
 
 const metaCache = new Map();
@@ -193,46 +256,34 @@ export async function getSection(owner, repo, section) {
 
 export async function getFolderMeta(owner, repo, f) {
     const cacheKey = f.submodule ? f.subUrl || f.name : f.path;
-    if (metaCache.has(cacheKey)) return metaCache.get(cacheKey);
     try {
         let o = owner, r = repo, p = f.path;
         if (f.submodule) {
-            if (!f.subUrl) return { logo: null, readme: null };
+            if (!f.subUrl)
+                return metaCache.get(cacheKey) || { logo: null, readme: null };
             const m = normalizeGitUrl(f.subUrl).match(
                 /github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
             );
-            if (!m) return { logo: null, readme: null };
+            if (!m)
+                return metaCache.get(cacheKey) || { logo: null, readme: null };
             o = m[1];
             r = m[2];
             p = "";
         }
         const items = await ghContents(o, r, p);
 
-        function pickImg(list) {
-            const isImg = (n) => /\.(png|jpe?g|gif|webp|svg)$/i.test(n);
-            return (
-                list.find(
-                    (i) =>
-                        i.type === "file" &&
-                        /^image\./i.test(i.name) &&
-                        isImg(i.name),
-                ) ||
-                list.find(
-                    (i) =>
-                        i.type === "file" &&
-                        /^icon\./i.test(i.name) &&
-                        isImg(i.name),
-                ) ||
-                list.find((i) => i.type === "file" && isImg(i.name)) ||
-                null
-            );
-        }
+        // First: recursively find branding folder anywhere in the tree
+        const brandingPath = await findBrandingDir(o, r, items);
+        let logo = brandingPath
+            ? await findLogoRecursive(o, r, brandingPath)
+            : null;
 
-        let img = pickImg(items);
+        // Fallback: check root-level images
+        if (!logo) logo = pickImg(items);
 
-        if (!img) {
-            const subdirs = items.filter((i) => i.type === "dir");
-            for (const sub of subdirs) {
+        // Last resort: one level deep in dirs with scripts (e.g. src/, assets/)
+        if (!logo) {
+            for (const sub of items.filter((i) => i.type === "dir")) {
                 try {
                     const subItems = await ghContents(o, r, sub.path);
                     const hasScript = subItems.some(
@@ -242,12 +293,12 @@ export async function getFolderMeta(owner, repo, f) {
                     if (hasScript) {
                         const found = pickImg(subItems);
                         if (found) {
-                            img = found;
+                            logo = found;
                             break;
                         }
                     }
                 } catch {
-                    // skip inaccessible subdir
+                    /* skip */
                 }
             }
         }
@@ -256,13 +307,14 @@ export async function getFolderMeta(owner, repo, f) {
             (i) => i.type === "file" && /^readme\.md$/i.test(i.name),
         );
         const result = {
-            logo: img ? img.download_url : null,
+            logo,
             readme: rm ? rm.download_url : null,
         };
         metaCache.set(cacheKey, result);
         return result;
     } catch {
-        return { logo: null, readme: null };
+        // GitHub unavailable — return cached data as fallback
+        return metaCache.get(cacheKey) || { logo: null, readme: null };
     }
 }
 
@@ -271,9 +323,14 @@ export async function getFolderMeta(owner, repo, f) {
 const readmeCache = new Map();
 
 export async function fetchReadme(url) {
-    if (readmeCache.has(url)) return readmeCache.get(url);
-    const r = await httpsGet(url);
-    const md = r.body.toString();
-    readmeCache.set(url, md);
-    return md;
+    try {
+        const r = await httpsGet(url);
+        if (r.statusCode !== 200) throw new Error(`HTTP ${r.statusCode}`);
+        const md = r.body.toString();
+        readmeCache.set(url, md);
+        return md;
+    } catch {
+        // GitHub unavailable — return cached data as fallback
+        return readmeCache.get(url) || "";
+    }
 }

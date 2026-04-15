@@ -101,10 +101,7 @@ export function fsToggle(name) {
     const disabled = found.startsWith("!");
     fs.renameSync(
         path.join(addonsDirectory, found),
-        path.join(
-            addonsDirectory,
-            disabled ? found.slice(1) : "!" + found,
-        ),
+        path.join(addonsDirectory, disabled ? found.slice(1) : "!" + found),
     );
     return !disabled;
 }
@@ -131,7 +128,8 @@ export function getCustomEntries(knownNames) {
                 const enabled = !n.startsWith("!");
                 const fullPath = path.join(addonsDirectory, n);
                 const isDir = fs.statSync(fullPath).isDirectory();
-                let logo = null, readme = null;
+                let logo = null,
+                    readme = null;
 
                 if (isDir) {
                     const files = fs.readdirSync(fullPath);
@@ -153,7 +151,103 @@ export function getCustomEntries(knownNames) {
 
                     let imgFile = pickImgFile(files);
 
+                    // 🔍 Если в корне не нашли, ищем папку branding
                     if (!imgFile) {
+                        // Рекурсивный поиск папки branding
+                        function findBrandingFolder(
+                            dirPath,
+                            relativePath = "",
+                        ) {
+                            try {
+                                const items = fs.readdirSync(dirPath);
+
+                                // Проверяем, есть ли папка branding на этом уровне
+                                const brandingFolder = items.find((item) => {
+                                    try {
+                                        return (
+                                            item.toLowerCase() === "branding" &&
+                                            fs
+                                                .statSync(
+                                                    path.join(dirPath, item),
+                                                )
+                                                .isDirectory()
+                                        );
+                                    } catch {
+                                        return false;
+                                    }
+                                });
+
+                                if (brandingFolder) {
+                                    const brandingPath = path.join(
+                                        dirPath,
+                                        brandingFolder,
+                                    );
+                                    const brandingRelativePath = relativePath
+                                        ? path.join(
+                                              relativePath,
+                                              brandingFolder,
+                                          )
+                                        : brandingFolder;
+                                    return brandingPath;
+                                }
+
+                                // Рекурсивно ищем в поддиректориях
+                                for (const item of items) {
+                                    try {
+                                        const itemPath = path.join(
+                                            dirPath,
+                                            item,
+                                        );
+                                        const stat = fs.statSync(itemPath);
+
+                                        if (stat.isDirectory()) {
+                                            const newRelativePath = relativePath
+                                                ? path.join(relativePath, item)
+                                                : item;
+                                            const found = findBrandingFolder(
+                                                itemPath,
+                                                newRelativePath,
+                                            );
+                                            if (found) return found;
+                                        }
+                                    } catch {
+                                        // skip
+                                    }
+                                }
+                            } catch {
+                                return null;
+                            }
+                            return null;
+                        }
+
+                        const brandingPath = findBrandingFolder(fullPath);
+
+                        if (brandingPath) {
+                            try {
+                                const brandingFiles =
+                                    fs.readdirSync(brandingPath);
+                                imgFile = pickImgFile(brandingFiles);
+
+                                if (imgFile) {
+                                    // Вычисляем относительный путь от корня аддона
+                                    const relativeBrandingPath = path.relative(
+                                        fullPath,
+                                        brandingPath,
+                                    );
+                                    const logoPath = path.join(
+                                        relativeBrandingPath,
+                                        imgFile,
+                                    );
+                                    logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(logoPath)}`;
+                                }
+                            } catch {
+                                // skip
+                            }
+                        }
+                    }
+
+                    // 📁 Если всё ещё не нашли, ищем в поддиректориях со скриптами (старая логика)
+                    if (!logo) {
                         const subdirs = files.filter((f) => {
                             try {
                                 return fs
@@ -183,12 +277,11 @@ export function getCustomEntries(knownNames) {
                         }
                     }
 
+                    // ✅ Если нашли изображение (но ещё не установили logo)
                     if (imgFile && !logo)
                         logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(imgFile)}`;
 
-                    const rmFile = files.find((f) =>
-                        /^readme\.md$/i.test(f),
-                    );
+                    const rmFile = files.find((f) => /^readme\.md$/i.test(f));
                     if (rmFile)
                         readme = `nextstore://app/api/local-readme?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rmFile)}`;
                 }
