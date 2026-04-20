@@ -6,7 +6,7 @@
 	"scripts": {
 		"start": "electron src/index.js",
 		"dist": "electron dist/index.js",
-		"build:code": "node build.js",
+		"build:code": "node scripts/build.js",
 		"build": "npm run build:code && electron-builder",
 		"build:win": "npm run build:code && electron-builder --win",
 		"build:linux": "npm run build:code && electron-builder --linux",
