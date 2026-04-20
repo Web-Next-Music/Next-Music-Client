@@ -139,132 +139,106 @@ export function getCustomEntries(knownNames) {
                     function pickImgFile(list) {
                         return (
                             list.find(
-                                (f) => /^image\./i.test(f) && isImgFile(f),
-                            ) ||
-                            list.find(
-                                (f) => /^icon\./i.test(f) && isImgFile(f),
+                                (f) =>
+                                    /^(image|icon|logo|preview)\./i.test(f) &&
+                                    isImgFile(f),
                             ) ||
                             list.find((f) => isImgFile(f)) ||
                             null
                         );
                     }
 
-                    let imgFile = pickImgFile(files);
-
-                    // 🔍 Если в корне не нашли, ищем папку branding
-                    if (!imgFile) {
-                        // Рекурсивный поиск папки branding
-                        function findBrandingFolder(
-                            dirPath,
-                            relativePath = "",
-                        ) {
-                            try {
-                                const items = fs.readdirSync(dirPath);
-
-                                // Проверяем, есть ли папка branding на этом уровне
-                                const brandingFolder = items.find((item) => {
-                                    try {
-                                        return (
-                                            item.toLowerCase() === "branding" &&
-                                            fs
-                                                .statSync(
-                                                    path.join(dirPath, item),
-                                                )
-                                                .isDirectory()
-                                        );
-                                    } catch {
-                                        return false;
-                                    }
-                                });
-
-                                if (brandingFolder) {
-                                    const brandingPath = path.join(
-                                        dirPath,
-                                        brandingFolder,
+                    function findBrandingDir(dirPath, depth = 0) {
+                        if (depth > 3) return null;
+                        try {
+                            const items = fs.readdirSync(dirPath);
+                            const found = items.find((item) => {
+                                try {
+                                    return (
+                                        /^branding$/i.test(item) &&
+                                        fs
+                                            .statSync(path.join(dirPath, item))
+                                            .isDirectory()
                                     );
-                                    const brandingRelativePath = relativePath
-                                        ? path.join(
-                                              relativePath,
-                                              brandingFolder,
-                                          )
-                                        : brandingFolder;
-                                    return brandingPath;
+                                } catch {
+                                    return false;
                                 }
-
-                                // Рекурсивно ищем в поддиректориях
-                                for (const item of items) {
-                                    try {
-                                        const itemPath = path.join(
-                                            dirPath,
-                                            item,
+                            });
+                            if (found) return path.join(dirPath, found);
+                            for (const item of items) {
+                                try {
+                                    const itemPath = path.join(dirPath, item);
+                                    if (fs.statSync(itemPath).isDirectory()) {
+                                        const r = findBrandingDir(
+                                            itemPath,
+                                            depth + 1,
                                         );
-                                        const stat = fs.statSync(itemPath);
-
-                                        if (stat.isDirectory()) {
-                                            const newRelativePath = relativePath
-                                                ? path.join(relativePath, item)
-                                                : item;
-                                            const found = findBrandingFolder(
-                                                itemPath,
-                                                newRelativePath,
-                                            );
-                                            if (found) return found;
-                                        }
-                                    } catch {
-                                        // skip
+                                        if (r) return r;
                                     }
+                                } catch {
+                                    /* skip */
                                 }
-                            } catch {
-                                return null;
                             }
-                            return null;
+                        } catch {
+                            /* skip */
                         }
+                        return null;
+                    }
 
-                        const brandingPath = findBrandingFolder(fullPath);
-
-                        if (brandingPath) {
-                            try {
-                                const brandingFiles =
-                                    fs.readdirSync(brandingPath);
-                                imgFile = pickImgFile(brandingFiles);
-
-                                if (imgFile) {
-                                    // Вычисляем относительный путь от корня аддона
-                                    const relativeBrandingPath = path.relative(
-                                        fullPath,
-                                        brandingPath,
-                                    );
-                                    const logoPath = path.join(
-                                        relativeBrandingPath,
-                                        imgFile,
-                                    );
-                                    logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(logoPath)}`;
+                    function findLogoInDir(dirPath, depth = 0) {
+                        if (depth > 5) return null;
+                        try {
+                            const items = fs.readdirSync(dirPath);
+                            const img = pickImgFile(items);
+                            if (img) return path.join(dirPath, img);
+                            for (const item of items) {
+                                try {
+                                    const itemPath = path.join(dirPath, item);
+                                    if (fs.statSync(itemPath).isDirectory()) {
+                                        const r = findLogoInDir(
+                                            itemPath,
+                                            depth + 1,
+                                        );
+                                        if (r) return r;
+                                    }
+                                } catch {
+                                    /* skip */
                                 }
-                            } catch {
-                                // skip
                             }
+                        } catch {
+                            /* skip */
+                        }
+                        return null;
+                    }
+
+                    // 1. Root-level image
+                    const rootImg = pickImgFile(files);
+                    if (rootImg)
+                        logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rootImg)}`;
+
+                    // 2. Branding folder (recursive search within it)
+                    if (!logo) {
+                        const brandingPath = findBrandingDir(fullPath);
+                        if (brandingPath) {
+                            const logoAbs = findLogoInDir(brandingPath);
+                            if (logoAbs)
+                                logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.relative(fullPath, logoAbs))}`;
                         }
                     }
 
-                    // 📁 Если всё ещё не нашли, ищем в поддиректориях со скриптами (старая логика)
+                    // 3. One level deep in dirs that contain scripts
                     if (!logo) {
-                        const subdirs = files.filter((f) => {
+                        for (const sub of files) {
                             try {
-                                return fs
-                                    .statSync(path.join(fullPath, f))
-                                    .isDirectory();
-                            } catch {
-                                return false;
-                            }
-                        });
-                        for (const sub of subdirs) {
-                            const subPath = path.join(fullPath, sub);
-                            try {
+                                const subPath = path.join(fullPath, sub);
+                                if (!fs.statSync(subPath).isDirectory())
+                                    continue;
                                 const subFiles = fs.readdirSync(subPath);
-                                const hasScript = subFiles.some((f) =>
-                                    /\.(css|js)$/i.test(f),
-                                );
-                                if (hasScript) {
+                                if (
+                                    subFiles.some((f) =>
+                                        /\.(css|js|json)$/i.test(f),
+                                    )
+                                ) {
                                     const found = pickImgFile(subFiles);
                                     if (found) {
                                         logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;
@@ -272,14 +246,10 @@ export function getCustomEntries(knownNames) {
                                     }
                                 }
                             } catch {
-                                // skip
+                                /* skip */
                             }
                         }
                     }
-
-                    // ✅ Если нашли изображение (но ещё не установили logo)
-                    if (imgFile && !logo)
-                        logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(imgFile)}`;
 
                     const rmFile = files.find((f) => /^readme\.md$/i.test(f));
                     if (rmFile)
