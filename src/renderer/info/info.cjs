@@ -1,11 +1,11 @@
 const { shell } = require("electron");
 
-// Берём версию автоматически из package.json
+// Version is taken automatically from package.json
 const { version: currentPkgVersion } = require("../../../package.json");
 
 const CURRENT_VERSION = currentPkgVersion.startsWith("v")
-    ? currentPkgVersion
-    : `v${currentPkgVersion}`;
+	? currentPkgVersion
+	: `v${currentPkgVersion}`;
 
 document.querySelector(".version").textContent = CURRENT_VERSION;
 const title = `Next Music ${CURRENT_VERSION} By Diramix`;
@@ -13,17 +13,17 @@ document.querySelector(".nm_title").textContent = title;
 
 // Buttons
 const buttonActions = {
-    women: () => {
-        const nya = new Audio("../../assets/info-page/nya.mp3");
-        nya.play();
-        shell.openExternal("https://diram1x.ru");
-    },
-    discordBtn: () => shell.openExternal("https://discord.gg/ky6bcdy7KA"),
-    githubBtn: () => shell.openExternal("https://github.com/diramix"),
-    boostyBtn: () => shell.openExternal("https://boosty.to/diramix"),
-    youtubeBtn: () => shell.openExternal("https://www.youtube.com/@Diram1x"),
+	women: () => {
+		const nya = new Audio("../../assets/info-page/nya.mp3");
+		nya.play();
+		shell.openExternal("https://diram1x.ru");
+	},
+	discordBtn: () => shell.openExternal("https://discord.gg/ky6bcdy7KA"),
+	githubBtn: () => shell.openExternal("https://github.com/diramix"),
+	boostyBtn: () => shell.openExternal("https://boosty.to/diramix"),
+	youtubeBtn: () => shell.openExternal("https://www.youtube.com/@Diram1x"),
 };
 
 Object.entries(buttonActions).forEach(([id, action]) => {
-    document.getElementById(id).addEventListener("click", action);
+	document.getElementById(id).addEventListener("click", action);
 });

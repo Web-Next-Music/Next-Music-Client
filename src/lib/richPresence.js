@@ -11,166 +11,155 @@ let lastActivity = null;
 let lastPlayerState = null;
 let globalConfig = null;
 
-// Last raw payload from the addon — sent to newly connected site clients
 let lastRawData = null;
 
-// --- Initialize RPC ---
 function initRPC() {
-    rpc = new Client({ clientId: CLIENT_ID, transport: { type: "ipc" } });
+	rpc = new Client({ clientId: CLIENT_ID, transport: { type: "ipc" } });
 
-    rpc.on("ready", () => {
-        console.log("[RPC] Connected to Discord!");
-        isReady = true;
-    });
+	rpc.on("ready", () => {
+		console.log("[RPC] Connected to Discord!");
+		isReady = true;
+	});
 
-    rpc.on("disconnected", () => {
-        console.log("[RPC] ❌ Disconnected from Discord, reconnecting...");
-        isReady = false;
-        setTimeout(initRPC, 2000);
-    });
+	rpc.on("disconnected", () => {
+		console.log("[RPC] ❌ Disconnected from Discord, reconnecting...");
+		isReady = false;
+		setTimeout(initRPC, 2000);
+	});
 
-    rpc.on("error", console.error);
+	rpc.on("error", console.error);
 
-    rpc.login().catch(console.error);
+	rpc.login().catch(console.error);
 }
 
-// --- WebSocket server ---
+// WebSocket server
 const wss = new WebSocket.Server({ port: WSPORT }, () =>
-    console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
+	console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 );
 
-// Broadcast raw addon data to all site clients EXCEPT the sender
+// Broadcast raw to all site clients
 function broadcastToSiteClients(data, sender) {
-    const msg = JSON.stringify(data);
-    wss.clients.forEach((client) => {
-        if (client !== sender && client.readyState === WebSocket.OPEN) {
-            client.send(msg);
-        }
-    });
+	const msg = JSON.stringify(data);
+
+	wss.clients.forEach((client) => {
+		if (client !== sender && client.readyState === WebSocket.OPEN) {
+			client.send(msg);
+		}
+	});
 }
 
 wss.on("connection", (ws) => {
-    console.log("[WS] New connection");
+	console.log("[WS] New connection");
 
-    // Immediately send last known raw state to newly connected site client
-    if (lastRawData) {
-        try {
-            ws.send(JSON.stringify(lastRawData));
-        } catch {}
-    }
+	if (lastRawData) {
+		try {
+			ws.send(JSON.stringify(lastRawData));
+		} catch {}
+	}
 
-    ws.on("message", (msg) => {
-        try {
-            const data = JSON.parse(msg.toString());
+	ws.on("message", (msg) => {
+		try {
+			const data = JSON.parse(msg.toString());
+			lastRawData = data;
 
-            // Save raw data for future connections
-            lastRawData = data;
-
-            // Broadcast raw data to all other connected clients (site browsers)
-            broadcastToSiteClients(data, ws);
-
-            // Update Discord RPC
-            updateActivity(data, globalConfig);
-        } catch (e) {
-            console.error("[WS] ❌ Error parsing data:", e);
-        }
-    });
+			broadcastToSiteClients(data, ws);
+			updateActivity(data, globalConfig);
+		} catch (e) {
+			console.error("[WS] ❌ Error parsing data:", e);
+		}
+	});
 });
 
-// --- Update Discord activity ---
 function updateActivity(data, config) {
-    if (!rpc || !isReady) return;
+	if (!rpc || !isReady) return;
 
-    const trackId = data.trackId || "";
-    const title = data.title || "";
-    const artist = data.artists || "";
-    const img = data.img || "icon";
-    const albumUrl = data.albumUrl || "";
-    const artistUrl = data.artistUrl || "";
+	const trackId = data.trackId || "";
+	const title = data.title || "";
+	const artist = data.artists || "";
+	const img = data.img || "icon";
+	const albumUrl = data.albumUrl || "";
+	const artistUrl = data.artistUrl || "";
 
-    const positionSec = data.positionSec ?? 0;
-    const durationSec = data.durationSec ?? 0;
-    const hasTimestamps = durationSec > 0 && positionSec > 0;
+	const positionSec = data.positionSec ?? 0;
+	const durationSec = data.durationSec ?? 0;
+	const hasTimestamps = durationSec > 0 && positionSec > 0;
 
-    const now = Math.floor(Date.now() / 1000);
-    const startTimestamp = now - Math.floor(positionSec);
-    const endTimestamp = startTimestamp + Math.floor(durationSec);
+	const now = Math.floor(Date.now() / 1000);
+	const startTimestamp = now - Math.floor(positionSec);
+	const endTimestamp = startTimestamp + Math.floor(durationSec);
 
-    const activityObject = {
-        name: config?.programSettings?.richPresence?.rpcTitle || "Next Music",
-        type: 2,
-        details: title,
-        state: artist,
-        largeImageKey: img,
-        largeImageUrl: GITHUB_LINK,
-        statusDisplayType: 1,
-        instance: false,
-        ...(albumUrl ? { detailsUrl: albumUrl } : {}),
-        ...(artistUrl ? { stateUrl: artistUrl } : {}),
-        ...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
-        buttons: [
-            ...(config?.programSettings?.richPresence?.buttons?.trackButton &&
-            trackId
-                ? [
-                      {
-                          label: "Open in Yandex Music",
-                          url: `https://music.yandex.ru/track/${trackId}`,
-                      },
-                  ]
-                : []),
-            ...(config?.programSettings?.richPresence?.buttons?.githubButton
-                ? [{ label: "Next Music Project", url: GITHUB_LINK }]
-                : []),
-        ],
-    };
+	const activityObject = {
+		name: config?.programSettings?.richPresence?.rpcTitle || "Next Music",
+		type: 2,
+		details: title,
+		state: artist,
+		largeImageKey: img,
+		largeImageUrl: GITHUB_LINK,
+		statusDisplayType: 1,
+		instance: false,
+		...(albumUrl ? { detailsUrl: albumUrl } : {}),
+		...(artistUrl ? { stateUrl: artistUrl } : {}),
+		...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
+		buttons: [
+			...(config?.programSettings?.richPresence?.buttons?.trackButton && trackId
+				? [
+						{
+							label: "Open in Yandex Music",
+							url: `https://music.yandex.ru/track/${trackId}`,
+						},
+					]
+				: []),
+			...(config?.programSettings?.richPresence?.buttons?.githubButton
+				? [{ label: "Next Music Project", url: GITHUB_LINK }]
+				: []),
+		],
+	};
 
-    const playerState = (data.playerState || "").toLowerCase();
+	const playerState = (data.playerState || "").toLowerCase();
 
-    if (playerState !== "playing") {
-        if (lastPlayerState !== "pause") {
-            console.log(
-                `[RPC] Clearing activity (${playerState || "unknown"})`,
-            );
-            rpc.user?.clearActivity().catch(console.error);
-            lastPlayerState = "pause";
-            lastActivity = null;
-        }
-        return;
-    }
+	if (playerState !== "playing") {
+		if (lastPlayerState !== "pause") {
+			console.log(`[RPC] Clearing activity (${playerState || "unknown"})`);
+			rpc.user?.clearActivity().catch(console.error);
+			lastPlayerState = "pause";
+			lastActivity = null;
+		}
+		return;
+	}
 
-    const hasChanged =
-        !lastActivity ||
-        lastActivity.details !== activityObject.details ||
-        lastActivity.state !== activityObject.state ||
-        lastActivity.largeImageKey !== activityObject.largeImageKey ||
-        lastPlayerState !== "play";
+	const hasChanged =
+		!lastActivity ||
+		lastActivity.details !== activityObject.details ||
+		lastActivity.state !== activityObject.state ||
+		lastActivity.largeImageKey !== activityObject.largeImageKey ||
+		lastPlayerState !== "play";
 
-    const timestampDiff =
-        lastActivity?.startTimestamp != null
-            ? Math.abs(
-                  activityObject.startTimestamp - lastActivity.startTimestamp,
-              )
-            : Infinity;
+	const timestampDiff =
+		lastActivity?.startTimestamp != null
+			? Math.abs(activityObject.startTimestamp - lastActivity.startTimestamp)
+			: Infinity;
 
-    if (hasChanged) {
-        console.log(`[RPC] Setting new activity: ${title} — ${artist}`);
-        rpc.user?.setActivity(activityObject).catch(console.error);
-        lastActivity = { ...activityObject };
-        lastPlayerState = "play";
-    } else if (hasTimestamps && timestampDiff > 1) {
-        console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
-        rpc.user
-            ?.setActivity({ ...lastActivity, startTimestamp, endTimestamp })
-            .catch(console.error);
-        lastActivity.startTimestamp = startTimestamp;
-        lastActivity.endTimestamp = endTimestamp;
-    }
+	if (hasChanged) {
+		console.log(`[RPC] Setting new activity: ${title} — ${artist}`);
+		rpc.user?.setActivity(activityObject).catch(console.error);
+		lastActivity = { ...activityObject };
+		lastPlayerState = "play";
+	} else if (hasTimestamps && timestampDiff > 1) {
+		console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
+
+		rpc.user
+			?.setActivity({ ...lastActivity, startTimestamp, endTimestamp })
+			.catch(console.error);
+
+		lastActivity.startTimestamp = startTimestamp;
+		lastActivity.endTimestamp = endTimestamp;
+	}
 }
 
-// --- Initialize Discord RPC if enabled ---
+// Initialize Discord RPC if enabled
 function presenceService(config) {
-    globalConfig = config;
-    initRPC();
+	globalConfig = config;
+	initRPC();
 }
 
 export { initRPC, updateActivity, presenceService };

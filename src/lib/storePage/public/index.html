@@ -1,163 +1,275 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Next Music Store</title>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap"
-            rel="stylesheet"
-        />
-        <link rel="stylesheet" href="/public/css/style.css" />
-        <!-- CodeMirror 5 -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/lint/lint.min.css">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Science+Gothic:wght@100..900&display=swap" rel="stylesheet">
-    </head>
-    <body>
-        <header>
-            <div class="logo-icon"></div>
-            <div class="header-text">
-                <h1>Next Music <span>Store</span></h1>
-                <p>WEB-NEXT-MUSIC / NEXT-MUSIC-EXTENSIONS</p>
-            </div>
-            <button class="store-close-btn" onclick="window.parent.postMessage('nextStore:close', '*')" title="Close">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-                    <path d="M3 3l10 10M13 3L3 13" />
-                </svg>
-            </button>
-        </header>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Next Music Store</title>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap"
+			rel="stylesheet"
+		/>
+		<link rel="stylesheet" href="/public/css/style.css" />
+		<!-- CodeMirror 5 -->
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css"
+		/>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/lint/lint.min.css"
+		/>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Science+Gothic:wght@100..900&display=swap"
+			rel="stylesheet"
+		/>
+	</head>
+	<body>
+		<header>
+			<div class="logo-icon"></div>
+			<div class="header-text">
+				<h1>Next Music <span>Store</span></h1>
+				<p>WEB-NEXT-MUSIC / NEXT-MUSIC-EXTENSIONS</p>
+			</div>
+			<button
+				class="store-close-btn"
+				onclick="window.parent.postMessage('nextStore:close', '*')"
+				title="Close"
+			>
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 16 16"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.2"
+					stroke-linecap="round"
+				>
+					<path d="M3 3l10 10M13 3L3 13" />
+				</svg>
+			</button>
+		</header>
 
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('addons', this)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-blocks-icon lucide-blocks"><path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/></svg>
-                <span class="tab-label">Addons</span><span class="tc" id="tc-addons">…</span>
-            </button>
-            <button class="tab" onclick="switchTab('themes', this)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-palette-icon lucide-palette"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg>
-                <span class="tab-label">Themes</span><span class="tc" id="tc-themes">…</span>
-            </button>
-            <button
-                class="tab"
-                id="tab-installed"
-                onclick="switchTab('installed', this)"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hard-drive-icon lucide-hard-drive"><path d="M10 16h.01"/><path d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M21.946 12.013H2.054"/><path d="M6 16h.01"/></svg>
-                <span class="tab-label">Installed</span><span class="tc" id="tc-installed">…</span>
-            </button>
-        </div>
+		<div class="tabs">
+			<button class="tab active" onclick="switchTab('addons', this)">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="lucide lucide-blocks-icon lucide-blocks"
+				>
+					<path
+						d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"
+					/>
+					<rect x="14" y="2" width="8" height="8" rx="1" />
+				</svg>
+				<span class="tab-label">Addons</span
+				><span class="tc" id="tc-addons">…</span>
+			</button>
+			<button class="tab" onclick="switchTab('themes', this)">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="lucide lucide-palette-icon lucide-palette"
+				>
+					<path
+						d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"
+					/>
+					<circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+					<circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+					<circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+					<circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+				</svg>
+				<span class="tab-label">Themes</span
+				><span class="tc" id="tc-themes">…</span>
+			</button>
+			<button
+				class="tab"
+				id="tab-installed"
+				onclick="switchTab('installed', this)"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="lucide lucide-hard-drive-icon lucide-hard-drive"
+				>
+					<path d="M10 16h.01" />
+					<path
+						d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+					/>
+					<path d="M21.946 12.013H2.054" />
+					<path d="M6 16h.01" />
+				</svg>
+				<span class="tab-label">Installed</span
+				><span class="tc" id="tc-installed">…</span>
+			</button>
+		</div>
 
-        <div class="search-wrap">
-            <span class="search-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search-code-icon lucide-search-code"><path d="m13 13.5 2-2.5-2-2.5"/><path d="m21 21-4.3-4.3"/><path d="M9 8.5 7 11l2 2.5"/><circle cx="11" cy="11" r="8"/></svg>
-            </span>
-            <input
-                class="search-box"
-                id="search-box"
-                type="text"
-                placeholder="Search extensions…"
-                oninput="onSearch(this.value)"
-            />
-        </div>
+		<div class="search-wrap">
+			<span class="search-icon">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="lucide lucide-search-code-icon lucide-search-code"
+				>
+					<path d="m13 13.5 2-2.5-2-2.5" />
+					<path d="m21 21-4.3-4.3" />
+					<path d="M9 8.5 7 11l2 2.5" />
+					<circle cx="11" cy="11" r="8" />
+				</svg>
+			</span>
+			<input
+				class="search-box"
+				id="search-box"
+				type="text"
+				placeholder="Search extensions…"
+				oninput="onSearch(this.value)"
+			/>
+		</div>
 
-        <main>
-            <div class="panel active" id="panel-addons">
-                <div class="sec-label">Addons</div>
-                <div class="grid" id="grid-addons">SKELS_ADDONS</div>
-            </div>
-            <div class="panel" id="panel-themes">
-                <div class="sec-label">Themes</div>
-                <div class="grid" id="grid-themes">SKELS_THEMES</div>
-            </div>
-            </div>
-            <div class="panel" id="panel-installed">
-                <div class="sec-label">
-                    Installed
-                </div>
-                <div class="grid" id="grid-installed">
-                    <div class="empty">Loading…</div>
-                </div>
-            </div>
-        </main>
+		<main>
+			<div class="panel active" id="panel-addons">
+				<div class="sec-label">Addons</div>
+				<div class="grid" id="grid-addons">SKELS_ADDONS</div>
+			</div>
+			<div class="panel" id="panel-themes">
+				<div class="sec-label">Themes</div>
+				<div class="grid" id="grid-themes">SKELS_THEMES</div>
+			</div>
 
-        <!-- handleEvents editor modal -->
-        <div
-            class="modal-bg hidden"
-            id="editor-modal-bg"
-            onclick="if (event.target === this) closeEditorModal();"
-        >
-            <div class="modal editor-modal">
-                <div class="modal-head">
-                    <div class="editor-modal-title-wrap">
-                        <span class="modal-title" id="editor-modal-title">handleEvents.json</span>
-                        <span class="editor-modal-badge">JSON</span>
-                    </div>
-                    <button class="modal-close" onclick="closeEditorModal()">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-                            <path d="M3 3l10 10M13 3L3 13" />
-                        </svg>
-                    </button>
-                </div>
-                <div class="editor-wrap" id="editor-cm-host"></div>
-                <div class="editor-status-bar">
-                    <span class="editor-status-msg" id="editor-status-msg"></span>
-                    <div class="editor-footer-btns">
-                        <button class="btn btn-editor-cancel" onclick="closeEditorModal()">Cancel</button>
-                        <button class="btn btn-editor-save" id="editor-save-btn" onclick="saveHandleEvents()">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+			<div class="panel" id="panel-installed">
+				<div class="sec-label">Installed</div>
+				<div class="grid" id="grid-installed">
+					<div class="empty">Loading…</div>
+				</div>
+			</div>
+		</main>
 
-        <div
-            class="modal-bg hidden"
-            id="modal-bg"
-            onclick="if (event.target === this) closeModal();"
-        >
-            <div class="modal">
-                <div class="modal-head">
-                    <span class="modal-title" id="modal-title">README</span>
-                    <button class="modal-close" onclick="closeModal()">
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 16 16"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.2"
-                            stroke-linecap="round"
-                        >
-                            <path d="M3 3l10 10M13 3L3 13" />
-                        </svg>
-                    </button>
-                </div>
-                <div class="modal-body" id="modal-body">
-                    <div class="modal-loading">Loading…</div>
-                </div>
-            </div>
-        </div>
+		<!-- handleEvents editor modal -->
+		<div
+			class="modal-bg hidden"
+			id="editor-modal-bg"
+			onclick="if (event.target === this) closeEditorModal();"
+		>
+			<div class="modal editor-modal">
+				<div class="modal-head">
+					<div class="editor-modal-title-wrap">
+						<span class="modal-title" id="editor-modal-title"
+							>handleEvents.json</span
+						>
+						<span class="editor-modal-badge">JSON</span>
+					</div>
+					<button class="modal-close" onclick="closeEditorModal()">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.2"
+							stroke-linecap="round"
+						>
+							<path d="M3 3l10 10M13 3L3 13" />
+						</svg>
+					</button>
+				</div>
+				<div class="editor-wrap" id="editor-cm-host"></div>
+				<div class="editor-status-bar">
+					<span class="editor-status-msg" id="editor-status-msg"></span>
+					<div class="editor-footer-btns">
+						<button class="btn btn-editor-cancel" onclick="closeEditorModal()">
+							Cancel
+						</button>
+						<button
+							class="btn btn-editor-save"
+							id="editor-save-btn"
+							onclick="saveHandleEvents()"
+						>
+							Save
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
 
-        <!-- CodeMirror 5 JS -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/javascript/javascript.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/selection/active-line.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldcode.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/brace-fold.min.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.css">
-        <script src="/public/js/config.js"></script>
-        <script src="/public/js/icons.js"></script>
-        <script src="/public/js/lang.js"></script>
-        <script src="/public/js/utils.js"></script>
-        <script src="/public/js/ui.js"></script>
-        <script src="/public/js/editor.js"></script>
-        <script src="/public/js/modals.js"></script>
-        <script src="/public/js/cards.js"></script>
-        <script src="/public/js/actions.js"></script>
-        <script src="/public/js/loader.js"></script>
-    </body>
+		<div
+			class="modal-bg hidden"
+			id="modal-bg"
+			onclick="if (event.target === this) closeModal();"
+		>
+			<div class="modal">
+				<div class="modal-head">
+					<span class="modal-title" id="modal-title">README</span>
+					<button class="modal-close" onclick="closeModal()">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.2"
+							stroke-linecap="round"
+						>
+							<path d="M3 3l10 10M13 3L3 13" />
+						</svg>
+					</button>
+				</div>
+				<div class="modal-body" id="modal-body">
+					<div class="modal-loading">Loading…</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- CodeMirror 5 JS -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/javascript/javascript.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/selection/active-line.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldcode.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/brace-fold.min.js"></script>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.css"
+		/>
+		<script src="/public/js/config.js"></script>
+		<script src="/public/js/icons.js"></script>
+		<script src="/public/js/lang.js"></script>
+		<script src="/public/js/utils.js"></script>
+		<script src="/public/js/ui.js"></script>
+		<script src="/public/js/editor.js"></script>
+		<script src="/public/js/modals.js"></script>
+		<script src="/public/js/cards.js"></script>
+		<script src="/public/js/actions.js"></script>
+		<script src="/public/js/loader.js"></script>
+	</body>
 </html>

@@ -6,50 +6,48 @@ const CURRENT_VERSION = ipcRenderer.sendSync("get-app-version");
 
 document.querySelector(".version").textContent = CURRENT_VERSION;
 document.querySelector(".nm_title").textContent =
-    `Next Music ${CURRENT_VERSION}`;
+	`Next Music ${CURRENT_VERSION}`;
 
 // i18n
 const { languagesDirectory, langCode } = ipcRenderer.sendSync("get-lang-info");
 initLanguages(languagesDirectory, langCode);
 
 function applyTranslations() {
-    document.querySelectorAll("[data-i18n]").forEach((el) => {
-        const key = el.getAttribute("data-i18n");
-        const vars = el.dataset.i18nVars ? JSON.parse(el.dataset.i18nVars) : {};
-        el.textContent = t(key, vars);
-    });
+	document.querySelectorAll("[data-i18n]").forEach((el) => {
+		const key = el.getAttribute("data-i18n");
+		const vars = el.dataset.i18nVars ? JSON.parse(el.dataset.i18nVars) : {};
+		el.textContent = t(key, vars);
+	});
 }
 
 applyTranslations();
 
-// Реалтайм смена языка
+// Real-time language change
 ipcRenderer.on("change-language", (_, newLangCode) => {
-    loadLanguage(languagesDirectory, newLangCode);
-    applyTranslations();
+	loadLanguage(languagesDirectory, newLangCode);
+	applyTranslations();
 });
 
 // Close button
 document.getElementById("btn-close").onclick = () =>
-    ipcRenderer.send("close-window");
+	ipcRenderer.send("close-window");
 
 // Buttons
 const buttonActions = {
-    women: () => {
-        const nya = new Audio("../../assets/info-page/nya.mp3");
-        nya.play();
-        shell.openExternal("https://diram1x.ru");
-    },
-    githubBtn: () => shell.openExternal("https://github.com/diramix"),
-    discordBtn: () => shell.openExternal("https://discord.gg/ky6bcdy7KA"),
-    twitterBtn: () => shell.openExternal("https://x.com/Diram1x"),
-    boostyBtn: () => shell.openExternal("https://boosty.to/diramix"),
-    youtubeBtn: () => shell.openExternal("https://www.youtube.com/@Diram1x"),
-    githubRepoBtn: () =>
-        shell.openExternal(
-            "https://github.com/Web-Next-Music/Next-Music-Client",
-        ),
+	women: () => {
+		const nya = new Audio("../../assets/info-page/nya.mp3");
+		nya.play();
+		shell.openExternal("https://diram1x.ru");
+	},
+	githubBtn: () => shell.openExternal("https://github.com/diramix"),
+	discordBtn: () => shell.openExternal("https://discord.gg/ky6bcdy7KA"),
+	twitterBtn: () => shell.openExternal("https://x.com/Diram1x"),
+	boostyBtn: () => shell.openExternal("https://boosty.to/diramix"),
+	youtubeBtn: () => shell.openExternal("https://www.youtube.com/@Diram1x"),
+	githubRepoBtn: () =>
+		shell.openExternal("https://github.com/Web-Next-Music/Next-Music-Client"),
 };
 
 Object.entries(buttonActions).forEach(([id, action]) => {
-    document.getElementById(id).addEventListener("click", action);
+	document.getElementById(id).addEventListener("click", action);
 });

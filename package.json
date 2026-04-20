@@ -1,90 +1,93 @@
 {
-    "name": "next-music",
-    "version": "3.2.1",
-    "description": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget",
-    "main": "dist/index.js",
-    "scripts": {
-        "start": "electron src/index.js",
-        "dist": "electron dist/index.js",
-        "build:code": "node build.js",
-        "build": "npm run build:code && electron-builder",
-        "build:win": "npm run build:code && electron-builder --win",
-        "build:linux": "npm run build:code && electron-builder --linux",
-        "build:all": "npm run build:code && electron-builder --win --linux"
-    },
-    "build": {
-        "appId": "com.nextmusic.client",
-        "productName": "Next Music",
-        "files": [
-            "dist/**/*"
-        ],
-        "directories": {
-            "buildResources": "src/assets",
-            "output": "release"
-        },
-        "win": {
-            "artifactName": "${name}_${version}_${arch}-Setup.${ext}",
-            "target": [
-                {
-                    "target": "nsis",
-                    "arch": [
-                        "x64"
-                    ]
-                }
-            ],
-            "icon": "src/assets/nm-icons/icon-256.png",
-            "executableName": "Next Music"
-        },
-        "linux": {
-            "artifactName": "${name}_${version}_${arch}.${ext}",
-            "target": [
-                "AppImage",
-                "deb",
-                "pacman"
-            ],
-            "category": "Audio",
-            "maintainer": "Diramix <39developer@diram1x.ru>",
-            "icon": "src/assets/nm-icons/icon-256.png",
-            "executableName": "next-music"
-        },
-        "pacman": {
-            "depends": [
-                "gtk3",
-                "libnotify",
-                "nss",
-                "libxss",
-                "glibc"
-            ],
-            "artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
-        }
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
-    },
-    "keywords": [],
-    "author": "Diramix <39developer@diram1x.ru>",
-    "license": "MIT",
-    "type": "module",
-    "bugs": {
-        "url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
-    },
-    "homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
-    "devDependencies": {
-        "electron": "^40.8.5",
-        "electron-builder": "^26.8.1",
-        "esbuild": "^0.27.4",
-        "html-minifier-terser": "^7.2.0",
-        "lightningcss": "^1.32.0",
-        "terser": "^5.46.1"
-    },
-    "dependencies": {
-        "@xhayper/discord-rpc": "^1.3.1",
-        "express": "^5.2.1",
-        "fs": "^0.0.1-security",
-        "node-notifier": "^10.0.1",
-        "sharp": "^0.34.5",
-        "socket.io": "^4.8.3",
-        "ws": "^8.20.0"
-    }
+	"name": "next-music",
+	"version": "3.2.1",
+	"description": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget",
+	"main": "dist/index.js",
+	"scripts": {
+		"start": "electron src/index.js",
+		"dist": "electron dist/index.js",
+		"build:code": "node build.js",
+		"build": "npm run build:code && electron-builder",
+		"build:win": "npm run build:code && electron-builder --win",
+		"build:linux": "npm run build:code && electron-builder --linux",
+		"build:all": "npm run build:code && electron-builder --win --linux",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"build": {
+		"appId": "com.nextmusic.client",
+		"productName": "Next Music",
+		"files": [
+			"dist/**/*"
+		],
+		"directories": {
+			"buildResources": "src/assets",
+			"output": "release"
+		},
+		"win": {
+			"artifactName": "${name}_${version}_${arch}-Setup.${ext}",
+			"target": [
+				{
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
+				}
+			],
+			"icon": "src/assets/nm-icons/icon-256.png",
+			"executableName": "Next Music"
+		},
+		"linux": {
+			"artifactName": "${name}_${version}_${arch}.${ext}",
+			"target": [
+				"AppImage",
+				"deb",
+				"pacman"
+			],
+			"category": "Audio",
+			"maintainer": "Diramix <39developer@diram1x.ru>",
+			"icon": "src/assets/nm-icons/icon-256.png",
+			"executableName": "next-music"
+		},
+		"pacman": {
+			"depends": [
+				"gtk3",
+				"libnotify",
+				"nss",
+				"libxss",
+				"glibc"
+			],
+			"artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Web-Next-Music/Next-Music-Client.git"
+	},
+	"keywords": [],
+	"author": "Diramix <39developer@diram1x.ru>",
+	"license": "MIT",
+	"type": "module",
+	"bugs": {
+		"url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
+	},
+	"homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
+	"devDependencies": {
+		"electron": "^40.8.5",
+		"electron-builder": "^26.8.1",
+		"esbuild": "^0.27.4",
+		"html-minifier-terser": "^7.2.0",
+		"lightningcss": "^1.32.0",
+		"prettier": "^3.8.3",
+		"terser": "^5.46.1"
+	},
+	"dependencies": {
+		"@xhayper/discord-rpc": "^1.3.1",
+		"express": "^5.2.1",
+		"fs": "^0.0.1-security",
+		"node-notifier": "^10.0.1",
+		"sharp": "^0.34.5",
+		"socket.io": "^4.8.3",
+		"ws": "^8.20.0"
+	}
 }

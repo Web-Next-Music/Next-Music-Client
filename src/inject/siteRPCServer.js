@@ -1,153 +1,143 @@
 (function () {
-    "use strict";
+	"use strict";
 
-    const WSPORT = 6972;
-    const WS_URL = `ws://127.0.0.1:${WSPORT}`;
-    const POLL_INTERVAL = 1000; // ms
-    let ws;
+	const WSPORT = 6972;
+	const WS_URL = `ws://127.0.0.1:${WSPORT}`;
+	const POLL_INTERVAL = 1000; // ms
+	let ws;
 
-    const pendingData = new Map();
-    const cooldownDuration = 2000;
-    const cooldownTimers = new Map();
+	const pendingData = new Map();
+	const cooldownDuration = 2000;
+	const cooldownTimers = new Map();
 
-    let lastSentData = null;
-    let lastPosition = null;
+	let lastSentData = null;
+	let lastPosition = null;
 
-    function log() {} // заглушка
+	function log() {} // stub
 
-    /* ===================== WEBSOCKET ===================== */
+	function connect() {
+		ws = new WebSocket(WS_URL);
 
-    function connect() {
-        ws = new WebSocket(WS_URL);
+		ws.onopen = () => {
+			pendingData.forEach((data, index) => {
+				const payload = { playerIndex: index, ...data };
+				ws.send(JSON.stringify(payload));
+				pendingData.delete(index);
+			});
+		};
 
-        ws.onopen = () => {
-            pendingData.forEach((data, index) => {
-                const payload = { playerIndex: index, ...data };
-                ws.send(JSON.stringify(payload));
-                pendingData.delete(index);
-            });
-        };
+		ws.onerror = (e) => console.error("[WS] ❌ WS Error:", e);
 
-        ws.onerror = (e) => console.error("[WS] ❌ WS Error:", e);
+		ws.onclose = () => {
+			setTimeout(connect, 3000);
+		};
+	}
 
-        ws.onclose = () => {
-            setTimeout(connect, 3000);
-        };
-    }
+	connect();
 
-    connect();
+	function getPlayerData() {
+		const api = window.nextmusicApi;
+		if (!api) return null;
 
-    /* ===================== DATA EXTRACTION ===================== */
+		const track = api.getCurrentTrack();
+		const state = api.getState();
+		if (!track || !state) return null;
 
-    function getPlayerData() {
-        const api = window.nextmusicApi;
-        if (!api) return null;
+		const artistsStr = track.artistNames?.join(", ") ?? "";
 
-        const track = api.getCurrentTrack();
-        const state = api.getState();
-        if (!track || !state) return null;
+		const artistUrl = track.artistIds?.[0]
+			? `https://music.yandex.ru/artist/${track.artistIds[0]}`
+			: null;
 
-        const artistsStr = track.artistNames?.join(", ") ?? "";
+		return {
+			trackId: track.id ?? null,
+			title: track.title ?? null,
+			artists: artistsStr,
+			img: track.coverUrl ?? null,
+			artistUrl,
+			trackUrl: track.trackUrl ?? null,
+			positionSec: state.progress?.position ?? 0,
+			durationSec: (track.durationMs ?? 0) / 1000,
+			playerState: state.status ?? null,
+		};
+	}
 
-        const artistUrl = track.artistIds?.[0]
-            ? `https://music.yandex.ru/artist/${track.artistIds[0]}`
-            : null;
+	function isSeekJump(positionSec) {
+		const last = lastPosition;
+		const expected = last != null ? last + POLL_INTERVAL / 1000 : null;
+		lastPosition = positionSec;
+		if (expected == null) return false;
+		return Math.abs(positionSec - expected) > 2;
+	}
 
-        return {
-            trackId: track.id ?? null,
-            title: track.title ?? null,
-            artists: artistsStr,
-            img: track.coverUrl ?? null,
-            artistUrl,
-            trackUrl: track.trackUrl ?? null,
-            positionSec: state.progress?.position ?? 0,
-            durationSec: (track.durationMs ?? 0) / 1000,
-            playerState: state.status ?? null,
-        };
-    }
+	function isStateChanged(data) {
+		if (!lastSentData) return true;
+		return (
+			data.trackId !== lastSentData.trackId ||
+			data.title !== lastSentData.title ||
+			data.artists !== lastSentData.artists ||
+			data.playerState !== lastSentData.playerState ||
+			data.img !== lastSentData.img
+		);
+	}
 
-    /* ===================== CHANGE DETECTION ===================== */
+	function scheduleSend(data) {
+		const index = 0;
+		pendingData.set(index, data);
 
-    function isSeekJump(positionSec) {
-        const last = lastPosition;
-        const expected = last != null ? last + POLL_INTERVAL / 1000 : null;
-        lastPosition = positionSec;
-        if (expected == null) return false;
-        return Math.abs(positionSec - expected) > 2;
-    }
+		if (cooldownTimers.has(index)) clearTimeout(cooldownTimers.get(index));
 
-    function isStateChanged(data) {
-        if (!lastSentData) return true;
-        return (
-            data.trackId !== lastSentData.trackId ||
-            data.title !== lastSentData.title ||
-            data.artists !== lastSentData.artists ||
-            data.playerState !== lastSentData.playerState ||
-            data.img !== lastSentData.img
-        );
-    }
+		const timer = setTimeout(() => {
+			const pending = pendingData.get(index);
+			if (pending && ws && ws.readyState === WebSocket.OPEN) {
+				const payload = { playerIndex: index, ...pending };
+				ws.send(JSON.stringify(payload));
+			}
+			pendingData.delete(index);
+			cooldownTimers.delete(index);
+		}, cooldownDuration);
 
-    /* ===================== SEND LOGIC ===================== */
+		cooldownTimers.set(index, timer);
+	}
 
-    function scheduleSend(data) {
-        const index = 0;
-        pendingData.set(index, data);
+	function sendImmediate(data) {
+		const index = 0;
+		if (ws && ws.readyState === WebSocket.OPEN) {
+			const payload = { playerIndex: index, ...data };
+			ws.send(JSON.stringify(payload));
+		} else {
+			pendingData.set(index, data);
+		}
+	}
 
-        if (cooldownTimers.has(index)) clearTimeout(cooldownTimers.get(index));
+	function poll() {
+		const data = getPlayerData();
+		if (!data) return;
 
-        const timer = setTimeout(() => {
-            const pending = pendingData.get(index);
-            if (pending && ws && ws.readyState === WebSocket.OPEN) {
-                const payload = { playerIndex: index, ...pending };
-                ws.send(JSON.stringify(payload));
-            }
-            pendingData.delete(index);
-            cooldownTimers.delete(index);
-        }, cooldownDuration);
+		const seeked = isSeekJump(data.positionSec);
+		const changed = isStateChanged(data);
 
-        cooldownTimers.set(index, timer);
-    }
+		if (!changed && !seeked) return;
 
-    function sendImmediate(data) {
-        const index = 0;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            const payload = { playerIndex: index, ...data };
-            ws.send(JSON.stringify(payload));
-        } else {
-            pendingData.set(index, data);
-        }
-    }
+		if (seeked && !changed && window.__liSyncSeeking) {
+			return;
+		}
 
-    /* ===================== POLL LOOP ===================== */
+		if (changed) {
+			lastSentData = { ...data };
+			scheduleSend(data);
+		} else if (seeked) {
+			sendImmediate(data);
+		}
+	}
 
-    function poll() {
-        const data = getPlayerData();
-        if (!data) return;
+	function waitForApi() {
+		if (window.nextmusicApi) {
+			setInterval(poll, POLL_INTERVAL);
+		} else {
+			setTimeout(waitForApi, 500);
+		}
+	}
 
-        const seeked = isSeekJump(data.positionSec);
-        const changed = isStateChanged(data);
-
-        if (!changed && !seeked) return;
-
-        if (seeked && !changed && window.__liSyncSeeking) {
-            return;
-        }
-
-        if (changed) {
-            lastSentData = { ...data };
-            scheduleSend(data);
-        } else if (seeked) {
-            sendImmediate(data);
-        }
-    }
-
-    function waitForApi() {
-        if (window.nextmusicApi) {
-            setInterval(poll, POLL_INTERVAL);
-        } else {
-            setTimeout(waitForApi, 500);
-        }
-    }
-
-    waitForApi();
+	waitForApi();
 })();

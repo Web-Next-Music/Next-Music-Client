@@ -1,111 +1,111 @@
 @font-face {
-    font-family: "JetBrainsMonoNerd";
-    src: url("./fonts/JetBrainsMonoNLNerdFont-Bold.ttf") format("truetype");
+	font-family: "JetBrainsMonoNerd";
+	src: url("./fonts/JetBrainsMonoNLNerdFont-Bold.ttf") format("truetype");
 }
 
 @font-face {
-    font-family: "GG Sans";
-    src: url("./fonts/ggsans-Bold.ttf") format("truetype");
+	font-family: "GG Sans";
+	src: url("./fonts/ggsans-Bold.ttf") format("truetype");
 }
 
 body {
-    margin: 0;
-    background: transparent;
-    color: white;
-    font-family: Arial, sans-serif;
+	margin: 0;
+	background: transparent;
+	color: white;
+	font-family: Arial, sans-serif;
 }
 
 .widget {
-    display: flex;
-    position: relative;
-    overflow: hidden;
-    align-items: center;
-    gap: 16px;
-    width: 500px;
-    height: 100px;
-    padding: 10px;
-    border-radius: 12px;
-    box-sizing: border-box;
-    background-color: #141414;
-    border: 1px solid #fff3;
-    transition: background-color 0.3s ease-in;
+	display: flex;
+	position: relative;
+	overflow: hidden;
+	align-items: center;
+	gap: 16px;
+	width: 500px;
+	height: 100px;
+	padding: 10px;
+	border-radius: 12px;
+	box-sizing: border-box;
+	background-color: #141414;
+	border: 1px solid #fff3;
+	transition: background-color 0.3s ease-in;
 }
 
 .decor {
-    position: absolute;
-    right: 0;
-    top: 0;
-    max-width: 100%;
-    max-height: 100%;
+	position: absolute;
+	right: 0;
+	top: 0;
+	max-width: 100%;
+	max-height: 100%;
 }
 
 .dimmer {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: linear-gradient(90deg, #0000 0%, #0003 90%);
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	background: linear-gradient(90deg, #0000 0%, #0003 90%);
 }
 
 .cover {
-    width: 80px; /* увеличиваем обложку */
-    height: 80px;
-    border-radius: 12px;
-    flex-shrink: 0;
-    z-index: 2;
+	width: 80px; /* increase cover size */
+	height: 80px;
+	border-radius: 12px;
+	flex-shrink: 0;
+	z-index: 2;
 }
 
 .title {
-    font-family: "GG Sans", monospace;
-    position: relative;
-    font-size: 22px;
-    font-weight: bold;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-    width: 380px;
-    box-sizing: border-box;
-    z-index: 2;
+	font-family: "GG Sans", monospace;
+	position: relative;
+	font-size: 22px;
+	font-weight: bold;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+	width: 380px;
+	box-sizing: border-box;
+	z-index: 2;
 }
 
 .artist {
-    font-family: "GG Sans", monospace;
-    font-size: 18px;
-    opacity: 0.5;
-    font-weight: bold;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-    width: 380px;
-    box-sizing: border-box;
-    z-index: 2;
+	font-family: "GG Sans", monospace;
+	font-size: 18px;
+	opacity: 0.5;
+	font-weight: bold;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+	width: 380px;
+	box-sizing: border-box;
+	z-index: 2;
 }
 
 .timeline {
-    font-family: "JetBrainsMonoNerd", monospace;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    font-weight: 600;
-    position: relative;
-    z-index: 5;
-    color: #fff;
+	font-family: "JetBrainsMonoNerd", monospace;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	font-weight: 600;
+	position: relative;
+	z-index: 5;
+	color: #fff;
 }
 
 .progress {
-    flex: 1;
-    height: 5px;
-    background: #0005;
-    border-radius: 999px;
-    overflow: hidden;
-    z-index: 5;
+	flex: 1;
+	height: 5px;
+	background: #0005;
+	border-radius: 999px;
+	overflow: hidden;
+	z-index: 5;
 }
 
 .progress-filled {
-    height: 100%;
-    width: 0%;
-    background: #fff;
-    transition: width 0.1s linear;
+	height: 100%;
+	width: 0%;
+	background: #fff;
+	transition: width 0.1s linear;
 }

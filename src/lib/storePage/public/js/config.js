@@ -1,22 +1,22 @@
-// ── Button order configuration ────────────────────────────────────────────────
-//   "toggle"   — кнопка Enable / Disable
-//   "delete"   — кнопка удаления (иконка корзины)
-//   "settings" — кнопка открытия handleEvents.json (показывается только если файл есть)
-//   "download" — кнопка Download (только для не-установленных элементов)
-//   "update"   — кнопка Update; при её наличии "toggle" автоматически сворачивается в иконку
-//   "readme"   — иконка README в заголовке карточки (не в .card-actions, а в .card-name)
+// Button order configuration
+//   "toggle"   — Enable / Disable button
+//   "delete"   — delete button (trash icon)
+//   "settings" — opens handleEvents.json (shown only if the file exists)
+//   "download" — Download button (only for not-yet-installed items)
+//   "update"   — Update button; when present, "toggle" collapses to an icon automatically
+//   "readme"   — README icon in the card header (in .card-name, not .card-actions)
 
-// Карточки из магазина (вкладки Addons / Themes) — когда элемент УЖЕ установлен
+// Store cards (Addons / Themes tabs) — when the item IS already installed
 const CARD_BUTTONS_INSTALLED = ["toggle", "settings", "delete"];
 
-// Карточки из магазина — когда элемент ЕЩЁ НЕ установлен
+// Store cards — when the item is NOT yet installed
 const CARD_BUTTONS_NOT_INSTALLED = ["download", "settings"];
 
-// Карточки на вкладке Custom / Installed (локальные файлы и папки)
+// Cards on the Custom / Installed tab (local files and folders)
 const CARD_BUTTONS_CUSTOM = ["toggle", "settings", "delete"];
 
-// Кнопки, которые появляются после успешного скачивания (inline-обновление)
+// Buttons shown after a successful download (inline update)
 const CARD_BUTTONS_AFTER_DOWNLOAD = ["toggle", "settings", "delete"];
 
-// Кнопки установленной карточки, когда доступно обновление
+// Installed card buttons when an update is available
 const CARD_BUTTONS_WITH_UPDATE = ["update", "toggle", "settings", "delete"];

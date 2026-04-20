@@ -1,92 +1,92 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap");
 
 body {
-    font-family: "Noto Sans", sans-serif;
-    user-select: none;
-    background: linear-gradient(-90deg, #000000 0%, #060330 100%);
+	font-family: "Noto Sans", sans-serif;
+	user-select: none;
+	background: linear-gradient(-90deg, #000000 0%, #060330 100%);
 }
 
 .women {
-    position: fixed;
-    background-image: url("../../assets/info-page/women.png");
-    right: 0;
-    bottom: 0;
-    width: 270px;
-    height: 350px;
-    background-size: contain;
-    background-position: bottom right;
-    background-repeat: no-repeat;
+	position: fixed;
+	background-image: url("../../assets/info-page/women.png");
+	right: 0;
+	bottom: 0;
+	width: 270px;
+	height: 350px;
+	background-size: contain;
+	background-position: bottom right;
+	background-repeat: no-repeat;
 }
 
 .nm_icon {
-    position: fixed;
-    transform: rotate(-5deg);
-    top: 20px;
-    left: 20px;
-    width: 100px;
-    height: 100px;
-    background-image: url("../../assets/nm-icons/icon-256.png");
-    background-size: cover;
-    border-radius: 20px;
+	position: fixed;
+	transform: rotate(-5deg);
+	top: 20px;
+	left: 20px;
+	width: 100px;
+	height: 100px;
+	background-image: url("../../assets/nm-icons/icon-256.png");
+	background-size: cover;
+	border-radius: 20px;
 }
 
 .main_info_container {
-    position: fixed;
-    top: 28px;
-    left: 140px;
+	position: fixed;
+	top: 28px;
+	left: 140px;
 }
 
 .next_music_title {
-    color: #fff;
-    font-size: 30px;
-    font-weight: 800;
+	color: #fff;
+	font-size: 30px;
+	font-weight: 800;
 }
 
 .developer {
-    color: #fff;
-    font-size: 20px;
-    font-weight: 800;
-    font-style: oblique;
+	color: #fff;
+	font-size: 20px;
+	font-weight: 800;
+	font-style: oblique;
 }
 
 .linkButtons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    position: fixed;
-    border-style: solid;
-    border-width: 0px;
-    border-color: #f00;
-    top: 133px;
-    left: 20px;
-    width: 290px;
-    height: 175px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	position: fixed;
+	border-style: solid;
+	border-width: 0px;
+	border-color: #f00;
+	top: 133px;
+	left: 20px;
+	width: 290px;
+	height: 175px;
 }
 
 .linkBtn {
-    background-color: #0008;
-    border-radius: 12px;
-    border-width: 0;
-    width: 50%;
-    height: 50%;
-    color: #fff;
-    font-size: 17px;
-    font-weight: 600;
-    flex: 1 1 calc(50% - 10px);
-    transition: background-color ease 0.25s;
+	background-color: #0008;
+	border-radius: 12px;
+	border-width: 0;
+	width: 50%;
+	height: 50%;
+	color: #fff;
+	font-size: 17px;
+	font-weight: 600;
+	flex: 1 1 calc(50% - 10px);
+	transition: background-color ease 0.25s;
 }
 
 .linkBtn:hover {
-    background-color: #fff1;
-    cursor: pointer;
+	background-color: #fff1;
+	cursor: pointer;
 }
 
 .version {
-    position: fixed;
-    left: 10px;
-    bottom: 4px;
-    color: #fff;
-    font-size: 30px;
-    font-weight: 700;
-    font-style: oblique;
+	position: fixed;
+	left: 10px;
+	bottom: 4px;
+	color: #fff;
+	font-size: 30px;
+	font-weight: 700;
+	font-style: oblique;
 }

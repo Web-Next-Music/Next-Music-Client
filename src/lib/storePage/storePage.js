@@ -10,12 +10,10 @@ const __dirname = path.dirname(__filename);
 
 const PUBLIC_DIR = path.join(__dirname, "public");
 
-// ── Skeleton cards (rendered into HTML before serving) ──
-
 function SKELS(n) {
-    return Array.from(
-        { length: n },
-        () => `
+	return Array.from(
+		{ length: n },
+		() => `
 <div class="card">
   <div class="card-top">
     <div class="skel" style="width:44px;height:44px;border-radius:9px;flex-shrink:0"></div>
@@ -26,81 +24,74 @@ function SKELS(n) {
   </div>
   <div class="skel" style="height:33px;border-radius:8px"></div>
 </div>`,
-    ).join("");
+	).join("");
 }
-
-// ── Electron custom protocol ──
 
 export function setupStorePage() {
-    protocol.handle("nextstore", async (request) => {
-        const url = new URL(request.url);
-        const urlPath = url.pathname;
-        const qp = Object.fromEntries(url.searchParams);
-        const method = request.method;
+	protocol.handle("nextstore", async (request) => {
+		const url = new URL(request.url);
+		const urlPath = url.pathname;
+		const qp = Object.fromEntries(url.searchParams);
+		const method = request.method;
 
-        const getBody = () =>
-            request
-                .arrayBuffer()
-                .then((ab) => Buffer.from(ab).toString("utf8"));
+		const getBody = () =>
+			request.arrayBuffer().then((ab) => Buffer.from(ab).toString("utf8"));
 
-        // Determine which BrowserWindow sent this request so that /api/reload
-        // can restart the correct main window (not a random other window).
-        let senderWcId = null;
-        try {
-            const allWins = BrowserWindow.getAllWindows();
-            for (const w of allWins) {
-                if (w.webContents.getURL().startsWith("nextstore://")) {
-                    senderWcId = w.webContents.id;
-                    break;
-                }
-            }
-        } catch {
-            // ignore – fallback to old behaviour
-        }
+		let senderWcId = null;
 
-        try {
-            const result = await handleRequest(
-                method,
-                urlPath,
-                qp,
-                getBody,
-                PUBLIC_DIR,
-                senderWcId,
-            );
-            return new Response(result.body, {
-                status: result.status,
-                headers: result.headers,
-            });
-        } catch (e) {
-            return new Response(JSON.stringify({ error: e.message }), {
-                status: 500,
-                headers: { "Content-Type": "application/json" },
-            });
-        }
-    });
+		try {
+			const allWins = BrowserWindow.getAllWindows();
+			for (const w of allWins) {
+				if (w.webContents.getURL().startsWith("nextstore://")) {
+					senderWcId = w.webContents.id;
+					break;
+				}
+			}
+		} catch {}
+
+		try {
+			const result = await handleRequest(
+				method,
+				urlPath,
+				qp,
+				getBody,
+				PUBLIC_DIR,
+				senderWcId,
+			);
+
+			return new Response(result.body, {
+				status: result.status,
+				headers: result.headers,
+			});
+		} catch (e) {
+			return new Response(JSON.stringify({ error: e.message }), {
+				status: 500,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+	});
 }
 
-// ── HTML helpers ──
-
 export function getStoreHtml() {
-    const htmlPath = path.join(PUBLIC_DIR, "index.html");
-    let html = fs.readFileSync(htmlPath, "utf8");
-    html = html
-        .replace("SKELS_ADDONS", SKELS(6))
-        .replace("SKELS_THEMES", SKELS(6))
-        .replace(
-            /\/(public\/[^"']+)/g,
-            (_, p) =>
-                pathToFileURL(path.join(PUBLIC_DIR, p.replace(/^public\//, "")))
-                    .href,
-        )
-        .replace("<head>", `<head>\n        <base href="nextstore://app/">`);
-    return html;
+	const htmlPath = path.join(PUBLIC_DIR, "index.html");
+	let html = fs.readFileSync(htmlPath, "utf8");
+
+	html = html
+		.replace("SKELS_ADDONS", SKELS(6))
+		.replace("SKELS_THEMES", SKELS(6))
+		.replace(
+			/\/(public\/[^"']+)/g,
+			(_, p) =>
+				pathToFileURL(path.join(PUBLIC_DIR, p.replace(/^public\//, ""))).href,
+		)
+
+		.replace("<head>", `<head>\n        <base href="nextstore://app/">`);
+	return html;
 }
 
 export function injectStoreHtml(win) {
-    const html = getStoreHtml();
-    win.webContents.executeJavaScript(
-        `window.__nextStoreHtml = ${JSON.stringify(html)};`,
-    );
+	const html = getStoreHtml();
+	win.webContents.executeJavaScript(
+		`window.__nextStoreHtml = ${JSON.stringify(html)};`,
+	);
 }

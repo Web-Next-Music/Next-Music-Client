@@ -8,28 +8,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default function injector(mainWindow, config) {
-    try {
-        const injectDir = path.join(__dirname, "../inject");
+	try {
+		const injectDir = path.join(__dirname, "../inject");
 
-        for (const item of injectList) {
-            const { file, condition } = item;
+		for (const item of injectList) {
+			const { file, condition } = item;
 
-            if (typeof condition === "function" && !condition(config)) {
-                console.log("[Injector] Skipped by config:", file);
-                continue;
-            }
+			if (typeof condition === "function" && !condition(config)) {
+				console.log("[Injector] Skipped by config:", file);
+				continue;
+			}
 
-            const fullPath = path.join(injectDir, file).replace(/\\/g, "/");
+			const fullPath = path.join(injectDir, file).replace(/\\/g, "/");
 
-            if (!fs.existsSync(fullPath)) {
-                console.warn("[Injector] ⚠️ File not found:", file);
-                continue;
-            }
+			if (!fs.existsSync(fullPath)) {
+				console.warn("[Injector] ⚠️ File not found:", file);
+				continue;
+			}
 
-            const isCSS = file.endsWith(".css");
+			const isCSS = file.endsWith(".css");
 
-            const injectScript = isCSS
-                ? `
+			const injectScript = isCSS
+				? `
                 (() => {
                     const injectedPath = "${fullPath}";
                     if (!document.querySelector('link[data-injected="' + injectedPath + '"]')) {
@@ -42,7 +42,7 @@ export default function injector(mainWindow, config) {
                     }
                 })();
                 `
-                : `
+				: `
                 (() => {
                     const injectedPath = "${fullPath}";
                     if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
@@ -56,16 +56,16 @@ export default function injector(mainWindow, config) {
                 })();
                 `;
 
-            mainWindow.webContents
-                .executeJavaScript(injectScript)
-                .then(() => {
-                    console.log("[Injector] Injected:", file);
-                })
-                .catch((err) => {
-                    console.error("[Injector] ❌ Failed to inject:", file, err);
-                });
-        }
-    } catch (err) {
-        console.error("[Injector] ❌ Injector error:", err);
-    }
+			mainWindow.webContents
+				.executeJavaScript(injectScript)
+				.then(() => {
+					console.log("[Injector] Injected:", file);
+				})
+				.catch((err) => {
+					console.error("[Injector] ❌ Failed to inject:", file, err);
+				});
+		}
+	} catch (err) {
+		console.error("[Injector] ❌ Injector error:", err);
+	}
 }

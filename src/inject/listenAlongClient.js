@@ -1,98 +1,91 @@
 (async () => {
-    const SEL = {
-        // Нижняя панель плеера
-        playerBar: '[class*="PlayerBar_root"]',
-        // Ссылка на альбом/трек в нижней панели (используется как ID текущего трека)
-        albumLink: '[class*="Meta_albumLink"]',
-        // Иконка кнопки play/pause в нижней панели
-        playButtonIcon: '[class*="BaseSonataControlsDesktop_playButtonIcon__"]',
-        // Основной слайдер времени в нижней панели
-        timeSlider:
-            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
-        // Слайдер времени в полноэкранном режиме
-        fullscreenSlider:
-            'input[class*="FullscreenPlayerDesktopContent_slider"]',
-        // Строка синхронизированного текста (клик = перемотка)
-        lyricsLine: '[class*="SyncLyricsLine_root"]',
-        // Элементы, клик/drag по которым считается перемоткой и отправляется seek
-        seekSources: [
-            '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
-            'input[class*="FullscreenPlayerDesktopContent_slider"]',
-            '[class*="SyncLyricsLine_root"]',
-        ],
-        // Дополнительные элементы управления, взаимодействие с которыми
-        // сигнализирует об активности пользователя (play/pause/next/prev и т.п.)
-        actionSources: [
-            '[class*="BaseSonataControlsDesktop_sonataButton"]',
-            '[class*="SonataFullscreenControlsDesktop_sonataButton"]',
-        ],
-    };
+	const SEL = {
+		playerBar: '[class*="PlayerBar_root"]',
+		albumLink: '[class*="Meta_albumLink"]',
+		playButtonIcon: '[class*="BaseSonataControlsDesktop_playButtonIcon__"]',
+		timeSlider: '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
+		fullscreenSlider: 'input[class*="FullscreenPlayerDesktopContent_slider"]',
+		lyricsLine: '[class*="SyncLyricsLine_root"]',
+		seekSources: [
+			'[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
+			'input[class*="FullscreenPlayerDesktopContent_slider"]',
+			'[class*="SyncLyricsLine_root"]',
+		],
+		actionSources: [
+			'[class*="BaseSonataControlsDesktop_sonataButton"]',
+			'[class*="SonataFullscreenControlsDesktop_sonataButton"]',
+		],
+	};
 
-    const _qs = new URLSearchParams(location.search);
+	const _qs = new URLSearchParams(location.search);
 
-    const blackIsland = _qs.get("__blackIsland") || null;
+	const blackIsland = _qs.get("__blackIsland") || null;
 
-    const _wssHost = _qs.get("__wss") || null;
-    const WSS_HOST = _wssHost ? "wss://" + _wssHost : null;
-    const ROOM_ID = _qs.get("__room") || null;
-    const CLIENT_ID = _qs.get("__clientId") || null;
-    const AVATAR_URL = _qs.get("__avatarUrl") || null;
-    const SYNC_THRESHOLD_SEC = 3;
+	const _wssHost = _qs.get("__wss") || null;
+	const WSS_HOST = _wssHost ? "wss://" + _wssHost : null;
+	const ROOM_ID = _qs.get("__room") || null;
+	const CLIENT_ID = _qs.get("__clientId") || null;
+	const AVATAR_URL = _qs.get("__avatarUrl") || null;
+	const SYNC_THRESHOLD_SEC = 3;
 
-    let wss = null;
-    let serverName = null;
-    let _currentServerLabel = "";
-    let observerStarted = false;
-    let lastSentPath = null;
-    let isNavigating = false;
-    // Путь, к которому сейчас идёт навигация — для дедупликации
-    let _navigatingToPath = null;
-    let pendingPath = null;
-    let _pendingSyncAfterNav = false;
-    let isApplyingState = false;
-    let lastSentPlayHref = null;
-    let isSeekingTimeline = false;
-    let isInitializing = true;
-    let initTimeout = null;
-    let serverState = null;
-    let isSyncPaused = false;
-    let _userPausedSync = false;
-    let _suppressSend = null;
-    let _suppressSeekSend = false;
+	let wss = null;
+	let serverName = null;
+	let _currentServerLabel = "";
+	let observerStarted = false;
+	let lastSentPath = null;
+	let isNavigating = false;
+	let _navigatingToPath = null;
+	let pendingPath = null;
+	let _pendingSyncAfterNav = false;
+	let isApplyingState = false;
+	let lastSentPlayHref = null;
+	let isSeekingTimeline = false;
+	let isInitializing = true;
+	let initTimeout = null;
+	let serverState = null;
+	let isSyncPaused = false;
+	let _userPausedSync = false;
+	let _suppressSend = null;
+	let _suppressSeekSend = false;
 
-    function liftInitializing() {
-        if (!isInitializing) return;
-        isInitializing = false;
-        const href = getPlayIconHref();
-        if (href) lastSentPlayHref = href;
-        if (serverState && (serverState.trackId ?? serverState.path)) {
-            lastSentPath = serverState.trackId ?? serverState.path;
-        } else {
-            const p = getTrackId();
-            if (p) lastSentPath = p;
-        }
-        console.log("Initialization complete — lastSentPath:", lastSentPath);
-    }
+	function liftInitializing() {
+		if (!isInitializing) return;
+		isInitializing = false;
 
-    const XLINK = "http://www.w3.org/1999/xlink";
+		const href = getPlayIconHref();
 
-    const isBlackIsland = blackIsland === true || blackIsland === "true";
+		if (href) lastSentPlayHref = href;
 
-    let islandBg, islandBlur;
-    if (isBlackIsland) {
-        islandBg = `#000`;
-        islandBlur = `0`;
-    } else {
-        islandBg = `#0005`;
-        islandBlur = `30px`;
-    }
+		if (serverState && (serverState.trackId ?? serverState.path)) {
+			lastSentPath = serverState.trackId ?? serverState.path;
+		} else {
+			const p = getTrackId();
+			if (p) lastSentPath = p;
+		}
 
-    (function injectStyles() {
-        if (document.getElementById("__li_styles__")) return;
+		console.log("Initialization complete — lastSentPath:", lastSentPath);
+	}
 
-        const s = document.createElement("style");
-        s.id = "__li_styles__";
-        s.textContent = `
+	const XLINK = "http://www.w3.org/1999/xlink";
+
+	const isBlackIsland = blackIsland === true || blackIsland === "true";
+
+	let islandBg, islandBlur;
+
+	if (isBlackIsland) {
+		islandBg = `#000`;
+		islandBlur = `0`;
+	} else {
+		islandBg = `#0005`;
+		islandBlur = `30px`;
+	}
+
+	(function injectStyles() {
+		if (document.getElementById("__li_styles__")) return;
+
+		const s = document.createElement("style");
+		s.id = "__li_styles__";
+		s.textContent = `
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
 
         #__li_island__ {
@@ -311,1034 +304,1050 @@
         }
     `;
 
-        document.head.appendChild(s);
-    })();
-
-    // ─── Build island DOM ───────────────────────────────────────────────
-
-    function buildIsland() {
-        if (document.getElementById("__li_island__")) return;
-
-        const island = document.createElement("div");
-        island.id = "__li_island__";
-
-        const inner = document.createElement("div");
-        inner.id = "__li_inner__";
-
-        const dotWrap = document.createElement("span");
-        dotWrap.id = "__li_dot_wrap__";
-        dotWrap.className = "disconnected";
-        dotWrap.title = "Disconnected";
-
-        const dot = document.createElement("span");
-        dot.id = "__li_dot__";
-
-        const status = document.createElement("span");
-        status.id = "__li_status__";
-        status.className = "hidden";
-
-        const avatarRow = document.createElement("div");
-        avatarRow.id = "__li_avatars__";
-
-        dotWrap.appendChild(dot);
-        inner.appendChild(dotWrap);
-        inner.appendChild(status);
-        inner.appendChild(avatarRow);
-        island.appendChild(inner);
-        document.body.appendChild(island);
-    }
-
-    buildIsland();
-
-    // ─── Dot state helper ───────────────────────────────────────────────
-
-    function setDotState(state, titleText) {
-        const wrap = document.getElementById("__li_dot_wrap__");
-        if (!wrap) return;
-        wrap.className = state;
-        wrap.title = titleText || "";
-    }
-
-    document.addEventListener("click", (e) => {
-        const wrap = document.getElementById("__li_dot_wrap__");
-        if (!wrap || (!wrap.contains(e.target) && e.target !== wrap)) return;
-
-        if (wrap.classList.contains("sync-paused")) {
-            resumeSync();
-        } else if (wrap.classList.contains("connected")) {
-            pauseSyncByUser();
-        }
-    });
-
-    function pauseSyncByUser() {
-        isSyncPaused = true;
-        _userPausedSync = true;
-        _pendingSyncAfterNav = false;
-        console.log("⏸️ Sync manually paused by user");
-        setDotState("sync-paused", "Synchronize");
-        clearTimeout(statusHideTimer);
-        animateInnerWidth(() => {
-            const status = document.getElementById("__li_status__");
-            if (status) status.classList.add("hidden");
-        });
-    }
-
-    function resumeSync() {
-        if (!isSyncPaused) return;
-        isSyncPaused = false;
-        _userPausedSync = false;
-        console.log("▶️ Sync resumed by user click on dot");
-        setDotState("connected", _currentServerLabel);
-        clearTimeout(statusHideTimer);
-        animateInnerWidth(() => {
-            const status = document.getElementById("__li_status__");
-            if (status) status.classList.add("hidden");
-            const avRow = document.getElementById("__li_avatars__");
-            if (avRow) avRow.className = "visible";
-        });
-        if (serverState) {
-            const currentId = getTrackId();
-            const srvId = serverState.trackId ?? serverState.path;
-            const needsNav = srvId && srvId !== currentId;
-            if (needsNav) {
-                _pendingSyncAfterNav = true;
-            }
-            applySyncState(serverState, true);
-        }
-    }
-
-    // ─── Island show / hide ─────────────────────────────────────────────
-
-    let hideIslandTimer = null;
-    let _islandVisible = false;
-
-    function showIsland() {
-        clearTimeout(hideIslandTimer);
-        const island = document.getElementById("__li_island__");
-        if (!island) return;
-        if (_islandVisible && !island.classList.contains("island-hiding"))
-            return;
-        _islandVisible = true;
-        island.classList.remove("island-hiding");
-        void island.offsetWidth;
-        island.classList.add("island-visible");
-    }
-
-    function hideIsland() {
-        const island = document.getElementById("__li_island__");
-        if (!island) return;
-        _islandVisible = false;
-        island.classList.remove("island-visible");
-        void island.offsetWidth;
-        island.classList.add("island-hiding");
-    }
-
-    function hideIslandAfter(ms) {
-        clearTimeout(hideIslandTimer);
-        hideIslandTimer = setTimeout(hideIsland, ms);
-    }
-
-    function animateInnerWidth(changeFn) {
-        const inner = document.getElementById("__li_inner__");
-        if (!inner) {
-            changeFn();
-            return;
-        }
-
-        const fromW = inner.getBoundingClientRect().width;
-        inner.style.width = fromW + "px";
-        inner.style.transition = "none";
-
-        changeFn();
-
-        const avRow = document.getElementById("__li_avatars__");
-        if (avRow && avRow.classList.contains("visible")) {
-            avRow.style.transition = "none";
-            avRow.style.maxWidth = "none";
-            avRow.style.opacity = "1";
-        }
-
-        inner.style.width = "";
-        const toW = inner.getBoundingClientRect().width;
-        inner.style.width = fromW + "px";
-        void inner.offsetWidth;
-
-        inner.style.transition = "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-        inner.style.width = toW + "px";
-
-        inner.addEventListener("transitionend", function handler(e) {
-            if (e.propertyName !== "width") return;
-
-            inner.style.transition = "";
-            inner.style.width = "";
-
-            if (avRow) {
-                avRow.style.transition = "";
-                avRow.style.maxWidth = "";
-                avRow.style.opacity = "";
-            }
-
-            inner.removeEventListener("transitionend", handler);
-        });
-    }
-
-    // ─── Island state machine ───────────────────────────────────────────
-
-    let statusHideTimer = null;
-
-    function islandSetDisconnected(autoHide = true) {
-        clearTimeout(statusHideTimer);
-        const status = document.getElementById("__li_status__");
-        const avRow = document.getElementById("__li_avatars__");
-
-        setDotState("disconnected", "Disconnected");
-
-        if (status) {
-            status.classList.remove("hidden");
-            status.style.color = "#888";
-            status.textContent = "Disconnected";
-        }
-
-        if (avRow) avRow.className = "";
-
-        showIsland();
-        if (autoHide) hideIslandAfter(4000);
-    }
-
-    function islandSetConnected(serverHost) {
-        clearTimeout(statusHideTimer);
-        showIsland();
-        _currentServerLabel = serverHost || "";
-        setDotState("connected", _currentServerLabel);
-
-        const status = document.getElementById("__li_status__");
-
-        if (status) {
-            status.style.opacity = "0";
-            status.style.transform = "translateY(4px)";
-            status.classList.remove("hidden");
-            void status.offsetWidth;
-            setTimeout(() => {
-                status.style.color = "#1db954";
-                status.textContent = `Connected to ${serverHost}`;
-                status.style.opacity = "";
-                status.style.transform = "";
-            }, 250);
-        }
-
-        statusHideTimer = setTimeout(() => {
-            animateInnerWidth(() => {
-                if (status) status.classList.add("hidden");
-                const avRow = document.getElementById("__li_avatars__");
-                if (avRow) avRow.className = "visible";
-            });
-        }, 3000);
-    }
-
-    function islandSetSyncPaused() {
-        clearTimeout(statusHideTimer);
-        setDotState("sync-paused", "Synchronize");
-
-        animateInnerWidth(() => {
-            const status = document.getElementById("__li_status__");
-            if (status) status.classList.add("hidden");
-        });
-
-        showIsland();
-    }
-
-    // ─── Avatar map ─────────────────────────────────────────────────────
-
-    const islandAvatars = new Map();
-    function setActiveSender(clientId) {
-        for (const [, wrap] of islandAvatars)
-            wrap.classList.remove("active-sender");
-        const wrap = islandAvatars.get(clientId);
-        if (wrap) wrap.classList.add("active-sender");
-    }
-
-    function upsertAvatar(clientId, base64Data) {
-        const avRow = document.getElementById("__li_avatars__");
-        if (!avRow) return;
-
-        animateInnerWidth(() => {
-            let wrap = islandAvatars.get(clientId);
-            if (!wrap) {
-                wrap = document.createElement("div");
-                wrap.className = "li-av-wrap";
-                avRow.appendChild(wrap);
-                islandAvatars.set(clientId, wrap);
-            }
-
-            const old = wrap.querySelector(".li-av-img, .li-av-placeholder");
-            if (old) old.remove();
-
-            if (base64Data) {
-                const img = document.createElement("img");
-                img.className = "li-av-img";
-                img.src = `data:image/webp;base64,${base64Data}`;
-                img.title = clientId;
-                img.onerror = () => {
-                    img.replaceWith(makePlaceholder(clientId));
-                };
-                wrap.appendChild(img);
-            } else {
-                wrap.appendChild(makePlaceholder(clientId));
-            }
-        });
-    }
-
-    function makePlaceholder(clientId) {
-        const el = document.createElement("div");
-        el.className = "li-av-placeholder";
-        el.textContent = (clientId?.[0] || "?").toUpperCase();
-        el.title = clientId;
-        return el;
-    }
-
-    function removeAvatar(clientId) {
-        const wrap = islandAvatars.get(clientId);
-        if (!wrap) return;
-        wrap.classList.add("removing");
-        setTimeout(() => {
-            animateInnerWidth(() => {
-                wrap.remove();
-                islandAvatars.delete(clientId);
-            });
-        }, 230);
-    }
-
-    // ─── Send avatar from URL ────────────────────────────────────────────
-
-    function sendAvatarFromUrl() {
-        if (!AVATAR_URL) return;
-        if (wss && wss.readyState === WebSocket.OPEN) {
-            wss.send(
-                JSON.stringify({
-                    type: "avatar_url",
-                    url: AVATAR_URL,
-                    roomId: ROOM_ID,
-                }),
-            );
-            console.log(`Sending avatar URL to server: ${AVATAR_URL}`);
-        }
-    }
-
-    // ─── Play/Pause helpers ─────────────────────────────────────────────
-
-    function getPlayIconEl() {
-        return document.querySelector(SEL.playButtonIcon);
-    }
-    function getPlayIconHref() {
-        const el = getPlayIconEl();
-        if (!el) return null;
-        const use = el.querySelector("svg use");
-        if (!use) return null;
-        return (
-            use.getAttributeNS(XLINK, "href") ||
-            use.getAttribute("href") ||
-            null
-        );
-    }
-    function clickPlayIcon() {
-        const el = getPlayIconEl();
-        if (!el) {
-            console.warn("⚠️ Play icon not found");
-            return;
-        }
-        const btn = el.closest("button") || el;
-        btn.dispatchEvent(
-            new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
-        );
-        btn.dispatchEvent(
-            new MouseEvent("mouseup", { bubbles: true, cancelable: true }),
-        );
-        btn.dispatchEvent(
-            new MouseEvent("click", { bubbles: true, cancelable: true }),
-        );
-        console.log("🖱️ Click play/pause");
-    }
-
-    // ─── Timeline helpers ───────────────────────────────────────────────
-
-    function getSlider() {
-        return document.querySelector(SEL.timeSlider);
-    }
-
-    let _isSyntheticSeek = false;
-
-    function seekTo(value) {
-        const slider = getSlider();
-        if (!slider) return;
-        const setter = Object.getOwnPropertyDescriptor(
-            HTMLInputElement.prototype,
-            "value",
-        ).set;
-        setter.call(slider, value);
-        slider.dispatchEvent(new Event("input", { bubbles: true }));
-        _isSyntheticSeek = true;
-        // Сообщаем siteRPCServer что это синтетический seek — не пользовательский
-        window.__liSyncSeeking = true;
-        slider.dispatchEvent(
-            new PointerEvent("pointerup", { bubbles: true, cancelable: true }),
-        );
-        slider.dispatchEvent(
-            new MouseEvent("mouseup", { bubbles: true, cancelable: true }),
-        );
-        _isSyntheticSeek = false;
-        slider.dispatchEvent(new Event("change", { bubbles: true }));
-        // Снимаем флаг после того как siteRPCServer успеет обработать тик
-        setTimeout(() => {
-            window.__liSyncSeeking = false;
-        }, 1500);
-        console.log(`⏱️ Seek → ${value}/${slider.max}`);
-    }
-
-    // ─── Apply state from server ────────────────────────────────────────
-
-    function applySyncState(msg, force = false) {
-        const targetPath = msg.trackId ?? msg.path ?? null; // совместимость со старым полем
-        const targetPlaying = msg.playing;
-        const targetPosition = msg.position;
-        const targetServerTime = msg.serverTime;
-
-        // 1. Навигация к нужному треку
-        const currentPath = getAlbumPath();
-        const needNav =
-            targetPath &&
-            targetPath !== currentPath &&
-            (force || targetPath !== lastSentPath) &&
-            !isNavigating;
-
-        if (needNav) {
-            if (
-                serverState &&
-                (serverState.trackId ?? serverState.path) !== targetPath
-            ) {
-                console.warn(
-                    `Nav cancelled: msg.trackId="${targetPath}" != serverState.trackId="${serverState.trackId ?? serverState.path}"`,
-                );
-                applySyncState(serverState, force);
-                return;
-            }
-            _suppressSend = targetPath;
-            pendingPath = targetPath;
-            processNext();
-        } else if (force && targetPath && targetPath === currentPath) {
-            if (!isApplyingState) {
-                applyPlayState(targetPlaying);
-            }
-        }
-
-        // 2. Play / Pause
-        if (!needNav && !isNavigating && !isApplyingState) {
-            applyPlayState(targetPlaying);
-        }
-
-        // 3. Позиция
-        if (!isSeekingTimeline && !isNavigating) {
-            const slider = getSlider();
-            if (slider) {
-                const networkDelay =
-                    (Date.now() - (targetServerTime || Date.now())) / 1000;
-                const targetPos = targetPlaying
-                    ? targetPosition + networkDelay
-                    : targetPosition;
-                const diff = Math.abs(parseInt(slider.value) - targetPos);
-                if (force || diff > SYNC_THRESHOLD_SEC) {
-                    console.log(
-                        `Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
-                    );
-                    isSeekingTimeline = true;
-                    _suppressSeekSend = true;
-                    seekTo(Math.round(targetPos));
-                    setTimeout(() => {
-                        isSeekingTimeline = false;
-                    }, 2000);
-                }
-            }
-        }
-    }
-
-    // ─── WebSocket ──────────────────────────────────────────────────────
-
-    function connect() {
-        if (!WSS_HOST || !ROOM_ID) {
-            const status = document.getElementById("__li_status__");
-            setDotState("disconnected", "Disconnected");
-            if (status) {
-                status.classList.remove("hidden");
-                status.style.color = "#e05c5c";
-                status.textContent = !WSS_HOST
-                    ? "No server configured"
-                    : "No room configured";
-            }
-            showIsland();
-            console.warn(
-                "Listen Along: missing __wss or __room param — not connecting.",
-            );
-            return;
-        }
-        const serverHost = WSS_HOST.replace(/^wss?:\/\//, "").split("/")[0];
-        const url = `${WSS_HOST}?room=${encodeURIComponent(ROOM_ID)}&clientId=${encodeURIComponent(CLIENT_ID || "user_" + Math.random().toString(36).slice(2, 7))}`;
-        wss = new WebSocket(url);
-
-        wss.onopen = () => {
-            console.log(`Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
-            islandSetConnected(serverName || serverHost);
-
-            if (!islandAvatars.has(CLIENT_ID)) upsertAvatar(CLIENT_ID, null);
-
-            startObserver();
-            startPlayStateObserver();
-            startTimelineObserver();
-            sendAvatarFromUrl();
-
-            clearTimeout(initTimeout);
-            initTimeout = setTimeout(liftInitializing, 5000);
-        };
-
-        wss.onmessage = (event) => {
-            const raw = event.data;
-            if (typeof raw !== "string") return;
-            let msg;
-            try {
-                msg = JSON.parse(raw.trim());
-            } catch {
-                msg = { type: "navigate", path: raw.trim() };
-            }
-
-            if (msg.type === "server_info") {
-                if (msg.name) {
-                    serverName = msg.name;
-                    islandSetConnected(serverName);
-                }
-                return;
-            }
-
-            if (msg.type === "state_sync") {
-                serverState = msg;
-
-                if (
-                    msg.by &&
-                    msg.by !== CLIENT_ID &&
-                    msg.by !== "heartbeat" &&
-                    msg.by !== "server" &&
-                    msg.by !== "server-admin"
-                ) {
-                    setActiveSender(msg.by);
-                }
-
-                if (isInitializing) {
-                    clearTimeout(initTimeout);
-                    initTimeout = setTimeout(liftInitializing, 1500);
-                }
-
-                if (!isSyncPaused) {
-                    applySyncState(msg);
-                } else {
-                    console.log("⏸️ Sync paused — playback not applied");
-                }
-
-                return;
-            }
-
-            if (msg.type === "client_joined") {
-                upsertAvatar(msg.clientId, msg.avatar || null);
-            } else if (msg.type === "client_left") {
-                removeAvatar(msg.clientId);
-            } else if (msg.type === "avatar") {
-                upsertAvatar(msg.clientId, msg.data);
-            } else if (msg.type === "error") {
-                console.warn("❌ Server error:", msg.message);
-            }
-        };
-
-        wss.onerror = () => {};
-        wss.onclose = (e) => {
-            islandSetDisconnected();
-            clearTimeout(initTimeout);
-            isInitializing = true;
-            serverState = null;
-            if (e.code === 4001) {
-                console.error(`Room [${ROOM_ID}] not found on server`);
-                return;
-            }
-            console.warn("WS disconnected, reconnecting in 3s...");
-            setTimeout(connect, 3000);
-        };
-    }
-
-    if (!WSS_HOST) {
-        islandSetDisconnected(false);
-        console.warn(
-            "Listen Along: no server configured (__wss param missing)",
-        );
-        return;
-    }
-
-    connect();
-
-    // ─── Navigation ─────────────────────────────────────────────────────
-
-    function processNext() {
-        if (!pendingPath) return;
-        const p = pendingPath;
-        pendingPath = null;
-        navigateAndPlay(p);
-    }
-
-    function navigateAndPlay(p) {
-        // ── ПРОВЕРКА 1: не дублировать навигацию к тому же треку ─────────
-        if (_navigatingToPath === p) {
-            console.log(
-                `⏭️ Already navigating to trackId "${p}", skip duplicate`,
-            );
-            return;
-        }
-
-        // ── ПРОВЕРКА 2: актуальность ──────────────────────────────────────
-        const srvId = serverState
-            ? (serverState.trackId ?? serverState.path)
-            : null;
-        if (srvId && srvId !== p) {
-            console.warn(`Nav to "${p}" aborted — server now wants "${srvId}"`);
-            pendingPath = srvId;
-            processNext();
-            return;
-        }
-
-        // ── ПРОВЕРКА 3: вдруг уже играет нужный трек ─────────────────────
-        const currentId = getTrackId();
-        if (currentId === p) {
-            console.log(`Already on trackId "${p}", skip navigation`);
-            _suppressSend = p;
-            lastSentPath = p;
-            if (serverState) {
-                setTimeout(() => applySyncState(serverState, true), 200);
-            }
-            return;
-        }
-
-        _navigatingToPath = p;
-        isNavigating = true;
-        console.log("▶️ playTrackById:", p);
-
-        // Запускаем трек через nextmusicApi — без роутера и виртуальных кликов
-        window.nextmusicApi.playTrackById(p);
-        waitForTrackAndPlay(p);
-    }
-
-    function finishNavigation() {
-        _navigatingToPath = null;
-        isNavigating = false;
-        processNext();
-        if (_pendingSyncAfterNav && serverState) {
-            _pendingSyncAfterNav = false;
-            console.log("Applying deferred server state after navigation");
-            setTimeout(() => applySyncState(serverState, true), 300);
-        }
-    }
-
-    function waitForTrackAndPlay(expectedId) {
-        let attempts = 0;
-        const wait = setInterval(() => {
-            // ── ПРОВЕРКА A: пришёл новый pendingPath ──────────────────────
-            if (pendingPath && pendingPath !== expectedId) {
-                clearInterval(wait);
-                console.warn(
-                    `Nav interrupted: new trackId "${pendingPath}" overrides "${expectedId}"`,
-                );
-                isNavigating = false;
-                _navigatingToPath = null;
-                processNext();
-                return;
-            }
-
-            // ── ПРОВЕРКА B: serverState изменился пока ждали ──────────────
-            const srvId = serverState
-                ? (serverState.trackId ?? serverState.path)
-                : null;
-            if (srvId && srvId !== expectedId) {
-                clearInterval(wait);
-                console.warn(
-                    `waitForTrackAndPlay: server switched to "${srvId}" while waiting for "${expectedId}"`,
-                );
-                isNavigating = false;
-                _navigatingToPath = null;
-                pendingPath = srvId;
-                processNext();
-                return;
-            }
-
-            const currentId = getTrackId();
-            const state = window.nextmusicApi?.getState?.();
-            const isPlaying = state?.status === "playing";
-
-            if (currentId === expectedId) {
-                clearInterval(wait);
-                console.log(
-                    `✅ Track "${expectedId}" is now active (playing=${isPlaying})`,
-                );
-                setTimeout(() => finishNavigation(), 400);
-                return;
-            }
-
-            if (++attempts >= 40) {
-                clearInterval(wait);
-                console.warn(
-                    `⚠️ Timed out waiting for trackId "${expectedId}" (got "${currentId}")`,
-                );
-                finishNavigation();
-            }
-        }, 500);
-    }
-
-    // ─── Play/Pause sync ────────────────────────────────────────────────
-
-    function sendPlayState(href) {
-        if (!wss || wss.readyState !== WebSocket.OPEN) return;
-        if (isInitializing || isSyncPaused || isSeekingTimeline) return;
-        if (!getAlbumPath()) return;
-        if (href === lastSentPlayHref) return;
-        lastSentPlayHref = href;
-        wss.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
-        setActiveSender(CLIENT_ID);
-        console.log("playstate →server (instant):", href);
-    }
-
-    function applyPlayState(wantPlay) {
-        const myHref = getPlayIconHref();
-        if (!myHref) return;
-        const currentlyPlaying =
-            myHref.includes("pause") || myHref.includes("Pause");
-        if (currentlyPlaying === wantPlay) return;
-        isApplyingState = true;
-        lastSentPlayHref = myHref;
-        clickPlayIcon();
-        setTimeout(() => {
-            const newHref = getPlayIconHref();
-            if (newHref) lastSentPlayHref = newHref;
-            isApplyingState = false;
-        }, 800);
-    }
-
-    let _playStateObserverStarted = false;
-    function startPlayStateObserver() {
-        if (_playStateObserverStarted) return;
-        _playStateObserverStarted = true;
-        let lastHref = null;
-        function check() {
-            if (isApplyingState || isNavigating || isSyncPaused) return;
-            if (!getAlbumPath()) return;
-            const href = getPlayIconHref();
-            if (!href || href === lastHref) return;
-            lastHref = href;
-            sendPlayState(href);
-        }
-
-        setInterval(check, 1000);
-
-        document.addEventListener(
-            "pointerup",
-            (e) => {
-                if (isSyncPaused) return;
-                const isAction = SEL.actionSources.some(
-                    (sel) => e.target.closest?.(sel) || e.target.matches?.(sel),
-                );
-                if (!isAction) return;
-                isApplyingState = false;
-                setTimeout(check, 150);
-                setTimeout(check, 500);
-            },
-            true,
-        );
-
-        function attachObserver() {
-            const target =
-                document.querySelector(SEL.playerBar) || document.body;
-            new MutationObserver(check).observe(target, {
-                subtree: true,
-                childList: true,
-                attributes: true,
-                attributeFilter: ["href", "xlink:href"],
-            });
-        }
-
-        if (document.querySelector(SEL.playerBar)) {
-            attachObserver();
-        } else {
-            const waitObs = new MutationObserver(() => {
-                if (document.querySelector(SEL.playerBar)) {
-                    waitObs.disconnect();
-                    attachObserver();
-                }
-            });
-            waitObs.observe(document.body, { childList: true, subtree: true });
-        }
-    }
-
-    // ─── Timeline sync ──────────────────────────────────────────────────
-
-    let _timelineObserverStarted = false;
-    function startTimelineObserver() {
-        if (_timelineObserverStarted) return;
-        _timelineObserverStarted = true;
-
-        let _sliderDownAt = 0;
-        let _lyricsSeekPos = null;
-
-        function isSeekSource(el) {
-            if (!el) return false;
-            return SEL.seekSources.some(
-                (sel) => el.closest?.(sel) || el.matches?.(sel),
-            );
-        }
-
-        function onSliderDown(e) {
-            if (!isSeekSource(e.target)) return;
-            _sliderDownAt = Date.now();
-            _lyricsSeekPos = null;
-
-            const lyricLine = e.target.closest?.(SEL.lyricsLine);
-            if (lyricLine) {
-                const t = parseFloat(
-                    lyricLine.dataset.startTime ??
-                        lyricLine.dataset.time ??
-                        lyricLine.getAttribute("data-start-time") ??
-                        lyricLine.getAttribute("data-time") ??
-                        "",
-                );
-                if (!isNaN(t)) _lyricsSeekPos = t;
-            }
-        }
-
-        function onSeekEnd(e) {
-            if (_isSyntheticSeek) return;
-
-            if (isInitializing || isNavigating || isSyncPaused) return;
-            if (!isSeekSource(e.target)) return;
-
-            if (_suppressSeekSend) {
-                _suppressSeekSend = false;
-                isSeekingTimeline = false;
-                return;
-            }
-
-            isSeekingTimeline = false;
-
-            const timeSinceDown = Date.now() - _sliderDownAt;
-            if (timeSinceDown > 500) {
-                console.log(
-                    `⏭️ seek ignored — no recent click (${timeSinceDown}ms ago)`,
-                );
-                return;
-            }
-
-            let val;
-            if (_lyricsSeekPos !== null) {
-                val = Math.round(_lyricsSeekPos);
-                _lyricsSeekPos = null;
-            } else {
-                const fsSlider =
-                    e.target.closest?.(SEL.fullscreenSlider) ||
-                    (e.target.matches?.(SEL.fullscreenSlider)
-                        ? e.target
-                        : null);
-                const slider = fsSlider || getSlider();
-                if (!slider) return;
-                val = parseInt(slider.value);
-            }
-
-            if (!isNaN(val) && wss && wss.readyState === WebSocket.OPEN) {
-                wss.send(
-                    JSON.stringify({
-                        type: "seek",
-                        position: val,
-                        roomId: ROOM_ID,
-                    }),
-                );
-                setActiveSender(CLIENT_ID);
-                console.log("seek →server (instant):", val);
-            }
-        }
-
-        document.addEventListener("pointerdown", onSliderDown, true);
-        document.addEventListener("mousedown", onSliderDown, true);
-        document.addEventListener("pointerup", onSeekEnd, true);
-        document.addEventListener("mouseup", onSeekEnd, true);
-    }
-
-    // ─── Track ID helpers (via nextmusicApi) ────────────────────────────
-
-    const UUID_RE =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-    /**
-     * Возвращает числовой id текущего трека через nextmusicApi.
-     * Локальные треки (UUID вида xxxxxxxx-xxxx-...) считаются как "нет трека" → null.
-     */
-    function getTrackId() {
-        if (typeof window.nextmusicApi?.getCurrentTrack !== "function")
-            return null;
-        const track = window.nextmusicApi.getCurrentTrack();
-        if (!track || !track.id) return null;
-        if (UUID_RE.test(String(track.id))) return null; // локальный трек
-        return String(track.id);
-    }
-
-    // Оставляем заглушку getAlbumPath для совместимости с UI-логикой (sync pause/resume),
-    // но теперь она опирается на getTrackId, а не на DOM-ссылку.
-    function getAlbumPath() {
-        return getTrackId();
-    }
-
-    // ─── Send debounce ───────────────────────────────────────────────────
-
-    const SEND_DELAY_MS = 1000;
-    let _navigateTimer = null;
-
-    function debouncedNavigate(p) {
-        clearTimeout(_navigateTimer);
-        _navigateTimer = setTimeout(() => {
-            if (!wss || wss.readyState !== WebSocket.OPEN) return;
-            lastSentPath = p;
-            wss.send(
-                JSON.stringify({
-                    type: "navigate",
-                    trackId: p,
-                    roomId: ROOM_ID,
-                }),
-            );
-            setActiveSender(CLIENT_ID);
-            console.log("navigate →server (debounced) trackId:", p);
-        }, SEND_DELAY_MS);
-    }
-
-    function trySend(p) {
-        if (!p || isInitializing || isNavigating || isSyncPaused) return;
-        if (p === _suppressSend) {
-            _suppressSend = null;
-            lastSentPath = p;
-            return;
-        }
-        const serverPath = serverState
-            ? (serverState.trackId ?? serverState.path)
-            : null;
-        if (p === lastSentPath) return;
-        if (p === serverPath) {
-            lastSentPath = p;
-            return;
-        }
-        debouncedNavigate(p);
-    }
-
-    function startObserver() {
-        if (observerStarted) return;
-        observerStarted = true;
-        const init = getAlbumPath();
-
-        let attrObs = null;
-        let obsLink = null;
-        let lastPolledPath = init || null;
-
-        if (!init) {
-            isSyncPaused = true;
-            islandSetSyncPaused();
-            console.log("⏸️ No album href on start — sync paused");
-        }
-
-        setInterval(() => {
-            const p = getAlbumPath();
-
-            if (!p && !isSyncPaused && !isNavigating) {
-                isSyncPaused = true;
-                _pendingSyncAfterNav = false;
-                islandSetSyncPaused();
-                console.log("⏸️ Album href disappeared — sync paused");
-                return;
-            }
-
-            if (p && isSyncPaused && !isNavigating && !_userPausedSync) {
-                console.log("Album href appeared — auto-resuming sync");
-                resumeSync();
-            }
-
-            if (isInitializing || isNavigating) return;
-            if (!p || p === lastPolledPath) return;
-            lastPolledPath = p;
-            trySend(p);
-            attachAttrObserver();
-        }, 1000);
-
-        function attachAttrObserver() {
-            const bar = document.querySelector(SEL.playerBar);
-            if (!bar) return;
-            const link = bar.querySelector(SEL.albumLink);
-            if (!link || link === obsLink) return;
-            if (attrObs) attrObs.disconnect();
-            obsLink = link;
-            attrObs = new MutationObserver(() => {
-                const p = link.getAttribute("href");
-                if (p) {
-                    if (isSyncPaused && !isNavigating && !_userPausedSync) {
-                        console.log(
-                            "Album href appeared (observer) — auto-resuming sync",
-                        );
-                        resumeSync();
-                    } else if (!isSyncPaused) {
-                        trySend(p);
-                    }
-                } else if (!isSyncPaused && !isNavigating) {
-                    isSyncPaused = true;
-                    islandSetSyncPaused();
-                    console.log(
-                        "⏸️ Album href removed (observer) — sync paused",
-                    );
-                }
-            });
-            attrObs.observe(link, {
-                attributes: true,
-                attributeFilter: ["href"],
-            });
-        }
-
-        function attachBarObserver(bar) {
-            new MutationObserver(() => {
-                const p = getAlbumPath();
-                if (p) {
-                    if (isSyncPaused && !isNavigating && !_userPausedSync) {
-                        console.log(
-                            "Album href appeared (bar observer) — auto-resuming sync",
-                        );
-                        resumeSync();
-                    } else if (!isSyncPaused) {
-                        trySend(p);
-                    }
-                } else if (!isSyncPaused && !isNavigating) {
-                    isSyncPaused = true;
-                    islandSetSyncPaused();
-                    console.log(
-                        "⏸️ Album href gone (bar observer) — sync paused",
-                    );
-                }
-                attachAttrObserver();
-            }).observe(bar, { childList: true, subtree: true });
-            attachAttrObserver();
-        }
-
-        const bar = document.querySelector(SEL.playerBar);
-        if (bar) {
-            attachBarObserver(bar);
-        } else {
-            const waitObs = new MutationObserver(() => {
-                const b = document.querySelector(SEL.playerBar);
-                if (b) {
-                    waitObs.disconnect();
-                    attachBarObserver(b);
-                }
-            });
-            waitObs.observe(document.body, { childList: true, subtree: true });
-        }
-    }
+		document.head.appendChild(s);
+	})();
+
+	// Build island DOM
+	function buildIsland() {
+		if (document.getElementById("__li_island__")) return;
+
+		const island = document.createElement("div");
+		island.id = "__li_island__";
+
+		const inner = document.createElement("div");
+		inner.id = "__li_inner__";
+
+		const dotWrap = document.createElement("span");
+		dotWrap.id = "__li_dot_wrap__";
+		dotWrap.className = "disconnected";
+		dotWrap.title = "Disconnected";
+
+		const dot = document.createElement("span");
+		dot.id = "__li_dot__";
+
+		const status = document.createElement("span");
+		status.id = "__li_status__";
+		status.className = "hidden";
+
+		const avatarRow = document.createElement("div");
+		avatarRow.id = "__li_avatars__";
+
+		dotWrap.appendChild(dot);
+		inner.appendChild(dotWrap);
+		inner.appendChild(status);
+		inner.appendChild(avatarRow);
+		island.appendChild(inner);
+		document.body.appendChild(island);
+	}
+
+	buildIsland();
+
+	// Dot state helper
+	function setDotState(state, titleText) {
+		const wrap = document.getElementById("__li_dot_wrap__");
+		if (!wrap) return;
+		wrap.className = state;
+		wrap.title = titleText || "";
+	}
+
+	document.addEventListener("click", (e) => {
+		const wrap = document.getElementById("__li_dot_wrap__");
+		if (!wrap || (!wrap.contains(e.target) && e.target !== wrap)) return;
+
+		if (wrap.classList.contains("sync-paused")) {
+			resumeSync();
+		} else if (wrap.classList.contains("connected")) {
+			pauseSyncByUser();
+		}
+	});
+
+	function pauseSyncByUser() {
+		isSyncPaused = true;
+		_userPausedSync = true;
+		_pendingSyncAfterNav = false;
+
+		console.log("⏸️ Sync manually paused by user");
+
+		setDotState("sync-paused", "Synchronize");
+
+		clearTimeout(statusHideTimer);
+
+		animateInnerWidth(() => {
+			const status = document.getElementById("__li_status__");
+			if (status) status.classList.add("hidden");
+		});
+	}
+
+	function resumeSync() {
+		if (!isSyncPaused) return;
+
+		isSyncPaused = false;
+		_userPausedSync = false;
+
+		console.log("▶️ Sync resumed by user click on dot");
+
+		setDotState("connected", _currentServerLabel);
+
+		clearTimeout(statusHideTimer);
+
+		animateInnerWidth(() => {
+			const status = document.getElementById("__li_status__");
+			if (status) status.classList.add("hidden");
+
+			const avRow = document.getElementById("__li_avatars__");
+			if (avRow) avRow.className = "visible";
+		});
+		if (serverState) {
+			const currentId = getTrackId();
+			const srvId = serverState.trackId ?? serverState.path;
+			const needsNav = srvId && srvId !== currentId;
+
+			if (needsNav) {
+				_pendingSyncAfterNav = true;
+			}
+
+			applySyncState(serverState, true);
+		}
+	}
+
+	// Island show / hide
+
+	let hideIslandTimer = null;
+	let _islandVisible = false;
+
+	function showIsland() {
+		clearTimeout(hideIslandTimer);
+
+		const island = document.getElementById("__li_island__");
+
+		if (!island) return;
+		if (_islandVisible && !island.classList.contains("island-hiding")) return;
+
+		_islandVisible = true;
+		island.classList.remove("island-hiding");
+		void island.offsetWidth;
+		island.classList.add("island-visible");
+	}
+
+	function hideIsland() {
+		const island = document.getElementById("__li_island__");
+		if (!island) return;
+
+		_islandVisible = false;
+		island.classList.remove("island-visible");
+		void island.offsetWidth;
+		island.classList.add("island-hiding");
+	}
+
+	function hideIslandAfter(ms) {
+		clearTimeout(hideIslandTimer);
+		hideIslandTimer = setTimeout(hideIsland, ms);
+	}
+
+	function animateInnerWidth(changeFn) {
+		const inner = document.getElementById("__li_inner__");
+
+		if (!inner) {
+			changeFn();
+			return;
+		}
+
+		const fromW = inner.getBoundingClientRect().width;
+		inner.style.width = fromW + "px";
+		inner.style.transition = "none";
+
+		changeFn();
+
+		const avRow = document.getElementById("__li_avatars__");
+		if (avRow && avRow.classList.contains("visible")) {
+			avRow.style.transition = "none";
+			avRow.style.maxWidth = "none";
+			avRow.style.opacity = "1";
+		}
+
+		inner.style.width = "";
+		const toW = inner.getBoundingClientRect().width;
+		inner.style.width = fromW + "px";
+		void inner.offsetWidth;
+
+		inner.style.transition = "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+		inner.style.width = toW + "px";
+
+		inner.addEventListener("transitionend", function handler(e) {
+			if (e.propertyName !== "width") return;
+
+			inner.style.transition = "";
+			inner.style.width = "";
+
+			if (avRow) {
+				avRow.style.transition = "";
+				avRow.style.maxWidth = "";
+				avRow.style.opacity = "";
+			}
+
+			inner.removeEventListener("transitionend", handler);
+		});
+	}
+
+	// Island state machine
+
+	let statusHideTimer = null;
+
+	function islandSetDisconnected(autoHide = true) {
+		clearTimeout(statusHideTimer);
+		const status = document.getElementById("__li_status__");
+		const avRow = document.getElementById("__li_avatars__");
+
+		setDotState("disconnected", "Disconnected");
+
+		if (status) {
+			status.classList.remove("hidden");
+			status.style.color = "#888";
+			status.textContent = "Disconnected";
+		}
+
+		if (avRow) avRow.className = "";
+
+		showIsland();
+		if (autoHide) hideIslandAfter(4000);
+	}
+
+	function islandSetConnected(serverHost) {
+		clearTimeout(statusHideTimer);
+		showIsland();
+
+		_currentServerLabel = serverHost || "";
+
+		setDotState("connected", _currentServerLabel);
+
+		const status = document.getElementById("__li_status__");
+
+		if (status) {
+			status.style.opacity = "0";
+			status.style.transform = "translateY(4px)";
+			status.classList.remove("hidden");
+			void status.offsetWidth;
+
+			setTimeout(() => {
+				status.style.color = "#1db954";
+				status.textContent = `Connected to ${serverHost}`;
+				status.style.opacity = "";
+				status.style.transform = "";
+			}, 250);
+		}
+
+		statusHideTimer = setTimeout(() => {
+			animateInnerWidth(() => {
+				if (status) status.classList.add("hidden");
+				const avRow = document.getElementById("__li_avatars__");
+				if (avRow) avRow.className = "visible";
+			});
+		}, 3000);
+	}
+
+	function islandSetSyncPaused() {
+		clearTimeout(statusHideTimer);
+		setDotState("sync-paused", "Synchronize");
+
+		animateInnerWidth(() => {
+			const status = document.getElementById("__li_status__");
+			if (status) status.classList.add("hidden");
+		});
+
+		showIsland();
+	}
+
+	// Avatar map
+	const islandAvatars = new Map();
+	function setActiveSender(clientId) {
+		for (const [, wrap] of islandAvatars)
+			wrap.classList.remove("active-sender");
+		const wrap = islandAvatars.get(clientId);
+		if (wrap) wrap.classList.add("active-sender");
+	}
+
+	function upsertAvatar(clientId, base64Data) {
+		const avRow = document.getElementById("__li_avatars__");
+		if (!avRow) return;
+
+		animateInnerWidth(() => {
+			let wrap = islandAvatars.get(clientId);
+			if (!wrap) {
+				wrap = document.createElement("div");
+				wrap.className = "li-av-wrap";
+				avRow.appendChild(wrap);
+				islandAvatars.set(clientId, wrap);
+			}
+
+			const old = wrap.querySelector(".li-av-img, .li-av-placeholder");
+			if (old) old.remove();
+
+			if (base64Data) {
+				const img = document.createElement("img");
+				img.className = "li-av-img";
+				img.src = `data:image/webp;base64,${base64Data}`;
+				img.title = clientId;
+				img.onerror = () => {
+					img.replaceWith(makePlaceholder(clientId));
+				};
+				wrap.appendChild(img);
+			} else {
+				wrap.appendChild(makePlaceholder(clientId));
+			}
+		});
+	}
+
+	function makePlaceholder(clientId) {
+		const el = document.createElement("div");
+		el.className = "li-av-placeholder";
+		el.textContent = (clientId?.[0] || "?").toUpperCase();
+		el.title = clientId;
+		return el;
+	}
+
+	function removeAvatar(clientId) {
+		const wrap = islandAvatars.get(clientId);
+		if (!wrap) return;
+		wrap.classList.add("removing");
+		setTimeout(() => {
+			animateInnerWidth(() => {
+				wrap.remove();
+				islandAvatars.delete(clientId);
+			});
+		}, 230);
+	}
+
+	// Send avatar from URL
+
+	function sendAvatarFromUrl() {
+		if (!AVATAR_URL) return;
+		if (wss && wss.readyState === WebSocket.OPEN) {
+			wss.send(
+				JSON.stringify({
+					type: "avatar_url",
+					url: AVATAR_URL,
+					roomId: ROOM_ID,
+				}),
+			);
+			console.log(`Sending avatar URL to server: ${AVATAR_URL}`);
+		}
+	}
+
+	// Play/Pause helpers
+	function getPlayIconEl() {
+		return document.querySelector(SEL.playButtonIcon);
+	}
+
+	function getPlayIconHref() {
+		const el = getPlayIconEl();
+		if (!el) return null;
+		const use = el.querySelector("svg use");
+		if (!use) return null;
+		return (
+			use.getAttributeNS(XLINK, "href") || use.getAttribute("href") || null
+		);
+	}
+
+	function clickPlayIcon() {
+		const el = getPlayIconEl();
+
+		if (!el) {
+			console.warn("⚠️ Play icon not found");
+			return;
+		}
+
+		const btn = el.closest("button") || el;
+
+		btn.dispatchEvent(
+			new MouseEvent("mousedown", { bubbles: true, cancelable: true }),
+		);
+
+		btn.dispatchEvent(
+			new MouseEvent("mouseup", { bubbles: true, cancelable: true }),
+		);
+
+		btn.dispatchEvent(
+			new MouseEvent("click", { bubbles: true, cancelable: true }),
+		);
+
+		console.log("🖱️ Click play/pause");
+	}
+
+	// Timeline helpers
+	function getSlider() {
+		return document.querySelector(SEL.timeSlider);
+	}
+
+	let _isSyntheticSeek = false;
+
+	function seekTo(value) {
+		const slider = getSlider();
+		if (!slider) return;
+
+		const setter = Object.getOwnPropertyDescriptor(
+			HTMLInputElement.prototype,
+			"value",
+		).set;
+
+		setter.call(slider, value);
+		slider.dispatchEvent(new Event("input", { bubbles: true }));
+
+		_isSyntheticSeek = true;
+
+		window.__liSyncSeeking = true;
+
+		slider.dispatchEvent(
+			new PointerEvent("pointerup", { bubbles: true, cancelable: true }),
+		);
+
+		slider.dispatchEvent(
+			new MouseEvent("mouseup", { bubbles: true, cancelable: true }),
+		);
+
+		_isSyntheticSeek = false;
+		slider.dispatchEvent(new Event("change", { bubbles: true }));
+
+		setTimeout(() => {
+			window.__liSyncSeeking = false;
+		}, 1500);
+
+		console.log(`⏱️ Seek → ${value}/${slider.max}`);
+	}
+
+	// Apply state from server
+	function applySyncState(msg, force = false) {
+		const targetPath = msg.trackId ?? msg.path ?? null; // backward compatibility with old field
+		const targetPlaying = msg.playing;
+		const targetPosition = msg.position;
+		const targetServerTime = msg.serverTime;
+
+		const currentPath = getAlbumPath();
+
+		const needNav =
+			targetPath &&
+			targetPath !== currentPath &&
+			(force || targetPath !== lastSentPath) &&
+			!isNavigating;
+
+		if (needNav) {
+			if (
+				serverState &&
+				(serverState.trackId ?? serverState.path) !== targetPath
+			) {
+				console.warn(
+					`Nav cancelled: msg.trackId="${targetPath}" != serverState.trackId="${serverState.trackId ?? serverState.path}"`,
+				);
+				applySyncState(serverState, force);
+				return;
+			}
+
+			_suppressSend = targetPath;
+			pendingPath = targetPath;
+
+			processNext();
+		} else if (force && targetPath && targetPath === currentPath) {
+			if (!isApplyingState) {
+				applyPlayState(targetPlaying);
+			}
+		}
+
+		if (!needNav && !isNavigating && !isApplyingState) {
+			applyPlayState(targetPlaying);
+		}
+
+		if (!isSeekingTimeline && !isNavigating) {
+			const slider = getSlider();
+
+			if (slider) {
+				const networkDelay =
+					(Date.now() - (targetServerTime || Date.now())) / 1000;
+
+				const targetPos = targetPlaying
+					? targetPosition + networkDelay
+					: targetPosition;
+
+				const diff = Math.abs(parseInt(slider.value) - targetPos);
+
+				if (force || diff > SYNC_THRESHOLD_SEC) {
+					console.log(
+						`Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
+					);
+
+					isSeekingTimeline = true;
+					_suppressSeekSend = true;
+
+					seekTo(Math.round(targetPos));
+
+					setTimeout(() => {
+						isSeekingTimeline = false;
+					}, 2000);
+				}
+			}
+		}
+	}
+
+	// WebSocket
+	function connect() {
+		if (!WSS_HOST || !ROOM_ID) {
+			const status = document.getElementById("__li_status__");
+
+			setDotState("disconnected", "Disconnected");
+
+			if (status) {
+				status.classList.remove("hidden");
+				status.style.color = "#e05c5c";
+				status.textContent = !WSS_HOST
+					? "No server configured"
+					: "No room configured";
+			}
+
+			showIsland();
+
+			console.warn(
+				"Listen Along: missing __wss or __room param — not connecting.",
+			);
+
+			return;
+		}
+
+		const serverHost = WSS_HOST.replace(/^wss?:\/\//, "").split("/")[0];
+		const url = `${WSS_HOST}?room=${encodeURIComponent(ROOM_ID)}&clientId=${encodeURIComponent(CLIENT_ID || "user_" + Math.random().toString(36).slice(2, 7))}`;
+		wss = new WebSocket(url);
+
+		wss.onopen = () => {
+			console.log(`Connected to room [${ROOM_ID}] as [${CLIENT_ID}]`);
+			islandSetConnected(serverName || serverHost);
+
+			if (!islandAvatars.has(CLIENT_ID)) upsertAvatar(CLIENT_ID, null);
+
+			startObserver();
+			startPlayStateObserver();
+			startTimelineObserver();
+			sendAvatarFromUrl();
+
+			clearTimeout(initTimeout);
+			initTimeout = setTimeout(liftInitializing, 5000);
+		};
+
+		wss.onmessage = (event) => {
+			const raw = event.data;
+			if (typeof raw !== "string") return;
+			let msg;
+
+			try {
+				msg = JSON.parse(raw.trim());
+			} catch {
+				msg = { type: "navigate", path: raw.trim() };
+			}
+
+			if (msg.type === "server_info") {
+				if (msg.name) {
+					serverName = msg.name;
+					islandSetConnected(serverName);
+				}
+				return;
+			}
+
+			if (msg.type === "state_sync") {
+				serverState = msg;
+
+				if (
+					msg.by &&
+					msg.by !== CLIENT_ID &&
+					msg.by !== "heartbeat" &&
+					msg.by !== "server" &&
+					msg.by !== "server-admin"
+				) {
+					setActiveSender(msg.by);
+				}
+
+				if (isInitializing) {
+					clearTimeout(initTimeout);
+					initTimeout = setTimeout(liftInitializing, 1500);
+				}
+
+				if (!isSyncPaused) {
+					applySyncState(msg);
+				} else {
+					console.log("⏸️ Sync paused — playback not applied");
+				}
+
+				return;
+			}
+
+			if (msg.type === "client_joined") {
+				upsertAvatar(msg.clientId, msg.avatar || null);
+			} else if (msg.type === "client_left") {
+				removeAvatar(msg.clientId);
+			} else if (msg.type === "avatar") {
+				upsertAvatar(msg.clientId, msg.data);
+			} else if (msg.type === "error") {
+				console.warn("❌ Server error:", msg.message);
+			}
+		};
+
+		wss.onerror = () => {};
+		wss.onclose = (e) => {
+			islandSetDisconnected();
+			clearTimeout(initTimeout);
+			isInitializing = true;
+			serverState = null;
+
+			if (e.code === 4001) {
+				console.error(`Room [${ROOM_ID}] not found on server`);
+				return;
+			}
+
+			console.warn("WS disconnected, reconnecting in 3s...");
+			setTimeout(connect, 3000);
+		};
+	}
+
+	if (!WSS_HOST) {
+		islandSetDisconnected(false);
+		console.warn("Listen Along: no server configured (__wss param missing)");
+		return;
+	}
+
+	connect();
+
+	// Navigation
+	function processNext() {
+		if (!pendingPath) return;
+		const p = pendingPath;
+		pendingPath = null;
+		navigateAndPlay(p);
+	}
+
+	function navigateAndPlay(p) {
+		if (_navigatingToPath === p) {
+			console.log(`⏭️ Already navigating to trackId "${p}", skip duplicate`);
+			return;
+		}
+
+		const srvId = serverState
+			? (serverState.trackId ?? serverState.path)
+			: null;
+		if (srvId && srvId !== p) {
+			console.warn(`Nav to "${p}" aborted — server now wants "${srvId}"`);
+			pendingPath = srvId;
+			processNext();
+			return;
+		}
+
+		const currentId = getTrackId();
+		if (currentId === p) {
+			console.log(`Already on trackId "${p}", skip navigation`);
+			_suppressSend = p;
+			lastSentPath = p;
+			if (serverState) {
+				setTimeout(() => applySyncState(serverState, true), 200);
+			}
+			return;
+		}
+
+		_navigatingToPath = p;
+		isNavigating = true;
+		console.log("▶️ playTrackById:", p);
+
+		window.nextmusicApi.playTrackById(p);
+		waitForTrackAndPlay(p);
+	}
+
+	function finishNavigation() {
+		_navigatingToPath = null;
+		isNavigating = false;
+		processNext();
+		if (_pendingSyncAfterNav && serverState) {
+			_pendingSyncAfterNav = false;
+			console.log("Applying deferred server state after navigation");
+			setTimeout(() => applySyncState(serverState, true), 300);
+		}
+	}
+
+	function waitForTrackAndPlay(expectedId) {
+		let attempts = 0;
+		const wait = setInterval(() => {
+			if (pendingPath && pendingPath !== expectedId) {
+				clearInterval(wait);
+				console.warn(
+					`Nav interrupted: new trackId "${pendingPath}" overrides "${expectedId}"`,
+				);
+				isNavigating = false;
+				_navigatingToPath = null;
+				processNext();
+				return;
+			}
+
+			const srvId = serverState
+				? (serverState.trackId ?? serverState.path)
+				: null;
+			if (srvId && srvId !== expectedId) {
+				clearInterval(wait);
+				console.warn(
+					`waitForTrackAndPlay: server switched to "${srvId}" while waiting for "${expectedId}"`,
+				);
+				isNavigating = false;
+				_navigatingToPath = null;
+				pendingPath = srvId;
+				processNext();
+				return;
+			}
+
+			const currentId = getTrackId();
+			const state = window.nextmusicApi?.getState?.();
+			const isPlaying = state?.status === "playing";
+
+			if (currentId === expectedId) {
+				clearInterval(wait);
+				console.log(
+					`✅ Track "${expectedId}" is now active (playing=${isPlaying})`,
+				);
+				setTimeout(() => finishNavigation(), 400);
+				return;
+			}
+
+			if (++attempts >= 40) {
+				clearInterval(wait);
+				console.warn(
+					`⚠️ Timed out waiting for trackId "${expectedId}" (got "${currentId}")`,
+				);
+				finishNavigation();
+			}
+		}, 500);
+	}
+
+	function sendPlayState(href) {
+		if (!wss || wss.readyState !== WebSocket.OPEN) return;
+		if (isInitializing || isSyncPaused || isSeekingTimeline) return;
+
+		if (!getAlbumPath()) return;
+		if (href === lastSentPlayHref) return;
+
+		lastSentPlayHref = href;
+		wss.send(JSON.stringify({ type: "playstate", href, roomId: ROOM_ID }));
+
+		setActiveSender(CLIENT_ID);
+		console.log("playstate →server (instant):", href);
+	}
+
+	function applyPlayState(wantPlay) {
+		const myHref = getPlayIconHref();
+		if (!myHref) return;
+
+		const currentlyPlaying =
+			myHref.includes("pause") || myHref.includes("Pause");
+
+		if (currentlyPlaying === wantPlay) return;
+		isApplyingState = true;
+		lastSentPlayHref = myHref;
+
+		clickPlayIcon();
+
+		setTimeout(() => {
+			const newHref = getPlayIconHref();
+			if (newHref) lastSentPlayHref = newHref;
+			isApplyingState = false;
+		}, 800);
+	}
+
+	let _playStateObserverStarted = false;
+	function startPlayStateObserver() {
+		if (_playStateObserverStarted) return;
+		_playStateObserverStarted = true;
+		let lastHref = null;
+		function check() {
+			if (isApplyingState || isNavigating || isSyncPaused) return;
+			if (!getAlbumPath()) return;
+			const href = getPlayIconHref();
+			if (!href || href === lastHref) return;
+			lastHref = href;
+			sendPlayState(href);
+		}
+
+		setInterval(check, 1000);
+
+		document.addEventListener(
+			"pointerup",
+			(e) => {
+				if (isSyncPaused) return;
+				const isAction = SEL.actionSources.some(
+					(sel) => e.target.closest?.(sel) || e.target.matches?.(sel),
+				);
+				if (!isAction) return;
+				isApplyingState = false;
+				setTimeout(check, 150);
+				setTimeout(check, 500);
+			},
+			true,
+		);
+
+		function attachObserver() {
+			const target = document.querySelector(SEL.playerBar) || document.body;
+			new MutationObserver(check).observe(target, {
+				subtree: true,
+				childList: true,
+				attributes: true,
+				attributeFilter: ["href", "xlink:href"],
+			});
+		}
+
+		if (document.querySelector(SEL.playerBar)) {
+			attachObserver();
+		} else {
+			const waitObs = new MutationObserver(() => {
+				if (document.querySelector(SEL.playerBar)) {
+					waitObs.disconnect();
+					attachObserver();
+				}
+			});
+			waitObs.observe(document.body, { childList: true, subtree: true });
+		}
+	}
+
+	// Timeline sync
+	let _timelineObserverStarted = false;
+	function startTimelineObserver() {
+		if (_timelineObserverStarted) return;
+		_timelineObserverStarted = true;
+
+		let _sliderDownAt = 0;
+		let _lyricsSeekPos = null;
+
+		function isSeekSource(el) {
+			if (!el) return false;
+			return SEL.seekSources.some(
+				(sel) => el.closest?.(sel) || el.matches?.(sel),
+			);
+		}
+
+		function onSliderDown(e) {
+			if (!isSeekSource(e.target)) return;
+			_sliderDownAt = Date.now();
+			_lyricsSeekPos = null;
+
+			const lyricLine = e.target.closest?.(SEL.lyricsLine);
+			if (lyricLine) {
+				const t = parseFloat(
+					lyricLine.dataset.startTime ??
+						lyricLine.dataset.time ??
+						lyricLine.getAttribute("data-start-time") ??
+						lyricLine.getAttribute("data-time") ??
+						"",
+				);
+				if (!isNaN(t)) _lyricsSeekPos = t;
+			}
+		}
+
+		function onSeekEnd(e) {
+			if (_isSyntheticSeek) return;
+
+			if (isInitializing || isNavigating || isSyncPaused) return;
+			if (!isSeekSource(e.target)) return;
+
+			if (_suppressSeekSend) {
+				_suppressSeekSend = false;
+				isSeekingTimeline = false;
+				return;
+			}
+
+			isSeekingTimeline = false;
+
+			const timeSinceDown = Date.now() - _sliderDownAt;
+			if (timeSinceDown > 500) {
+				console.log(
+					`⏭️ seek ignored — no recent click (${timeSinceDown}ms ago)`,
+				);
+				return;
+			}
+
+			let val;
+			if (_lyricsSeekPos !== null) {
+				val = Math.round(_lyricsSeekPos);
+				_lyricsSeekPos = null;
+			} else {
+				const fsSlider =
+					e.target.closest?.(SEL.fullscreenSlider) ||
+					(e.target.matches?.(SEL.fullscreenSlider) ? e.target : null);
+				const slider = fsSlider || getSlider();
+				if (!slider) return;
+				val = parseInt(slider.value);
+			}
+
+			if (!isNaN(val) && wss && wss.readyState === WebSocket.OPEN) {
+				wss.send(
+					JSON.stringify({
+						type: "seek",
+						position: val,
+						roomId: ROOM_ID,
+					}),
+				);
+				setActiveSender(CLIENT_ID);
+				console.log("seek →server (instant):", val);
+			}
+		}
+
+		document.addEventListener("pointerdown", onSliderDown, true);
+		document.addEventListener("mousedown", onSliderDown, true);
+		document.addEventListener("pointerup", onSeekEnd, true);
+		document.addEventListener("mouseup", onSeekEnd, true);
+	}
+
+	// Track ID helpers (via nextmusicApi)
+	const UUID_RE =
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+	function getTrackId() {
+		if (typeof window.nextmusicApi?.getCurrentTrack !== "function") return null;
+		const track = window.nextmusicApi.getCurrentTrack();
+		if (!track || !track.id) return null;
+		if (UUID_RE.test(String(track.id))) return null; // local track
+		return String(track.id);
+	}
+
+	function getAlbumPath() {
+		return getTrackId();
+	}
+
+	// Send debounce
+	const SEND_DELAY_MS = 1000;
+	let _navigateTimer = null;
+
+	function debouncedNavigate(p) {
+		clearTimeout(_navigateTimer);
+		_navigateTimer = setTimeout(() => {
+			if (!wss || wss.readyState !== WebSocket.OPEN) return;
+			lastSentPath = p;
+			wss.send(
+				JSON.stringify({
+					type: "navigate",
+					trackId: p,
+					roomId: ROOM_ID,
+				}),
+			);
+			setActiveSender(CLIENT_ID);
+			console.log("navigate →server (debounced) trackId:", p);
+		}, SEND_DELAY_MS);
+	}
+
+	function trySend(p) {
+		if (!p || isInitializing || isNavigating || isSyncPaused) return;
+		if (p === _suppressSend) {
+			_suppressSend = null;
+			lastSentPath = p;
+			return;
+		}
+		const serverPath = serverState
+			? (serverState.trackId ?? serverState.path)
+			: null;
+		if (p === lastSentPath) return;
+		if (p === serverPath) {
+			lastSentPath = p;
+			return;
+		}
+		debouncedNavigate(p);
+	}
+
+	function startObserver() {
+		if (observerStarted) return;
+		observerStarted = true;
+		const init = getAlbumPath();
+
+		let attrObs = null;
+		let obsLink = null;
+		let lastPolledPath = init || null;
+
+		if (!init) {
+			isSyncPaused = true;
+			islandSetSyncPaused();
+			console.log("⏸️ No album href on start — sync paused");
+		}
+
+		setInterval(() => {
+			const p = getAlbumPath();
+
+			if (!p && !isSyncPaused && !isNavigating) {
+				isSyncPaused = true;
+				_pendingSyncAfterNav = false;
+				islandSetSyncPaused();
+				console.log("⏸️ Album href disappeared — sync paused");
+				return;
+			}
+
+			if (p && isSyncPaused && !isNavigating && !_userPausedSync) {
+				console.log("Album href appeared — auto-resuming sync");
+				resumeSync();
+			}
+
+			if (isInitializing || isNavigating) return;
+			if (!p || p === lastPolledPath) return;
+			lastPolledPath = p;
+			trySend(p);
+			attachAttrObserver();
+		}, 1000);
+
+		function attachAttrObserver() {
+			const bar = document.querySelector(SEL.playerBar);
+			if (!bar) return;
+			const link = bar.querySelector(SEL.albumLink);
+			if (!link || link === obsLink) return;
+			if (attrObs) attrObs.disconnect();
+			obsLink = link;
+			attrObs = new MutationObserver(() => {
+				const p = link.getAttribute("href");
+				if (p) {
+					if (isSyncPaused && !isNavigating && !_userPausedSync) {
+						console.log("Album href appeared (observer) — auto-resuming sync");
+						resumeSync();
+					} else if (!isSyncPaused) {
+						trySend(p);
+					}
+				} else if (!isSyncPaused && !isNavigating) {
+					isSyncPaused = true;
+					islandSetSyncPaused();
+					console.log("⏸️ Album href removed (observer) — sync paused");
+				}
+			});
+			attrObs.observe(link, {
+				attributes: true,
+				attributeFilter: ["href"],
+			});
+		}
+
+		function attachBarObserver(bar) {
+			new MutationObserver(() => {
+				const p = getAlbumPath();
+				if (p) {
+					if (isSyncPaused && !isNavigating && !_userPausedSync) {
+						console.log(
+							"Album href appeared (bar observer) — auto-resuming sync",
+						);
+						resumeSync();
+					} else if (!isSyncPaused) {
+						trySend(p);
+					}
+				} else if (!isSyncPaused && !isNavigating) {
+					isSyncPaused = true;
+					islandSetSyncPaused();
+					console.log("⏸️ Album href gone (bar observer) — sync paused");
+				}
+				attachAttrObserver();
+			}).observe(bar, { childList: true, subtree: true });
+			attachAttrObserver();
+		}
+
+		const bar = document.querySelector(SEL.playerBar);
+		if (bar) {
+			attachBarObserver(bar);
+		} else {
+			const waitObs = new MutationObserver(() => {
+				const b = document.querySelector(SEL.playerBar);
+				if (b) {
+					waitObs.disconnect();
+					attachBarObserver(b);
+				}
+			});
+			waitObs.observe(document.body, { childList: true, subtree: true });
+		}
+	}
 })();

@@ -6,36 +6,30 @@ const require = createRequire(import.meta.url);
 const { version } = require("../../package.json");
 
 function parsePackageVersion() {
-    return version;
+	return version;
 }
 
 function parsePackageVersionWV() {
-    return version.startsWith("v") ? version : `v${version}`;
+	return version.startsWith("v") ? version : `v${version}`;
 }
 
 function parseGitCommit() {
-    try {
-        const hash = execSync("git rev-parse --short HEAD", {
-            encoding: "utf-8",
-            stdio: ["pipe", "pipe", "pipe"],
-        }).trim();
+	try {
+		const hash = execSync("git rev-parse --short HEAD", {
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		}).trim();
 
-        return hash;
-    } catch {
-        // git недоступен или папка не является репозиторием
-        return version;
-    }
+		return hash;
+	} catch {
+		return version;
+	}
 }
 
-/**
- * Возвращает версию приложения:
- * - билд (app.isPackaged):    "v1.2.3"      из package.json
- * - исходники:                "a1b2c3d"  последний git-коммит
- */
 export function getCurrentVersion() {
-    return app.isPackaged ? parsePackageVersion() : parseGitCommit();
+	return app.isPackaged ? parsePackageVersion() : parseGitCommit();
 }
 
 export function getCurrentVersionWV() {
-    return app.isPackaged ? parsePackageVersionWV() : parseGitCommit();
+	return app.isPackaged ? parsePackageVersionWV() : parseGitCommit();
 }

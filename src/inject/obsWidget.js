@@ -1,133 +1,132 @@
 (function () {
-    "use strict";
+	"use strict";
 
-    const WS_URL = "ws://localhost:4091";
-    let ws = null;
-    let lastPayload = "";
-    let observing = false;
+	const WS_URL = "ws://localhost:4091";
+	let ws = null;
+	let lastPayload = "";
+	let observing = false;
 
-    function log(...args) {
-        console.log("[YM-OBSERVER]", ...args);
-    }
+	function log(...args) {
+		console.log("[YM-OBSERVER]", ...args);
+	}
 
-    function connect() {
-        log("Connecting to WebSocket...");
-        ws = new WebSocket(WS_URL);
+	function connect() {
+		log("Connecting to WebSocket...");
+		ws = new WebSocket(WS_URL);
 
-        ws.onopen = () => log("WebSocket connected");
-        ws.onclose = () => {
-            log("WebSocket disconnected, retry in 2s");
-            setTimeout(connect, 2000);
-        };
-        ws.onerror = (e) => log("WebSocket error", e);
-    }
+		ws.onopen = () => log("WebSocket connected");
+		ws.onclose = () => {
+			log("WebSocket disconnected, retry in 2s");
+			setTimeout(connect, 2000);
+		};
+		ws.onerror = (e) => log("WebSocket error", e);
+	}
 
-    connect();
+	connect();
 
-    function qs(selector) {
-        return document.querySelector(selector);
-    }
+	function qs(selector) {
+		return document.querySelector(selector);
+	}
 
-    function getText(selector) {
-        return qs(selector)?.textContent.trim() || "";
-    }
+	function getText(selector) {
+		return qs(selector)?.textContent.trim() || "";
+	}
 
-    function getCover() {
-        const img = qs(
-            '[class*="PlayerBar_root"] * [class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img',
-        );
-        return img?.src || "";
-    }
+	function getCover() {
+		const img = qs(
+			'[class*="PlayerBar_root"] * [class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img',
+		);
+		return img?.src || "";
+	}
 
-    function getPlayerColor() {
-        const root = qs('[class*="PlayerBar_root"]');
-        if (!root) return null;
-        const style = getComputedStyle(root);
-        return (
-            style
-                .getPropertyValue("--player-average-color-background")
-                ?.trim() || null
-        );
-    }
+	function getPlayerColor() {
+		const root = qs('[class*="PlayerBar_root"]');
+		if (!root) return null;
+		const style = getComputedStyle(root);
+		return (
+			style.getPropertyValue("--player-average-color-background")?.trim() ||
+			null
+		);
+	}
 
-    function getCurrentTime() {
-        return getText(
-            '[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_current_animation"] > span',
-        );
-    }
+	function getCurrentTime() {
+		return getText(
+			'[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_current_animation"] > span',
+		);
+	}
 
-    function getDuration() {
-        return getText(
-            '[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_end"] > span',
-        );
-    }
+	function getDuration() {
+		return getText(
+			'[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_end"] > span',
+		);
+	}
 
-    function collectAndSend() {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+	function collectAndSend() {
+		if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-        const data = {
-            title: getText('[class*="PlayerBar_root"] * [class*="Meta_title"]'),
-            artist: getText(
-                '[class*="PlayerBar_root"] * [class*="SeparatedArtists_root_clamp"]',
-            ),
-            cover: getCover(),
-            color: getPlayerColor(),
-            position: getCurrentTime(),
-            duration: getDuration(),
-        };
+		const data = {
+			title: getText('[class*="PlayerBar_root"] * [class*="Meta_title"]'),
+			artist: getText(
+				'[class*="PlayerBar_root"] * [class*="SeparatedArtists_root_clamp"]',
+			),
+			cover: getCover(),
+			color: getPlayerColor(),
+			position: getCurrentTime(),
+			duration: getDuration(),
+		};
 
-        if (!data.title) return;
+		if (!data.title) return;
 
-        const payload = JSON.stringify(data);
+		const payload = JSON.stringify(data);
 
-        if (payload !== lastPayload) {
-            lastPayload = payload;
-            log("DOM change → sending", data);
-            ws.send(payload);
-        }
-    }
+		if (payload !== lastPayload) {
+			lastPayload = payload;
+			log("DOM change → sending", data);
+			ws.send(payload);
+		}
+	}
 
-    function waitForPlayerAndObserve() {
-        if (observing) return;
+	function waitForPlayerAndObserve() {
+		if (observing) return;
 
-        const root = qs('[class*="PlayerBar_root"]');
-        if (!root) {
-            setTimeout(waitForPlayerAndObserve, 500);
-            return;
-        }
+		const root = qs('[class*="PlayerBar_root"]');
+		if (!root) {
+			setTimeout(waitForPlayerAndObserve, 500);
+			return;
+		}
 
-        log("PlayerBar found, observing…");
-        observing = true;
+		log("PlayerBar found, observing…");
+		observing = true;
 
-        const observer = new MutationObserver(() => {
-            collectAndSend();
-        });
+		const observer = new MutationObserver(() => {
+			collectAndSend();
+		});
 
-        observer.observe(root, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-            attributes: true,
-        });
+		observer.observe(root, {
+			childList: true,
+			subtree: true,
+			characterData: true,
+			attributes: true,
+		});
 
-        // Сбрасываем флаг если PlayerBar исчез
-        const disconnectObserver = new MutationObserver(() => {
-            if (!document.contains(root)) {
-                log("PlayerBar removed from DOM");
-                observer.disconnect();
-                disconnectObserver.disconnect();
-                observing = false;
-                waitForPlayerAndObserve();
-            }
-        });
+		// Reset flag if PlayerBar is gone
+		const disconnectObserver = new MutationObserver(() => {
+			if (!document.contains(root)) {
+				log("PlayerBar removed from DOM");
+				observer.disconnect();
+				disconnectObserver.disconnect();
+				observing = false;
+				waitForPlayerAndObserve();
+			}
+		});
 
-        disconnectObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
+		disconnectObserver.observe(document.body, {
+			childList: true,
+			subtree: true,
+		});
 
-        collectAndSend();
-    }
+		collectAndSend();
+	}
 
-    waitForPlayerAndObserve();
+	waitForPlayerAndObserve();
 })();

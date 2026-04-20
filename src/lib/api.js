@@ -1,268 +1,267 @@
 {
-    const webpackGlobal = window.webpackChunk_N_E;
-    let appRequire = null;
-    webpackGlobal.push([
-        [Symbol()],
-        {},
-        (r) => {
-            appRequire = r;
-        },
-    ]);
-    webpackGlobal.pop();
+	const webpackGlobal = window.webpackChunk_N_E;
+	let appRequire = null;
 
-    const VE = appRequire(46663).VE;
-    const found = [];
+	webpackGlobal.push([
+		[Symbol()],
+		{},
+		(r) => {
+			appRequire = r;
+		},
+	]);
+	webpackGlobal.pop();
 
-    function searchFiber(fiber, cls, depth = 0) {
-        if (!fiber || depth > 50) return;
-        if (fiber.stateNode instanceof cls) found.push(fiber.stateNode);
-        let state = fiber.memoizedState;
-        while (state) {
-            if (state.memoizedState instanceof cls)
-                found.push(state.memoizedState);
-            state = state.next;
-        }
-        function searchObj(obj, visited = new Set()) {
-            if (!obj || typeof obj !== "object" || visited.has(obj)) return;
-            visited.add(obj);
-            if (obj instanceof cls) {
-                found.push(obj);
-                return;
-            }
-            for (const v of Object.values(obj)) searchObj(v, visited);
-        }
-        searchObj(fiber.memoizedProps);
-        searchFiber(fiber.child, cls, depth + 1);
-        searchFiber(fiber.sibling, cls, depth + 1);
-    }
+	const VE = appRequire(46663).VE;
+	const found = [];
 
-    const rootEl = document.getElementById("__next") || document.body;
-    const fiberKey = Object.keys(rootEl).find((k) =>
-        k.startsWith("__reactFiber"),
-    );
-    searchFiber(rootEl[fiberKey], VE);
+	function searchFiber(fiber, cls, depth = 0) {
+		if (!fiber || depth > 50) return;
+		if (fiber.stateNode instanceof cls) found.push(fiber.stateNode);
+		let state = fiber.memoizedState;
 
-    window._ymPlayers = [...new Map(found.map((p) => [p.id, p])).values()];
+		while (state) {
+			if (state.memoizedState instanceof cls) found.push(state.memoizedState);
+			state = state.next;
+		}
 
-    function getMainPlayer() {
-        // Если есть живой инстанс — используем
-        const cached = window._ymPlayers?.find((p) => p.id === "MAIN");
-        if (cached) return cached;
+		function searchObj(obj, visited = new Set()) {
+			if (!obj || typeof obj !== "object" || visited.has(obj)) return;
+			visited.add(obj);
+			if (obj instanceof cls) {
+				found.push(obj);
+				return;
+			}
 
-        // Иначе ищем заново
-        const webpackGlobal = window.webpackChunk_N_E;
-        let appRequire = null;
-        webpackGlobal.push([
-            [Symbol()],
-            {},
-            (r) => {
-                appRequire = r;
-            },
-        ]);
-        webpackGlobal.pop();
+			for (const v of Object.values(obj)) searchObj(v, visited);
+		}
 
-        const VE = appRequire(46663).VE;
-        const found = [];
+		searchObj(fiber.memoizedProps);
+		searchFiber(fiber.child, cls, depth + 1);
+		searchFiber(fiber.sibling, cls, depth + 1);
+	}
 
-        function searchFiber(fiber, cls, depth = 0) {
-            if (!fiber || depth > 50) return;
-            if (fiber.stateNode instanceof cls) found.push(fiber.stateNode);
-            let state = fiber.memoizedState;
-            while (state) {
-                if (state.memoizedState instanceof cls)
-                    found.push(state.memoizedState);
-                state = state.next;
-            }
-            function searchObj(obj, visited = new Set()) {
-                if (!obj || typeof obj !== "object" || visited.has(obj)) return;
-                visited.add(obj);
-                if (obj instanceof cls) {
-                    found.push(obj);
-                    return;
-                }
-                for (const v of Object.values(obj)) searchObj(v, visited);
-            }
-            searchObj(fiber.memoizedProps);
-            searchFiber(fiber.child, cls, depth + 1);
-            searchFiber(fiber.sibling, cls, depth + 1);
-        }
+	const rootEl = document.getElementById("__next") || document.body;
+	const fiberKey = Object.keys(rootEl).find((k) =>
+		k.startsWith("__reactFiber"),
+	);
 
-        const rootEl = document.getElementById("__next") || document.body;
-        const fiberKey = Object.keys(rootEl).find((k) =>
-            k.startsWith("__reactFiber"),
-        );
-        searchFiber(rootEl[fiberKey], VE);
+	searchFiber(rootEl[fiberKey], VE);
 
-        window._ymPlayers = [...new Map(found.map((p) => [p.id, p])).values()];
-        return window._ymPlayers.find((p) => p.id === "MAIN");
-    }
+	window._ymPlayers = [...new Map(found.map((p) => [p.id, p])).values()];
 
-    function getCurrentMeta() {
-        const player = getMainPlayer();
-        if (!player) return null;
-        const queue = player.queueController;
-        const entityList = queue?.playerQueue?.queueState?.entityList?.value;
-        const idx = player.playbackState?.queueState?.index?.value;
-        if (idx == null || !entityList) return null;
-        return entityList[idx]?.entity?.entityData?.meta ?? null;
-    }
+	function getMainPlayer() {
+		const cached = window._ymPlayers?.find((p) => p.id === "MAIN");
+		if (cached) return cached;
 
-    window.nextmusicApi = {
-        // ── скачивание ассета ─────────────────────────────────────────────
-        /**
-         * Скачивает файл по URL и сохраняет его в папку assets темы.
-         * @param {string} url        - URL файла для скачивания
-         * @param {string} fileName   - Имя файла для сохранения (например, "icon.png")
-         * @param {string} addonName  - Имя папки аддона (темы), куда класть файл
-         * @returns {Promise<{ok: boolean, fileName: string, path: string}>}
-         */
-        async downloadAsset(url, fileName, addonName) {
-            const port = window.__nextmusicApiAssetPort ?? 2007;
-            const res = await fetch(
-                `http://127.0.0.1:${port}/download_asset?name=${encodeURIComponent(addonName)}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ url, fileName }),
-                },
-            );
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(
-                    `[downloadAsset] Server error ${res.status}: ${text}`,
-                );
-            }
-            return res.json();
-        },
+		const webpackGlobal = window.webpackChunk_N_E;
+		let appRequire = null;
+		webpackGlobal.push([
+			[Symbol()],
+			{},
+			(r) => {
+				appRequire = r;
+			},
+		]);
 
-        // ── текст в TitleBar ──────────────────────────────────────────
-        nextText(text) {
-            let el = document.querySelector(".TitleBar_nextText");
-            if (text === "") {
-                if (el) el.textContent = "";
-            } else {
-                if (el) el.textContent = text;
-            }
-        },
+		webpackGlobal.pop();
 
-        // ── воспроизведение ───────────────────────────────────────────
-        playTrackById(trackId) {
-            const player = getMainPlayer();
-            const queue = player.queueController;
-            const currentIndex = player.playbackState.queueState.index.value;
+		const VE = appRequire(46663).VE;
+		const found = [];
 
-            queue.inject({
-                entitiesData: [
-                    {
-                        type: "music",
-                        meta: { id: String(trackId), realId: String(trackId) },
-                        fromCurrentContext: false,
-                        loadEntityMeta: true,
-                    },
-                ],
-                position: currentIndex + 1,
-                silent: false,
-            });
+		function searchFiber(fiber, cls, depth = 0) {
+			if (!fiber || depth > 50) return;
+			if (fiber.stateNode instanceof cls) found.push(fiber.stateNode);
+			let state = fiber.memoizedState;
 
-            setTimeout(() => {
-                const entityList =
-                    queue.playerQueue.queueState.entityList.value;
-                const idx = entityList.findIndex(
-                    (e) => e?.entity?.entityData?.meta?.id === String(trackId),
-                );
-                if (idx !== -1) {
-                    player.setEntityByIndex(idx);
-                    player.play();
-                } else {
-                    console.warn(
-                        "[nextmusicApi] Track not found in queue:",
-                        trackId,
-                    );
-                }
-            }, 100);
-        },
+			while (state) {
+				if (state.memoizedState instanceof cls) found.push(state.memoizedState);
+				state = state.next;
+			}
 
-        setSpeed(speed) {
-            getMainPlayer()?.setSpeed(speed);
-        },
+			function searchObj(obj, visited = new Set()) {
+				if (!obj || typeof obj !== "object" || visited.has(obj)) return;
 
-        setProgress(progress) {
-            getMainPlayer()?.setProgress(progress);
-        },
+				visited.add(obj);
 
-        setVolume(volume) {
-            getMainPlayer()?.setVolume(volume);
-        },
+				if (obj instanceof cls) {
+					found.push(obj);
+					return;
+				}
 
-        play() {
-            getMainPlayer()?.play();
-        },
+				for (const v of Object.values(obj)) searchObj(v, visited);
+			}
 
-        pause() {
-            getMainPlayer()?.pause();
-        },
+			searchObj(fiber.memoizedProps);
+			searchFiber(fiber.child, cls, depth + 1);
+			searchFiber(fiber.sibling, cls, depth + 1);
+		}
 
-        resume() {
-            getMainPlayer()?.resume();
-        },
+		const rootEl = document.getElementById("__next") || document.body;
+		const fiberKey = Object.keys(rootEl).find((k) =>
+			k.startsWith("__reactFiber"),
+		);
 
-        togglePause() {
-            getMainPlayer()?.togglePause();
-        },
+		searchFiber(rootEl[fiberKey], VE);
 
-        next() {
-            getMainPlayer()?.moveForward();
-        },
+		window._ymPlayers = [...new Map(found.map((p) => [p.id, p])).values()];
+		return window._ymPlayers.find((p) => p.id === "MAIN");
+	}
 
-        prev() {
-            getMainPlayer()?.moveBackward();
-        },
+	function getCurrentMeta() {
+		const player = getMainPlayer();
+		if (!player) return null;
+		const queue = player.queueController;
+		const entityList = queue?.playerQueue?.queueState?.entityList?.value;
+		const idx = player.playbackState?.queueState?.index?.value;
+		if (idx == null || !entityList) return null;
+		return entityList[idx]?.entity?.entityData?.meta ?? null;
+	}
 
-        // ── текущий трек ──────────────────────────────────────────────
-        getCurrentTrack() {
-            const meta = getCurrentMeta();
-            if (!meta) return null;
+	window.nextmusicApi = {
+		async downloadAsset(url, fileName, addonName) {
+			const port = window.__nextmusicApiAssetPort ?? 2007;
 
-            const coverUri = meta.coverUri
-                ? "https://" + meta.coverUri.replace("%%", "400x400")
-                : null;
+			const res = await fetch(
+				`http://127.0.0.1:${port}/download_asset?name=${encodeURIComponent(addonName)}`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ url, fileName }),
+				},
+			);
 
-            const artists = (meta.artists ?? []).map((a) => ({
-                id: a.id,
-                name: a.name,
-            }));
+			if (!res.ok) {
+				const text = await res.text();
+				throw new Error(`[downloadAsset] Server error ${res.status}: ${text}`);
+			}
 
-            return {
-                id: meta.id,
-                realId: meta.realId,
-                title: meta.title,
-                version: meta.version ?? null,
-                artists,
-                artistIds: artists.map((a) => a.id),
-                artistNames: artists.map((a) => a.name),
-                albumId: meta.albums?.[0]?.id ?? null,
-                coverUrl: coverUri,
-                trackUrl: `https://music.yandex.ru/track/${meta.id}`,
-                durationMs: meta.durationMs ?? null,
-                contentWarning: meta.contentWarning ?? null,
-            };
-        },
+			return res.json();
+		},
 
-        // ── состояние плеера ──────────────────────────────────────────
-        getState() {
-            const player = getMainPlayer();
-            if (!player) return null;
-            const ps = player.playbackState;
-            return {
-                status: ps?.playerState?.status?.value,
-                progress: ps?.playerState?.progress?.value,
-                volume: ps?.playerState?.volume?.value,
-                shuffle: ps?.playerState?.shuffle?.value,
-                repeat: ps?.playerState?.repeatMode?.value,
-            };
-        },
-    };
+		nextText(text) {
+			let el = document.querySelector(".TitleBar_nextText");
 
-    console.log("[nextmusicApi] Ready!");
-    console.log("API:", Object.keys(window.nextmusicApi));
+			if (text === "") {
+				if (el) el.textContent = "";
+			} else {
+				if (el) el.textContent = text;
+			}
+		},
+
+		playTrackById(trackId) {
+			const player = getMainPlayer();
+			const queue = player.queueController;
+			const currentIndex = player.playbackState.queueState.index.value;
+
+			queue.inject({
+				entitiesData: [
+					{
+						type: "music",
+						meta: { id: String(trackId), realId: String(trackId) },
+						fromCurrentContext: false,
+						loadEntityMeta: true,
+					},
+				],
+				position: currentIndex + 1,
+				silent: false,
+			});
+
+			setTimeout(() => {
+				const entityList = queue.playerQueue.queueState.entityList.value;
+
+				const idx = entityList.findIndex(
+					(e) => e?.entity?.entityData?.meta?.id === String(trackId),
+				);
+
+				if (idx !== -1) {
+					player.setEntityByIndex(idx);
+					player.play();
+				} else {
+					console.warn("[nextmusicApi] Track not found in queue:", trackId);
+				}
+			}, 100);
+		},
+
+		setSpeed(speed) {
+			getMainPlayer()?.setSpeed(speed);
+		},
+
+		setProgress(progress) {
+			getMainPlayer()?.setProgress(progress);
+		},
+
+		setVolume(volume) {
+			getMainPlayer()?.setVolume(volume);
+		},
+
+		play() {
+			getMainPlayer()?.play();
+		},
+
+		pause() {
+			getMainPlayer()?.pause();
+		},
+
+		resume() {
+			getMainPlayer()?.resume();
+		},
+
+		togglePause() {
+			getMainPlayer()?.togglePause();
+		},
+
+		next() {
+			getMainPlayer()?.moveForward();
+		},
+
+		prev() {
+			getMainPlayer()?.moveBackward();
+		},
+
+		getCurrentTrack() {
+			const meta = getCurrentMeta();
+			if (!meta) return null;
+
+			const coverUri = meta.coverUri
+				? "https://" + meta.coverUri.replace("%%", "400x400")
+				: null;
+
+			const artists = (meta.artists ?? []).map((a) => ({
+				id: a.id,
+				name: a.name,
+			}));
+
+			return {
+				id: meta.id,
+				realId: meta.realId,
+				title: meta.title,
+				version: meta.version ?? null,
+				artists,
+				artistIds: artists.map((a) => a.id),
+				artistNames: artists.map((a) => a.name),
+				albumId: meta.albums?.[0]?.id ?? null,
+				coverUrl: coverUri,
+				trackUrl: `https://music.yandex.ru/track/${meta.id}`,
+				durationMs: meta.durationMs ?? null,
+				contentWarning: meta.contentWarning ?? null,
+			};
+		},
+
+		getState() {
+			const player = getMainPlayer();
+			if (!player) return null;
+			const ps = player.playbackState;
+
+			return {
+				status: ps?.playerState?.status?.value,
+				progress: ps?.playerState?.progress?.value,
+				volume: ps?.playerState?.volume?.value,
+				shuffle: ps?.playerState?.shuffle?.value,
+				repeat: ps?.playerState?.repeatMode?.value,
+			};
+		},
+	};
+
+	console.log("[nextmusicApi] Ready!");
+	console.log("API:", Object.keys(window.nextmusicApi));
 }

@@ -1,77 +1,77 @@
 @font-face {
-    font-family: "YS Text Local";
-    src: url("fonts/YSText-Regular.woff2") format("woff2");
-    font-weight: normal;
-    font-style: normal;
+	font-family: "YS Text Local";
+	src: url("fonts/YSText-Regular.woff2") format("woff2");
+	font-weight: normal;
+	font-style: normal;
 }
 
 .TitleBar_root {
-    --nm-spacer-size-xxxl: var(--ym-spacer-size-xxxl);
-    --nm-line-height: var(--ym-font-line-height-label-s);
-    --nm-btn-color: var(--ym-controls-color-primary-text-enabled_variant);
-    --nm-btn-hover-bg: var(--ym-controls-color-secondary-default-hovered);
-    --nm-btn-close-hover-bg: #f23f42;
-    --next-text-color: var(--text-enabled-color);
+	--nm-spacer-size-xxxl: var(--ym-spacer-size-xxxl);
+	--nm-line-height: var(--ym-font-line-height-label-s);
+	--nm-btn-color: var(--ym-controls-color-primary-text-enabled_variant);
+	--nm-btn-hover-bg: var(--ym-controls-color-secondary-default-hovered);
+	--nm-btn-close-hover-bg: #f23f42;
+	--next-text-color: var(--text-enabled-color);
 }
 
 [class*="CommonLayout_root"] {
-    padding-block-start: var(--ym-spacer-size-xxxl) !important;
+	padding-block-start: var(--ym-spacer-size-xxxl) !important;
 }
 
 [class*="Navbar_root"] {
-    margin-block-start: calc(var(--ym-spacer-size-l) * -1);
+	margin-block-start: calc(var(--ym-spacer-size-l) * -1);
 }
 
 .TitleBar_root {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--nm-spacer-size-xxxl);
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    -webkit-app-region: drag;
-    z-index: 99999;
-    user-select: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: var(--nm-spacer-size-xxxl);
+	background: transparent;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	-webkit-app-region: drag;
+	z-index: 99999;
+	user-select: none;
 }
 
 .TitleBar_root .TitleBar_nextText {
-    color: var(--next-text-color);
-    font-family: "YS Text Local", sans-serif;
-    font-weight: 500;
-    line-height: var(--nm-line-height);
-    margin-right: 20px;
-    white-space: nowrap;
-    pointer-events: none;
-    margin-top: 2px;
+	color: var(--next-text-color);
+	font-family: "YS Text Local", sans-serif;
+	font-weight: 500;
+	line-height: var(--nm-line-height);
+	margin-right: 20px;
+	white-space: nowrap;
+	pointer-events: none;
+	margin-top: 2px;
 }
 
 .TitleBar_root .TitleBar_button {
-    width: 2.875rem;
-    height: var(--nm-spacer-size-xxxl);
-    background: none;
-    border: none;
-    color: var(--nm-btn-color);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-app-region: no-drag;
-    padding: 0;
+	width: 2.875rem;
+	height: var(--nm-spacer-size-xxxl);
+	background: none;
+	border: none;
+	color: var(--nm-btn-color);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	-webkit-app-region: no-drag;
+	padding: 0;
 }
 
 .TitleBar_root .TitleBar_button svg {
-    width: 10px;
-    height: 10px;
-    pointer-events: none;
+	width: 10px;
+	height: 10px;
+	pointer-events: none;
 }
 
 .TitleBar_root .TitleBar_button:hover {
-    background: var(--nm-btn-hover-bg);
+	background: var(--nm-btn-hover-bg);
 }
 
 .TitleBar_root .TitleBar_closeButton:hover {
-    background: var(--nm-btn-close-hover-bg);
+	background: var(--nm-btn-close-hover-bg);
 }
