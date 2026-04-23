@@ -261,7 +261,4 @@
 			};
 		},
 	};
-
-	console.log("[nextmusicApi] Ready!");
-	console.log("API:", Object.keys(window.nextmusicApi));
 }
