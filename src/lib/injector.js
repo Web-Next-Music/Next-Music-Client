@@ -9,7 +9,10 @@ const __dirname = path.dirname(__filename);
 
 export default function injector(mainWindow, config) {
 	try {
-		const injectDir = path.join(__dirname, "../inject");
+		const isDev = __dirname.includes(path.sep + "src" + path.sep);
+		const injectDir = isDev
+			? path.resolve(__dirname, "../../dist/inject")
+			: path.join(__dirname, "../inject");
 
 		for (const item of injectList) {
 			const { file, condition } = item;

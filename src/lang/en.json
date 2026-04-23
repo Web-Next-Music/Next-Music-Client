@@ -103,7 +103,8 @@
 			"port": "Port",
 			"roomId": "Room ID",
 			"clientId": "Client ID",
-			"avatarUrl": "Avatar"
+			"avatarUrl": "Avatar",
+			"antiSelect": "Anti-Select"
 		},
 		"desc": {
 			"loaderWindow": "Show a loader window before the main window appears",
@@ -124,7 +125,8 @@
 			"blackIsland": "Makes the island black",
 			"roomId": "Room ID to connect to",
 			"clientId": "ID = client nickname",
-			"avatarUrl": "URL to the avatar image"
+			"avatarUrl": "URL to the avatar image",
+			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics"
 		}
 	}
 }

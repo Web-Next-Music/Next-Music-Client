@@ -1,13 +1,9 @@
 import { BrowserWindow } from "electron";
 import { appIcon } from "../../config.js";
 import path from "path";
+import { rendererRoot } from "../rendererPath.js";
 
-// __dirname fix for ESM
-import { fileURLToPath } from "url";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const loaderPath = path.join(__dirname, "../../renderer/loader/loader.html");
+const loaderPath = path.join(rendererRoot, "loader/loader.html");
 
 let loaderWindow;
 

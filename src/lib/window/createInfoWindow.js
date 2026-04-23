@@ -1,10 +1,7 @@
 import { BrowserWindow, nativeImage } from "electron";
 import { trayIconPath } from "../../config.js";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { rendererRoot } from "../rendererPath.js";
 
 const trayIcon = nativeImage
 	.createFromPath(trayIconPath)
@@ -33,7 +30,7 @@ export function createInfoWindow() {
 		},
 	});
 
-	infoWindow.loadFile(path.join(__dirname, "../../renderer/info/info.html"));
+	infoWindow.loadFile(path.join(rendererRoot, "info/info.html"));
 	infoWindow.setMenu(null);
 	infoWindow.on("closed", () => {
 		infoWindow = null;

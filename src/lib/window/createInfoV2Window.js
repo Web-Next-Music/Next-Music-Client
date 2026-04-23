@@ -3,11 +3,7 @@ import { getCurrentVersionWV } from "../../lib/getAppVersion.js";
 import { trayIconPath, getPaths } from "../../config.js";
 import { getConfig } from "../../lib/configManager.js";
 import path from "path";
-
-// __dirname fix for ESM
-import { fileURLToPath } from "url";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { rendererRoot } from "../rendererPath.js";
 
 if (!ipcMain.listenerCount("get-app-version")) {
 	ipcMain.on("get-app-version", (event) => {
@@ -44,9 +40,7 @@ export function createInfoV2Window() {
 		},
 	});
 
-	infoWindow.loadFile(
-		path.join(__dirname, "../../renderer/info_v2/index.html"),
-	);
+	infoWindow.loadFile(path.join(rendererRoot, "info_v2/index.html"));
 
 	infoWindow.setMenu(null);
 

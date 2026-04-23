@@ -5,6 +5,7 @@ import { appIcon } from "../../../config.js";
 import injector from "../../injector.js";
 import path from "path";
 import fs from "fs";
+import { rendererRoot } from "../../rendererPath.js";
 
 // Version
 import pkg from "../../../../package.json" with { type: "json" };
@@ -169,7 +170,7 @@ export function createWindow(config) {
 	) {
 		if (isMainFrame) {
 			mainWindow.loadFile(
-				path.join(__dirname, "../../../renderer/fallback/fallback.html"),
+				path.join(rendererRoot, "fallback/fallback.html"),
 			);
 		}
 	}

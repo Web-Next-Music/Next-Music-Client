@@ -1,6 +1,7 @@
 import { BrowserWindow, ipcMain, shell, app } from "electron";
 import { fileURLToPath } from "url";
 import path from "path";
+import { rendererRoot } from "../../rendererPath.js";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, updateConfig } from "../../configManager.js";
 import { getPaths } from "../../../config.js";
@@ -49,9 +50,7 @@ export function createSettingsWindow() {
 		},
 	});
 
-	settingsWindow.loadFile(
-		path.join(__dirname, "../../../renderer/settings/index.html"),
-	);
+	settingsWindow.loadFile(path.join(rendererRoot, "settings/index.html"));
 
 	settingsWindow.once("ready-to-show", () => settingsWindow.show());
 

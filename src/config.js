@@ -51,6 +51,7 @@ export const defaultConfig = {
 		obsWidget: false,
 		alwaysExpandedPlayer: false,
 		disableAutoZoom: false,
+		antiSelect: false,
 		language: "en",
 	},
 
@@ -73,6 +74,10 @@ export const injectList = [
 	{
 		file: "alwaysExpandedPlayer.css",
 		condition: (config) => config?.programSettings?.alwaysExpandedPlayer,
+	},
+	{
+		file: "antiSelect.css",
+		condition: (config) => config?.programSettings?.antiSelect,
 	},
 	{
 		file: "listenAlongClient.js",
