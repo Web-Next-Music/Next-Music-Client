@@ -4,7 +4,7 @@
 	"description": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget",
 	"main": "dist/index.js",
 	"scripts": {
-		"start": "electron src/index.js",
+		"start": "node scripts/compile-scss.js && electron src/index.js",
 		"dist": "electron dist/index.js",
 		"build:code": "node scripts/build.js",
 		"build": "npm run build:code && electron-builder",
@@ -79,6 +79,7 @@
 		"html-minifier-terser": "^7.2.0",
 		"lightningcss": "^1.32.0",
 		"prettier": "^3.8.3",
+		"sass": "^1.99.0",
 		"terser": "^5.46.1"
 	},
 	"dependencies": {

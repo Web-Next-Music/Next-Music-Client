@@ -4,6 +4,7 @@ import path from "path";
 import { minify } from "html-minifier-terser";
 import { minify as terserMinify } from "terser";
 import * as lightningcss from "lightningcss";
+import * as sass from "sass";
 
 const SRC = "src";
 const DIST = "dist";
@@ -65,6 +66,15 @@ async function build() {
 				format: "cjs",
 				minify: true,
 			});
+		} else if (ext === ".scss") {
+			const compiled = sass.compile(file);
+			const cssOutFile = outFile.replace(/\.scss$/, ".css");
+			const result = lightningcss.transform({
+				filename: cssOutFile,
+				code: Buffer.from(compiled.css),
+				minify: true,
+			});
+			fs.writeFileSync(cssOutFile, result.code);
 		} else if (ext === ".css") {
 			const css = fs.readFileSync(file);
 
