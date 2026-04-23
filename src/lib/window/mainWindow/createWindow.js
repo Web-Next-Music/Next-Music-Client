@@ -7,11 +7,9 @@ import path from "path";
 import fs from "fs";
 import { rendererRoot } from "../../rendererPath.js";
 
-// Version
 import pkg from "../../../../package.json" with { type: "json" };
 const CURRENT_VERSION = pkg.version;
 
-// ESM __dirname fix
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,9 +44,8 @@ export function createWindow(config) {
 			webSecurity: false,
 			nodeIntegration: false,
 			contextIsolation: true,
-			preload: titleBarEnabled
-				? path.join(__dirname, "preload.cjs")
-				: undefined,
+			additionalArguments: titleBarEnabled ? ["--nmc-titlebar"] : [],
+			preload: path.join(__dirname, "preload.cjs"),
 		},
 	});
 
@@ -101,8 +98,6 @@ export function createWindow(config) {
 
 			if (config.programSettings.addons.enable) {
 				applyAddons(mainWindow);
-			} else {
-				console.log("Addons are disabled");
 			}
 
 			onFinishLoad();
@@ -169,9 +164,7 @@ export function createWindow(config) {
 		isMainFrame,
 	) {
 		if (isMainFrame) {
-			mainWindow.loadFile(
-				path.join(rendererRoot, "fallback/fallback.html"),
-			);
+			mainWindow.loadFile(path.join(rendererRoot, "fallback/fallback.html"));
 		}
 	}
 
