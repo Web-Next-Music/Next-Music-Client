@@ -77,7 +77,7 @@ function updateActivity(data, config) {
 	const title = data.title || "";
 	const artist = data.artists || "";
 	const img = data.img || "icon";
-	const albumUrl = data.albumUrl || "";
+	const trackUrl = `https://music.yandex.ru/track/${trackId}` || "";
 	const artistUrl = data.artistUrl || "";
 
 	const positionSec = data.positionSec ?? 0;
@@ -97,7 +97,7 @@ function updateActivity(data, config) {
 		largeImageUrl: GITHUB_LINK,
 		statusDisplayType: 1,
 		instance: false,
-		...(albumUrl ? { detailsUrl: albumUrl } : {}),
+		...(trackUrl ? { detailsUrl: trackUrl } : {}),
 		...(artistUrl ? { stateUrl: artistUrl } : {}),
 		...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
 		buttons: [
@@ -105,7 +105,7 @@ function updateActivity(data, config) {
 				? [
 						{
 							label: "Open in Yandex Music",
-							url: `https://music.yandex.ru/track/${trackId}`,
+							url: trackUrl,
 						},
 					]
 				: []),
