@@ -265,7 +265,7 @@ function rebuildexperimentsConfig(container) {
 	container.querySelectorAll(".experiments-row").forEach((row) => {
 		const name = row.querySelector(".experiments-name").value.trim();
 		const val = row.querySelector(".experiments-select").value;
-		if (name && val !== "unset") experiments[name] = val;
+		experiments[name] = val;
 	});
 	CONFIG.experiments = experiments;
 	scheduleSave();
