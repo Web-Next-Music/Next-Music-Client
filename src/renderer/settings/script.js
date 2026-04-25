@@ -19,6 +19,7 @@ let CONFIG = {};
 let ORIGINAL_CONFIG = {};
 let STRINGS = {};
 let LANGLIST = [];
+let ADDON_EXPERIMENTS = []; // [{ addonName, experiments: { key: value } }]
 
 let _hasPendingChanges = false;
 
@@ -46,6 +47,14 @@ function showToast() {
 // i18n
 function t(key, fallback) {
 	return STRINGS[key] || fallback || key;
+}
+
+function ti(key, vars, fallback) {
+	let str = STRINGS[key] || fallback || key;
+	for (const [k, v] of Object.entries(vars)) {
+		str = str.replace(`{${k}}`, v);
+	}
+	return str;
 }
 
 function applyI18n() {
@@ -262,16 +271,19 @@ function mkRow(field) {
 
 function rebuildexperimentsConfig(container) {
 	const experiments = {};
-	container.querySelectorAll(".experiments-row").forEach((row) => {
-		const name = row.querySelector(".experiments-name").value.trim();
-		const val = row.querySelector(".experiments-select").value;
-		experiments[name] = val;
-	});
+	container
+		.querySelectorAll(".experiments-row:not(.experiments-row--locked)")
+		.forEach((row) => {
+			const name = row.querySelector(".experiments-name").value.trim();
+			const val = row.querySelector(".experiments-select").value;
+			experiments[name] = val;
+		});
 	CONFIG.experiments = experiments;
 	scheduleSave();
 }
 
-function mkexperimentsRow(name, value, container) {
+// addonLock: null | { addonName: string, isConflict: boolean }
+function mkexperimentsRow(name, value, container, addonLock = null) {
 	const row = document.createElement("div");
 	row.className = "experiments-row";
 
@@ -291,19 +303,51 @@ function mkexperimentsRow(name, value, container) {
 		sel.append(o);
 	});
 
-	const delBtn = document.createElement("button");
-	delBtn.className = "btn experiments-del";
-	delBtn.textContent = "×";
+	if (addonLock) {
+		row.classList.add("experiments-row--locked");
+		if (addonLock.isConflict) row.classList.add("experiments-row--conflict");
 
-	const onChange = () => rebuildexperimentsConfig(container);
-	nameInp.addEventListener("input", onChange);
-	sel.addEventListener("change", onChange);
-	delBtn.addEventListener("click", () => {
-		row.remove();
-		rebuildexperimentsConfig(container);
-	});
+		nameInp.disabled = true;
+		sel.disabled = true;
 
-	row.append(nameInp, sel, delBtn);
+		const mainLine = document.createElement("div");
+		mainLine.className = "experiments-row-main";
+		mainLine.append(nameInp, sel);
+		row.append(mainLine);
+
+		const tag = document.createElement("div");
+		if (addonLock.isConflict) {
+			tag.className = "experiments-addon-blocked";
+			tag.textContent = ti(
+				"settings.experiments.blockedBy",
+				{ addonName: addonLock.addonName },
+				`Blocked — experiments.override is active in ${addonLock.addonName}`,
+			);
+		} else {
+			tag.className = "experiments-addon-tag";
+			tag.textContent = ti(
+				"settings.experiments.requiredBy",
+				{ addonName: addonLock.addonName },
+				`Required by ${addonLock.addonName}`,
+			);
+		}
+		row.append(tag);
+	} else {
+		const delBtn = document.createElement("button");
+		delBtn.className = "btn experiments-del";
+		delBtn.textContent = "×";
+
+		const onChange = () => rebuildexperimentsConfig(container);
+		nameInp.addEventListener("input", onChange);
+		sel.addEventListener("change", onChange);
+		delBtn.addEventListener("click", () => {
+			row.remove();
+			rebuildexperimentsConfig(container);
+		});
+
+		row.append(nameInp, sel, delBtn);
+	}
+
 	return row;
 }
 
@@ -327,9 +371,43 @@ function renderexperimentsPanel(panel) {
 	rowsWrap.className = "experiments-rows";
 	panel.append(rowsWrap);
 
-	const overrides = CONFIG.experiments || {};
-	for (const [name, val] of Object.entries(overrides)) {
-		rowsWrap.append(mkexperimentsRow(name, val, rowsWrap));
+	// Build flat map: experimentName -> { addonName, value } (first addon wins)
+	const addonOverrideMap = new Map();
+	for (const { addonName, experiments } of ADDON_EXPERIMENTS) {
+		for (const [name, value] of Object.entries(experiments)) {
+			if (!addonOverrideMap.has(name)) {
+				addonOverrideMap.set(name, { addonName, value });
+			}
+		}
+	}
+
+	const userOverrides = CONFIG.experiments || {};
+
+	// User experiments — locked if addon overrides them
+	for (const [name, val] of Object.entries(userOverrides)) {
+		const addonLock = addonOverrideMap.get(name);
+		if (addonLock) {
+			rowsWrap.append(
+				mkexperimentsRow(name, addonLock.value, rowsWrap, {
+					addonName: addonLock.addonName,
+					isConflict: true,
+				}),
+			);
+		} else {
+			rowsWrap.append(mkexperimentsRow(name, val, rowsWrap));
+		}
+	}
+
+	// Addon-only experiments (not set by user)
+	for (const [name, { addonName, value }] of addonOverrideMap) {
+		if (!(name in userOverrides)) {
+			rowsWrap.append(
+				mkexperimentsRow(name, value, rowsWrap, {
+					addonName,
+					isConflict: false,
+				}),
+			);
+		}
 	}
 
 	searchInp.addEventListener("input", () => {
@@ -591,16 +669,18 @@ window.electronAPI?.onMaximizeChange?.((maximized) => {
 
 // Init
 async function init() {
-	const [cfg, strings, langList] = await Promise.all([
+	const [cfg, strings, langList, addonExps] = await Promise.all([
 		window.electronAPI?.loadConfig().catch(() => ({})),
 		window.electronAPI?.loadLangStrings?.().catch(() => null),
 		window.electronAPI?.getLangList?.().catch(() => []),
+		window.electronAPI?.getAddonExperiments?.().catch(() => []),
 	]);
 
 	CONFIG = cfg || {};
 	ORIGINAL_CONFIG = JSON.parse(JSON.stringify(CONFIG));
 	STRINGS = strings || {};
 	LANGLIST = Array.isArray(langList) ? langList : [];
+	ADDON_EXPERIMENTS = Array.isArray(addonExps) ? addonExps : [];
 
 	// Populate version info in sidebar footer
 	const versions = await window.electronAPI?.getVersions?.().catch(() => null);

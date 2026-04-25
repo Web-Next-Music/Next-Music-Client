@@ -131,7 +131,9 @@
 		},
 		"experiments": {
 			"search": "Search experiments…",
-			"name": "Experiment name"
+			"name": "Experiment name",
+			"requiredBy": "Required by {addonName}",
+			"blockedBy": "Blocked — experiments.override is active in {addonName}"
 		}
 	}
 }

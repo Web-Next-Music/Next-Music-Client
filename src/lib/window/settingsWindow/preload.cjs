@@ -5,6 +5,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
 	loadConfig: () => ipcRenderer.invoke("settings:load-config"),
 
+	getAddonExperiments: () =>
+		ipcRenderer.invoke("settings:get-addon-experiments"),
+
 	saveConfig: (config) => ipcRenderer.invoke("settings:save-config", config),
 
 	toggleMaximize: () => ipcRenderer.send("settings:toggle-maximize"),

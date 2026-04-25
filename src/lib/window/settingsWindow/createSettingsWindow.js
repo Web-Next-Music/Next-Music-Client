@@ -4,6 +4,7 @@ import path from "path";
 import { rendererRoot } from "../../rendererPath.js";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, updateConfig } from "../../configManager.js";
+import { getAddonExperimentOverrides } from "../../addonExperiments.js";
 import { getPaths } from "../../../config.js";
 
 import {
@@ -80,6 +81,12 @@ if (!ipcMain.listenerCount("settings:get-versions")) {
 
 if (!ipcMain.listenerCount("settings:load-config")) {
 	ipcMain.handle("settings:load-config", () => getConfig());
+}
+
+if (!ipcMain.listenerCount("settings:get-addon-experiments")) {
+	ipcMain.handle("settings:get-addon-experiments", () =>
+		getAddonExperimentOverrides(),
+	);
 }
 
 if (!ipcMain.listenerCount("settings:save-config")) {

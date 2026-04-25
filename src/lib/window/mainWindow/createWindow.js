@@ -1,6 +1,7 @@
 import { BrowserWindow, session, nativeTheme } from "electron";
 import { createLoaderWindow } from "../createLoaderWindow.js";
 import { applyAddons } from "../../loadAddons.js";
+import { mergeAddonExperiments } from "../../addonExperiments.js";
 import { appIcon } from "../../../config.js";
 import injector from "../../injector.js";
 import path from "path";
@@ -46,7 +47,7 @@ export function createWindow(config) {
 			contextIsolation: true,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
-				`--nmc-experiments=${JSON.stringify(config?.experiments ?? {})}`,
+				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(config?.experiments ?? {}))}`,
 			],
 			preload: path.join(__dirname, "preload.cjs"),
 		},

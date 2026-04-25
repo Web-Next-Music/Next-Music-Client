@@ -131,7 +131,9 @@
 		},
 		"experiments": {
 			"search": "Поиск экспериментов…",
-			"name": "Название эксперимента"
+			"name": "Название эксперимента",
+			"requiredBy": "Требуется аддоном {addonName}",
+			"blockedBy": "Заблокировано — experiments.override активен в {addonName}"
 		}
 	}
 }
