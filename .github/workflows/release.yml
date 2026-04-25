@@ -92,3 +92,54 @@ jobs:
             release/*.AppImage
             release/*.deb
             release/*.pkg.tar.zst
+
+      - name: Setup SSH for AUR
+        if: matrix.os == 'ubuntu-latest'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: Push pacman package to AUR
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          AUR_REPO: next-music
+        run: |
+          set -euxo pipefail
+
+          mkdir -p ~/.ssh
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+          VERSION="${{ github.event.release.tag_name }}"
+          echo "Version: $VERSION"
+
+          # find pacman package built by electron-builder
+          PKG_FILE=$(ls release/*.pkg.tar.zst | head -n1)
+          echo "Found package: $PKG_FILE"
+
+          # compute checksum of the built package
+          SHA256=$(sha256sum "$PKG_FILE" | awk '{print $1}')
+          echo "SHA256: $SHA256"
+
+          # clone AUR repo via SSH and prepare commit
+          git clone "ssh://aur@aur.archlinux.org/${{ env.AUR_REPO }}.git" aur
+          cd aur
+
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # update PKGBUILD: version and checksum
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${SHA256}')/" PKGBUILD
+
+          # update .SRCINFO
+          PKGFILE="next-music_${VERSION}_x64.pkg.tar.zst"
+          SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/${PKGFILE}"
+          sed -i "s/^\tpkgver = .*/\tpkgver = ${VERSION}/" .SRCINFO
+          sed -i "s/^\tpkgrel = .*/\tpkgrel = 1/" .SRCINFO
+          sed -i "s|^\tsource = .*|\tsource = ${PKGFILE}::${SOURCE_URL}|" .SRCINFO
+          sed -i "s/^\tsha256sums = .*/\tsha256sums = ${SHA256}/" .SRCINFO
+
+          git add PKGBUILD .SRCINFO
+          git commit -m "ci: Update to ${VERSION}" || echo "No changes to commit"
+          git push origin master
