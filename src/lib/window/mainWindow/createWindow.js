@@ -44,7 +44,10 @@ export function createWindow(config) {
 			webSecurity: false,
 			nodeIntegration: false,
 			contextIsolation: true,
-			additionalArguments: titleBarEnabled ? ["--nmc-titlebar"] : [],
+			additionalArguments: [
+				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
+				`--nmc-experiments=${JSON.stringify(config?.experiments ?? {})}`,
+			],
 			preload: path.join(__dirname, "preload.cjs"),
 		},
 	});

@@ -95,7 +95,7 @@
 			"obsWidget": "OBS Widget",
 			"alwaysExpandedPlayer": "Wide Player Panel",
 			"disableAutoZoom": "Disable Auto Zoom",
-			"experiments": "Experiments",
+			"alpha": "alpha",
 			"volumeNormalization": "Volume Normalization",
 			"listenAlong": "Listen Along",
 			"blackIsland": "Black Island",
@@ -104,7 +104,8 @@
 			"roomId": "Room ID",
 			"clientId": "Client ID",
 			"avatarUrl": "Avatar",
-			"antiSelect": "Anti-Select"
+			"antiSelect": "Anti-Select",
+			"experiments": "Experiments"
 		},
 		"desc": {
 			"loaderWindow": "Show a loader window before the main window appears",
@@ -127,6 +128,10 @@
 			"clientId": "ID = client nickname",
 			"avatarUrl": "URL to the avatar image",
 			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics"
+		},
+		"experiments": {
+			"search": "Search experiments…",
+			"name": "Experiment name"
 		}
 	}
 }

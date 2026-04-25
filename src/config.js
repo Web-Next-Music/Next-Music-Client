@@ -55,7 +55,7 @@ export const defaultConfig = {
 		language: "en",
 	},
 
-	experiments: {
+	alpha: {
 		volumeNormalization: false,
 		listenAlong: {
 			enable: false,
@@ -67,6 +67,8 @@ export const defaultConfig = {
 			avatarUrl: "",
 		},
 	},
+
+	experiments: {},
 };
 
 // Injector list
@@ -81,7 +83,7 @@ export const injectList = [
 	},
 	{
 		file: "listenAlongClient.js",
-		condition: (config) => config?.experiments?.listenAlong?.enable,
+		condition: (config) => config?.alpha?.listenAlong?.enable,
 	},
 	{
 		file: "nextStore.js",
@@ -105,7 +107,7 @@ export const injectList = [
 	},
 	{
 		file: "volumeNormalization.js",
-		condition: (config) => config?.experiments?.volumeNormalization,
+		condition: (config) => config?.alpha?.volumeNormalization,
 	},
 ];
 

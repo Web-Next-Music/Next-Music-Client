@@ -22,13 +22,29 @@ if (process.argv.includes("--nmc-titlebar")) {
 	});
 }
 
-// Experiment patcher
-const EXPERIMENT_OVERRIDES = {
-	WebNextNewWaveTab: {
-		group: "on",
-		value: { title: "on" },
-	},
-};
+// Experiment patcher — built from config passed via argv
+const _experimentsArg = process.argv.find((a) =>
+	a.startsWith("--nmc-experiments="),
+);
+const _experimentsRaw = (() => {
+	try {
+		return _experimentsArg
+			? JSON.parse(_experimentsArg.slice("--nmc-experiments=".length))
+			: {};
+	} catch {
+		return {};
+	}
+})();
+
+const EXPERIMENT_OVERRIDES = {};
+for (const [name, state] of Object.entries(_experimentsRaw)) {
+	if (state === "on" || state === "default") {
+		EXPERIMENT_OVERRIDES[name] = {
+			group: state,
+			value: { title: state },
+		};
+	}
+}
 
 const patcherCode = `
 (function () {
@@ -79,6 +95,8 @@ const patcherCode = `
 	}
 
 	var _arr = window.__next_f || [];
+	// Patch chunks already queued before this script ran (e.g. Ctrl+R with disk cache)
+	_arr.forEach(patchChunk);
 	var _customPush = null;
 
 	function ourPush() {
@@ -133,7 +151,8 @@ const patcherCode = `
 		}
 	}
 
-	var _snap = [];
+	var _snap = Array.isArray(window.__STATE_SNAPSHOT__) ? window.__STATE_SNAPSHOT__ : [];
+	_snap.forEach(patchSnapshotItem);
 	var _snapPush = null;
 
 	function snapPush() {
@@ -160,6 +179,39 @@ const patcherCode = `
 		configurable: true,
 		enumerable: true,
 	});
+
+	// ── Script tags (HTML-embedded RSC) ───────────────────────────────────
+	function patchScriptTags() {
+		try {
+			document.querySelectorAll('script').forEach(function (s) {
+				try {
+					var txt = s.textContent;
+					if (typeof txt !== 'string') return;
+					if (Object.keys(overrides).some(function (k) { return txt.indexOf('"' + k + '"') !== -1; })) {
+						s.textContent = patchRSCString(txt);
+					}
+				} catch (e) {}
+			});
+		} catch (e) {}
+	}
+	patchScriptTags();
+
+	var scriptObserver = new MutationObserver(function (muts) {
+		muts.forEach(function (m) {
+			m.addedNodes && m.addedNodes.forEach(function (n) {
+				if (n && n.tagName === 'SCRIPT') {
+					try {
+						var txt = n.textContent;
+						if (typeof txt === 'string' && Object.keys(overrides).some(function (k) { return txt.indexOf('"' + k + '"') !== -1; })) {
+							n.textContent = patchRSCString(txt);
+						}
+					} catch (e) {}
+				}
+			});
+		});
+	});
+	scriptObserver.observe(document.documentElement || document, { childList: true, subtree: true });
+
 })();
 `;
 

@@ -84,6 +84,7 @@ function buildSchema() {
 	const tabs = [];
 
 	for (const [tabKey, tabVal] of Object.entries(CONFIG)) {
+		if (tabKey === "experiments") continue;
 		if (typeof tabVal !== "object" || Array.isArray(tabVal) || tabVal === null)
 			continue;
 
@@ -257,6 +258,95 @@ function mkRow(field) {
 	return { row, control };
 }
 
+// ── experiments tab ───────────────────────────────────────────────────────────────
+
+function rebuildexperimentsConfig(container) {
+	const experiments = {};
+	container.querySelectorAll(".experiments-row").forEach((row) => {
+		const name = row.querySelector(".experiments-name").value.trim();
+		const val = row.querySelector(".experiments-select").value;
+		if (name && val !== "unset") experiments[name] = val;
+	});
+	CONFIG.experiments = experiments;
+	scheduleSave();
+}
+
+function mkexperimentsRow(name, value, container) {
+	const row = document.createElement("div");
+	row.className = "experiments-row";
+
+	const nameInp = document.createElement("input");
+	nameInp.type = "text";
+	nameInp.className = "inp experiments-name";
+	nameInp.placeholder = t("settings.experiments.name", "Experiment name");
+	nameInp.value = name;
+
+	const sel = document.createElement("select");
+	sel.className = "sel experiments-select";
+	["unset", "default", "on"].forEach((opt) => {
+		const o = document.createElement("option");
+		o.value = opt;
+		o.textContent = opt;
+		if (opt === value) o.selected = true;
+		sel.append(o);
+	});
+
+	const delBtn = document.createElement("button");
+	delBtn.className = "btn experiments-del";
+	delBtn.textContent = "×";
+
+	const onChange = () => rebuildexperimentsConfig(container);
+	nameInp.addEventListener("input", onChange);
+	sel.addEventListener("change", onChange);
+	delBtn.addEventListener("click", () => {
+		row.remove();
+		rebuildexperimentsConfig(container);
+	});
+
+	row.append(nameInp, sel, delBtn);
+	return row;
+}
+
+function renderexperimentsPanel(panel) {
+	const toolbar = document.createElement("div");
+	toolbar.className = "experiments-toolbar";
+
+	const searchInp = document.createElement("input");
+	searchInp.type = "text";
+	searchInp.className = "inp experiments-search";
+	searchInp.placeholder = t("settings.experiments.search", "Search…");
+
+	const addBtn = document.createElement("button");
+	addBtn.className = "btn experiments-add-btn";
+	addBtn.textContent = "+";
+
+	toolbar.append(searchInp, addBtn);
+	panel.append(toolbar);
+
+	const rowsWrap = document.createElement("div");
+	rowsWrap.className = "experiments-rows";
+	panel.append(rowsWrap);
+
+	const overrides = CONFIG.experiments || {};
+	for (const [name, val] of Object.entries(overrides)) {
+		rowsWrap.append(mkexperimentsRow(name, val, rowsWrap));
+	}
+
+	searchInp.addEventListener("input", () => {
+		const q = searchInp.value.toLowerCase().trim();
+		rowsWrap.querySelectorAll(".experiments-row").forEach((row) => {
+			const n = row.querySelector(".experiments-name").value.toLowerCase();
+			row.classList.toggle("hidden", q !== "" && !n.includes(q));
+		});
+	});
+
+	addBtn.addEventListener("click", () => {
+		const row = mkexperimentsRow("", "unset", rowsWrap);
+		rowsWrap.append(row);
+		row.querySelector(".experiments-name").focus();
+	});
+}
+
 // UI builder — remembers active tab across rebuilds
 const langSelects = [];
 let _activeTab = null;
@@ -381,10 +471,15 @@ function buildUI() {
 	langSelects.length = 0;
 
 	const tabs = buildSchema();
-	if (!tabs.length) return;
+	const hasexperiments = CONFIG.experiments !== undefined;
 
-	if (!_activeTab || !tabs.find((t) => t.key === _activeTab)) {
-		_activeTab = tabs[0].key;
+	if (!tabs.length && !hasexperiments) return;
+
+	if (
+		!_activeTab ||
+		(!tabs.find((t) => t.key === _activeTab) && _activeTab !== "experiments")
+	) {
+		_activeTab = tabs.length ? tabs[0].key : "experiments";
 	}
 
 	// Save & Restart button — rendered into sidebar-footer, above version info
@@ -436,6 +531,24 @@ function buildUI() {
 
 		content.append(panel);
 	});
+
+	// experiments tab — special dynamic UI
+	if (hasexperiments) {
+		const nav = document.createElement("div");
+		nav.className =
+			"nav-item" + (_activeTab === "experiments" ? " active" : "");
+		nav.textContent = tabName("experiments");
+		nav.dataset.tab = "experiments";
+		nav.addEventListener("click", () => activateTab("experiments"));
+		sidebar.append(nav);
+
+		const panel = document.createElement("div");
+		panel.className =
+			"tab-panel" + (_activeTab === "experiments" ? " active" : "");
+		panel.id = "panel-experiments";
+		renderexperimentsPanel(panel);
+		content.append(panel);
+	}
 }
 
 function activateTab(key) {

@@ -138,11 +138,7 @@ body {
 
 	&.active {
 		color: $accent;
-		background: linear-gradient(
-			90deg,
-			$accent-gradient 0%,
-			$dim-accent 100%
-		);
+		background: linear-gradient(90deg, $accent-gradient 0%, $dim-accent 100%);
 		border-left-color: $accent;
 	}
 }
@@ -568,4 +564,73 @@ body {
 	pointer-events: none;
 	user-select: none;
 	-webkit-user-select: none;
+}
+
+// ── experiments tab ────────────────────────────────────────────────────────────────
+
+.experiments-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.experiments-search {
+	flex: 1 !important;
+	width: auto !important;
+}
+
+.experiments-add-btn {
+	flex-shrink: 0;
+	width: 29px;
+	height: 29px;
+	padding: 5px 8px;
+	font-size: 13px;
+	line-height: 1;
+}
+
+.experiments-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.experiments-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px;
+	background: $bg2;
+	border: 1px solid $line;
+	border-radius: $r;
+	transition: border-color 0.15s;
+
+	&:hover {
+		border-color: $dim-accent;
+	}
+
+	&.hidden {
+		display: none;
+	}
+}
+
+.experiments-name {
+	flex: 1 !important;
+	width: auto !important;
+	min-width: 0;
+}
+
+.experiments-del {
+	flex-shrink: 0;
+	width: 29px;
+	height: 29px;
+	padding: 0 9px;
+	color: $muted;
+	justify-content: center;
+	align-items: center;
+
+	&:hover {
+		color: $danger;
+		border-color: $danger;
+	}
 }
