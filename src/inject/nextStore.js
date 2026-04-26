@@ -1,6 +1,9 @@
 (() => {
 	const STORE_HTML = window.__nextStoreHtml;
-	const ICON_HREF = "/icons/sprite.svg#search_m";
+
+	const ICON_HREF = document
+		.querySelector(`[class*="NavbarDesktop_navigation"] * use`)
+		.getAttribute("xlink:href");
 
 	function getPlusLink() {
 		const links = document.querySelectorAll(
