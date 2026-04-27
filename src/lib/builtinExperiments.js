@@ -16,7 +16,7 @@ let cachedExperiments = null;
 
 function normalizeExperiments(raw) {
 	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-		return { ...FALLBACK_EXPERIMENTS };
+		return {};
 	}
 
 	const result = {};
@@ -30,7 +30,7 @@ function normalizeExperiments(raw) {
 		}
 	}
 
-	return Object.keys(result).length > 0 ? result : { ...FALLBACK_EXPERIMENTS };
+	return result;
 }
 
 export function getBuiltinExperiments() {
@@ -40,7 +40,7 @@ export function getBuiltinExperiments() {
 		const raw = fs.readFileSync(BUILTIN_EXPERIMENTS_PATH, "utf-8");
 		cachedExperiments = normalizeExperiments(JSON.parse(raw));
 	} catch {
-		cachedExperiments = { ...FALLBACK_EXPERIMENTS };
+		cachedExperiments = {};
 	}
 
 	return { ...cachedExperiments };
