@@ -14,6 +14,15 @@
 		"restart": "Restart",
 		"quit": "Quit"
 	},
+	"updater": {
+		"title": "Update available",
+		"message": "A new version {version} is available",
+		"detail": "Do you want to update?",
+		"buttons": {
+			"0": "Yes",
+			"1": "Cancel"
+		}
+	},
 	"store": {
 		"tabAddons": "Addons",
 		"tabThemes": "Themes",

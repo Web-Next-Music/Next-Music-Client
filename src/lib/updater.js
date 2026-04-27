@@ -1,4 +1,5 @@
 import { app, dialog, shell } from "electron";
+import { t } from "./langManager.js";
 import https from "https";
 
 // Version
@@ -115,10 +116,10 @@ function showUpdateDialog(version, releaseUrl) {
 	dialog
 		.showMessageBox({
 			type: "info",
-			title: "Update available",
-			message: `A new version ${version} is available.`,
-			detail: "Do you want to update?",
-			buttons: ["Yes", "Cancel"],
+			title: t("updater.title"),
+			message: t("updater.message", { version }),
+			detail: t("updater.detail"),
+			buttons: [t("updater.buttons.0"), t("updater.buttons.1")],
 			defaultId: 0,
 			cancelId: 1,
 			noLink: true,
