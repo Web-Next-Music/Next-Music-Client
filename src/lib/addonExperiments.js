@@ -3,6 +3,17 @@ import { getConfig } from "./configManager.js";
 import fs from "fs";
 import path from "path";
 
+function isAddonDirectory(addonsDirectory, entry) {
+	if (entry.isDirectory()) return true;
+	if (!entry.isSymbolicLink()) return false;
+
+	try {
+		return fs.statSync(path.join(addonsDirectory, entry.name)).isDirectory();
+	} catch {
+		return false;
+	}
+}
+
 function parseOverrideFile(content) {
 	const result = {};
 	for (const line of content.split("\n")) {
@@ -32,7 +43,7 @@ export function getAddonExperimentOverrides() {
 	const overrides = [];
 
 	for (const entry of entries) {
-		if (!entry.isDirectory()) continue;
+		if (!isAddonDirectory(addonsDirectory, entry)) continue;
 		if (entry.name.startsWith("!")) continue;
 
 		const overrideFile = path.join(
@@ -49,9 +60,7 @@ export function getAddonExperimentOverrides() {
 				overrides.push({ addonName: entry.name, experiments });
 			}
 		} catch {
-			console.warn(
-				`[AddonExperiments] Could not read ${overrideFile}`,
-			);
+			console.warn(`[AddonExperiments] Could not read ${overrideFile}`);
 		}
 	}
 
