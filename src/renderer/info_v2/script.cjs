@@ -9,8 +9,7 @@ document.querySelector(".nm_title").textContent =
 	`Next Music ${CURRENT_VERSION}`;
 
 // i18n
-const { languagesDirectory, langCode } = ipcRenderer.sendSync("get-lang-info");
-initLanguages(languagesDirectory, langCode);
+let languagesDirectory = null;
 
 function applyTranslations() {
 	document.querySelectorAll("[data-i18n]").forEach((el) => {
@@ -20,10 +19,15 @@ function applyTranslations() {
 	});
 }
 
-applyTranslations();
+ipcRenderer.once("init-lang", (_, payload) => {
+	languagesDirectory = payload.languagesDirectory;
+	initLanguages(languagesDirectory, payload.langCode);
+	applyTranslations();
+});
 
 // Real-time language change
 ipcRenderer.on("change-language", (_, newLangCode) => {
+	if (!languagesDirectory) return;
 	loadLanguage(languagesDirectory, newLangCode);
 	applyTranslations();
 });

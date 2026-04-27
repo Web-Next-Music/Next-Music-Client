@@ -7,7 +7,7 @@
 		"node": ">=24.0.0"
 	},
 	"scripts": {
-		"start": "node scripts/compile-scss.js && electron src/index.js",
+		"start": "node scripts/build.js && electron dist/index.js",
 		"dist": "electron dist/index.js",
 		"build:code": "node scripts/build.js",
 		"build": "npm run build:code && electron-builder",
