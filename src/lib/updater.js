@@ -1,10 +1,10 @@
 import { app, dialog, shell } from "electron";
 import { t } from "./langManager.js";
+import { getCurrentVersionWV } from "./getAppVersion.js";
 import https from "https";
 
 // Version
-import pkg from "../../package.json" with { type: "json" };
-const CURRENT_VERSION = pkg.version;
+const CURRENT_VERSION = getCurrentVersionWV();
 
 const GITHUB_API_URL =
 	"https://api.github.com/repos/Web-Next-Music/Next-Music-Client/releases/latest";
@@ -113,20 +113,24 @@ export async function checkForUpdates() {
 }
 
 function showUpdateDialog(version, releaseUrl) {
-	dialog
-		.showMessageBox({
-			type: "info",
-			title: t("updater.title"),
-			message: t("updater.message", { version }),
-			detail: t("updater.detail"),
-			buttons: [t("updater.buttons.0"), t("updater.buttons.1")],
-			defaultId: 0,
-			cancelId: 1,
-			noLink: true,
-		})
-		.then(({ response }) => {
-			if (response === 0) {
-				shell.openExternal(releaseUrl);
-			}
-		});
+	if (CURRENT_VERSION.startsWith("v")) {
+		dialog
+			.showMessageBox({
+				type: "info",
+				title: t("updater.title"),
+				message: t("updater.message", { version }),
+				detail: t("updater.detail"),
+				buttons: [t("updater.buttons.0"), t("updater.buttons.1")],
+				defaultId: 0,
+				cancelId: 1,
+				noLink: true,
+			})
+			.then(({ response }) => {
+				if (response === 0) {
+					shell.openExternal(releaseUrl);
+				}
+			});
+	} else {
+		return;
+	}
 }
