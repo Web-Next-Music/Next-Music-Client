@@ -110,12 +110,15 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
 
-          VERSION="${{ github.event.release.tag_name }}"
-          echo "Version: $VERSION"
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          PKGVER="${RELEASE_TAG#v}"
+          echo "Release tag: $RELEASE_TAG"
+          echo "Package version: $PKGVER"
 
           # find pacman package built by electron-builder
           PKG_FILE=$(ls release/*.pkg.tar.zst | head -n1)
           echo "Found package: $PKG_FILE"
+          PKGFILE=$(basename "$PKG_FILE")
 
           # compute checksum of the built package
           SHA256=$(sha256sum "$PKG_FILE" | awk '{print $1}')
@@ -128,19 +131,21 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          # update PKGBUILD: version and checksum
-          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          # update PKGBUILD for the current release
+          sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s|^_pkgfile=.*|_pkgfile=\"${PKGFILE}\"|" PKGBUILD
+          sed -i "s|^_pkgtag=.*|_pkgtag=\"${RELEASE_TAG}\"|" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('${SHA256}')/" PKGBUILD
 
-          # update .SRCINFO
-          PKGFILE="next-music_${VERSION}_x64.pkg.tar.zst"
-          SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}/${PKGFILE}"
-          sed -i "s/^\tpkgver = .*/\tpkgver = ${VERSION}/" .SRCINFO
+          # update .SRCINFO to match PKGBUILD
+          SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}/${PKGFILE}"
+          sed -i "s/^\tpkgver = .*/\tpkgver = ${PKGVER}/" .SRCINFO
           sed -i "s/^\tpkgrel = .*/\tpkgrel = 1/" .SRCINFO
+          sed -i "s/^\tnoextract = .*/\tnoextract = ${PKGFILE}/" .SRCINFO
           sed -i "s|^\tsource = .*|\tsource = ${PKGFILE}::${SOURCE_URL}|" .SRCINFO
           sed -i "s/^\tsha256sums = .*/\tsha256sums = ${SHA256}/" .SRCINFO
 
           git add PKGBUILD .SRCINFO
-          git commit -m "ci: Update to ${VERSION}" || echo "No changes to commit"
+          git commit -m "ci: Update to ${PKGVER}" || echo "No changes to commit"
           git push origin master
