@@ -597,8 +597,9 @@ body {
 
 .experiments-row {
 	display: flex;
-	align-items: center;
-	gap: 8px;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 4px;
 	padding: 7px;
 	background: $bg2;
 	border: 1px solid $line;
@@ -612,6 +613,19 @@ body {
 	&.hidden {
 		display: none;
 	}
+}
+
+.experiments-row-main {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.experiments-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 0 2px;
 }
 
 .experiments-name {
@@ -636,9 +650,6 @@ body {
 }
 
 .experiments-row--locked {
-	flex-direction: column;
-	align-items: stretch;
-	gap: 4px;
 	cursor: default;
 
 	&:hover {
@@ -653,15 +664,16 @@ body {
 	}
 }
 
-.experiments-row-main {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
 .experiments-addon-tag {
 	font-size: 10px;
 	color: #e3b341;
+	padding: 0 2px;
+	line-height: 1.3;
+}
+
+.experiments-builtin-tag {
+	font-size: 10px;
+	color: #2bfef5;
 	padding: 0 2px;
 	line-height: 1.3;
 }

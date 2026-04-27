@@ -20,6 +20,7 @@ let ORIGINAL_CONFIG = {};
 let STRINGS = {};
 let LANGLIST = [];
 let ADDON_EXPERIMENTS = []; // [{ addonName, experiments: { key: value } }]
+let BUILTIN_EXPERIMENTS = {}; // { key: value }
 
 let _hasPendingChanges = false;
 
@@ -275,17 +276,75 @@ function rebuildexperimentsConfig(container) {
 		.querySelectorAll(".experiments-row:not(.experiments-row--locked)")
 		.forEach((row) => {
 			const name = row.querySelector(".experiments-name").value.trim();
+			if (!name) return;
 			const val = row.querySelector(".experiments-select").value;
+			const builtinDefault = row.dataset.builtinDefault;
+			const isBuiltin = row.dataset.isBuiltin === "true";
+			if (isBuiltin && builtinDefault === val) return;
 			experiments[name] = val;
 		});
 	CONFIG.experiments = experiments;
 	scheduleSave();
 }
 
-// addonLock: null | { addonName: string, isConflict: boolean }
-function mkexperimentsRow(name, value, container, addonLock = null) {
+function getBuiltinExperimentDefault(name) {
+	return Object.prototype.hasOwnProperty.call(BUILTIN_EXPERIMENTS, name)
+		? BUILTIN_EXPERIMENTS[name]
+		: null;
+}
+
+function syncExperimentRowMeta(row, addonLock, name) {
+	const meta = row.querySelector(".experiments-meta");
+	meta.innerHTML = "";
+
+	const builtinDefault = getBuiltinExperimentDefault(name);
+	if (builtinDefault) {
+		row.dataset.isBuiltin = "true";
+		row.dataset.builtinDefault = builtinDefault;
+
+		const builtinTag = document.createElement("div");
+		builtinTag.className = "experiments-builtin-tag";
+		builtinTag.textContent = t(
+			"settings.experiments.builtin",
+			"Built-in Next Music experiment",
+		);
+		meta.append(builtinTag);
+	} else {
+		row.dataset.isBuiltin = "false";
+		delete row.dataset.builtinDefault;
+	}
+
+	if (addonLock) {
+		const addonTag = document.createElement("div");
+		if (addonLock.isConflict) {
+			addonTag.className = "experiments-addon-blocked";
+			addonTag.textContent = ti(
+				"settings.experiments.blockedBy",
+				{ addonName: addonLock.addonName },
+				`Blocked — experiments.override is active in ${addonLock.addonName}`,
+			);
+		} else {
+			addonTag.className = "experiments-addon-tag";
+			addonTag.textContent = ti(
+				"settings.experiments.requiredBy",
+				{ addonName: addonLock.addonName },
+				`Required by ${addonLock.addonName}`,
+			);
+		}
+		meta.append(addonTag);
+	}
+
+	row.classList.toggle("experiments-row--stacked", meta.childElementCount > 0);
+}
+
+// meta: { addonLock?: { addonName: string, isConflict: boolean } | null }
+function mkexperimentsRow(name, value, container, meta = {}) {
+	const { addonLock = null } = meta;
 	const row = document.createElement("div");
 	row.className = "experiments-row";
+
+	const mainLine = document.createElement("div");
+	mainLine.className = "experiments-row-main";
 
 	const nameInp = document.createElement("input");
 	nameInp.type = "text";
@@ -309,35 +368,15 @@ function mkexperimentsRow(name, value, container, addonLock = null) {
 
 		nameInp.disabled = true;
 		sel.disabled = true;
-
-		const mainLine = document.createElement("div");
-		mainLine.className = "experiments-row-main";
-		mainLine.append(nameInp, sel);
-		row.append(mainLine);
-
-		const tag = document.createElement("div");
-		if (addonLock.isConflict) {
-			tag.className = "experiments-addon-blocked";
-			tag.textContent = ti(
-				"settings.experiments.blockedBy",
-				{ addonName: addonLock.addonName },
-				`Blocked — experiments.override is active in ${addonLock.addonName}`,
-			);
-		} else {
-			tag.className = "experiments-addon-tag";
-			tag.textContent = ti(
-				"settings.experiments.requiredBy",
-				{ addonName: addonLock.addonName },
-				`Required by ${addonLock.addonName}`,
-			);
-		}
-		row.append(tag);
 	} else {
 		const delBtn = document.createElement("button");
 		delBtn.className = "btn experiments-del";
 		delBtn.textContent = "×";
 
-		const onChange = () => rebuildexperimentsConfig(container);
+		const onChange = () => {
+			syncExperimentRowMeta(row, addonLock, nameInp.value.trim());
+			rebuildexperimentsConfig(container);
+		};
 		nameInp.addEventListener("input", onChange);
 		sel.addEventListener("change", onChange);
 		delBtn.addEventListener("click", () => {
@@ -345,8 +384,18 @@ function mkexperimentsRow(name, value, container, addonLock = null) {
 			rebuildexperimentsConfig(container);
 		});
 
-		row.append(nameInp, sel, delBtn);
+		mainLine.append(nameInp, sel, delBtn);
 	}
+
+	if (addonLock) {
+		mainLine.append(nameInp, sel);
+	}
+
+	const metaWrap = document.createElement("div");
+	metaWrap.className = "experiments-meta";
+
+	row.append(mainLine, metaWrap);
+	syncExperimentRowMeta(row, addonLock, name);
 
 	return row;
 }
@@ -382,6 +431,7 @@ function renderexperimentsPanel(panel) {
 	}
 
 	const userOverrides = CONFIG.experiments || {};
+	const builtinEntries = Object.entries(BUILTIN_EXPERIMENTS || {});
 
 	// User experiments — locked if addon overrides them
 	for (const [name, val] of Object.entries(userOverrides)) {
@@ -389,8 +439,10 @@ function renderexperimentsPanel(panel) {
 		if (addonLock) {
 			rowsWrap.append(
 				mkexperimentsRow(name, addonLock.value, rowsWrap, {
-					addonName: addonLock.addonName,
-					isConflict: true,
+					addonLock: {
+						addonName: addonLock.addonName,
+						isConflict: true,
+					},
 				}),
 			);
 		} else {
@@ -398,13 +450,33 @@ function renderexperimentsPanel(panel) {
 		}
 	}
 
+	// Built-in experiments (not set by user)
+	for (const [name, builtinValue] of builtinEntries) {
+		if (name in userOverrides) continue;
+		const addonLock = addonOverrideMap.get(name);
+		if (addonLock) {
+			rowsWrap.append(
+				mkexperimentsRow(name, addonLock.value, rowsWrap, {
+					addonLock: {
+						addonName: addonLock.addonName,
+						isConflict: false,
+					},
+				}),
+			);
+		} else {
+			rowsWrap.append(mkexperimentsRow(name, builtinValue, rowsWrap));
+		}
+	}
+
 	// Addon-only experiments (not set by user)
 	for (const [name, { addonName, value }] of addonOverrideMap) {
-		if (!(name in userOverrides)) {
+		if (!(name in userOverrides) && !getBuiltinExperimentDefault(name)) {
 			rowsWrap.append(
 				mkexperimentsRow(name, value, rowsWrap, {
-					addonName,
-					isConflict: false,
+					addonLock: {
+						addonName,
+						isConflict: false,
+					},
 				}),
 			);
 		}
@@ -669,11 +741,12 @@ window.electronAPI?.onMaximizeChange?.((maximized) => {
 
 // Init
 async function init() {
-	const [cfg, strings, langList, addonExps] = await Promise.all([
+	const [cfg, strings, langList, addonExps, builtinExps] = await Promise.all([
 		window.electronAPI?.loadConfig().catch(() => ({})),
 		window.electronAPI?.loadLangStrings?.().catch(() => null),
 		window.electronAPI?.getLangList?.().catch(() => []),
 		window.electronAPI?.getAddonExperiments?.().catch(() => []),
+		window.electronAPI?.getBuiltinExperiments?.().catch(() => ({})),
 	]);
 
 	CONFIG = cfg || {};
@@ -681,6 +754,8 @@ async function init() {
 	STRINGS = strings || {};
 	LANGLIST = Array.isArray(langList) ? langList : [];
 	ADDON_EXPERIMENTS = Array.isArray(addonExps) ? addonExps : [];
+	BUILTIN_EXPERIMENTS =
+		builtinExps && typeof builtinExps === "object" ? builtinExps : {};
 
 	// Populate version info in sidebar footer
 	const versions = await window.electronAPI?.getVersions?.().catch(() => null);

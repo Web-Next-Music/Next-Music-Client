@@ -8,6 +8,7 @@ import * as sass from "sass";
 
 const SRC = "src";
 const DIST = "dist";
+const EXTRA_COPY_DIRS = ["data"];
 
 const BROWSER_DIRS = [path.join(SRC, "lib", "storePage", "public")];
 
@@ -100,6 +101,11 @@ async function build() {
 		} else {
 			fs.copyFileSync(file, outFile);
 		}
+	}
+
+	for (const dir of EXTRA_COPY_DIRS) {
+		if (!fs.existsSync(dir)) continue;
+		fs.cpSync(dir, path.join(DIST, path.basename(dir)), { recursive: true });
 	}
 }
 

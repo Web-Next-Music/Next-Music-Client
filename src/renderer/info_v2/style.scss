@@ -17,11 +17,7 @@ body {
 	height: 100%;
 	margin: 0;
 	user-select: none;
-	background: linear-gradient(
-		165deg,
-		$gradient-color 0%,
-		$bg-color 70%
-	);
+	background: linear-gradient(165deg, $gradient-color 0%, $bg-color 70%);
 	font-family: $font-base;
 }
 

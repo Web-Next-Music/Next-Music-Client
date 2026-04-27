@@ -5,6 +5,7 @@ import { rendererRoot } from "../../rendererPath.js";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, updateConfig } from "../../configManager.js";
 import { getAddonExperimentOverrides } from "../../addonExperiments.js";
+import { getBuiltinExperiments } from "../../builtinExperiments.js";
 import { getPaths } from "../../../config.js";
 
 import {
@@ -86,6 +87,12 @@ if (!ipcMain.listenerCount("settings:load-config")) {
 if (!ipcMain.listenerCount("settings:get-addon-experiments")) {
 	ipcMain.handle("settings:get-addon-experiments", () =>
 		getAddonExperimentOverrides(),
+	);
+}
+
+if (!ipcMain.listenerCount("settings:get-builtin-experiments")) {
+	ipcMain.handle("settings:get-builtin-experiments", () =>
+		getBuiltinExperiments(),
 	);
 }
 

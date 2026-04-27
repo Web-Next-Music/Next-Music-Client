@@ -142,7 +142,8 @@
 			"search": "Search experiments…",
 			"name": "Experiment name",
 			"requiredBy": "Required by {addonName}",
-			"blockedBy": "Blocked — experiments.override is active in {addonName}"
+			"blockedBy": "Blocked — experiments.override is active in {addonName}",
+			"builtin": "Built-in Next Music experiment"
 		}
 	}
 }

@@ -11,6 +11,7 @@ import { checkForUpdates } from "../lib/updater.js";
 import { getCurrentVersion } from "./getAppVersion.js";
 import { trayIconPath, getPaths } from "../config.js";
 import { getConfig } from "../lib/configManager.js";
+import { getBuiltinExperimentState } from "./builtinExperiments.js";
 import { initLanguages, t } from "../lib/langManager.js";
 import { createInfoWindow } from "./window/createInfoWindow.js";
 import { createInfoV2Window } from "./window/createInfoV2Window.js";
@@ -154,10 +155,12 @@ export function createTray(
 function selInfoVer() {
 	const config = getConfig();
 
-	if (config?.labs?.nm_info_v2 == false) {
-		createInfoWindow();
-	} else {
+	if (
+		getBuiltinExperimentState("nm_info_v2", config?.experiments ?? {}) === "on"
+	) {
 		createInfoV2Window();
+	} else {
+		createInfoWindow();
 	}
 }
 

@@ -142,7 +142,8 @@
 			"search": "Поиск экспериментов…",
 			"name": "Название эксперимента",
 			"requiredBy": "Требуется аддоном {addonName}",
-			"blockedBy": "Заблокировано — experiments.override активен в {addonName}"
+			"blockedBy": "Заблокировано — experiments.override активен в {addonName}",
+			"builtin": "Встроенный эксперимент Next Music"
 		}
 	}
 }
