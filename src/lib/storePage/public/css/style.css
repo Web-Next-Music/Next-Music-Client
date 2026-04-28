@@ -1,3 +1,5 @@
+@import url("/assets/fonts/local-fonts.css");
+
 :root {
 	--bg: var(--ym-background-color-primary-enabled-basic);
 	--sur: var(--ym-background-color-primary-enabled-content);
@@ -783,7 +785,7 @@ main {
 	color: #0a0a0f;
 	font-family: "Syne", "Science Gothic", sans-serif;
 	font-size: 0.76rem;
-	font-weight: 800;
+	font-weight: 700;
 	cursor: pointer;
 	transition:
 		opacity 0.2s,

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap");
+@import url("../../assets/fonts/local-fonts.css");
 
 $accent-color: #29f1e8;
 $bg-color: #010409;
@@ -64,7 +64,7 @@ body {
 .nm_title {
 	font-family: $font-heading-large;
 	font-weight: 750;
-	font-size: 16px;
+	font-size: 17px;
 	color: $text-color;
 }
 
@@ -267,7 +267,6 @@ body {
 	height: 100%;
 	color: $text-color;
 	font-size: 17px;
-	font-weight: 600;
 	flex: 1 1 calc(50% - 10px);
 	font-family: $font-heading-large;
 	font-weight: 700;

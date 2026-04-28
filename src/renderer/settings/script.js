@@ -1,3 +1,5 @@
+import "./style.scss";
+
 // Utils
 function getPath(obj, path) {
 	return path.split(".").reduce((o, k) => (o != null ? o[k] : undefined), obj);

@@ -1,12 +1,11 @@
 import { BrowserWindow, ipcMain, shell, app } from "electron";
-import { fileURLToPath } from "url";
-import path from "path";
-import { rendererRoot } from "../../rendererPath.js";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, updateConfig } from "../../configManager.js";
 import { getAddonExperimentOverrides } from "../../addonExperiments.js";
 import { getBuiltinExperiments } from "../../builtinExperiments.js";
-import { getPaths } from "../../../config.js";
+import { getPaths, isDev, devUrl } from "../../../config.js";
+import { fileURLToPath } from "url";
+import path from "path";
 
 import {
 	loadLanguage,
@@ -52,7 +51,13 @@ export function createSettingsWindow() {
 		},
 	});
 
-	settingsWindow.loadFile(path.join(rendererRoot, "settings/index.html"));
+	if (isDev) {
+		settingsWindow.loadURL(`${devUrl}/src/renderer/settings/index.html`);
+	} else {
+		settingsWindow.loadFile(
+			path.join(__dirname, "../../../renderer/settings/index.html"),
+		);
+	}
 
 	settingsWindow.once("ready-to-show", () => settingsWindow.show());
 

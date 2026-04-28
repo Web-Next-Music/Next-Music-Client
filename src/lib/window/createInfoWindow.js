@@ -1,7 +1,9 @@
 import { BrowserWindow, nativeImage } from "electron";
 import { trayIconPath } from "../../config.js";
+import { fileURLToPath } from "url";
 import path from "path";
-import { rendererRoot } from "../rendererPath.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const trayIcon = nativeImage
 	.createFromPath(trayIconPath)
@@ -10,11 +12,10 @@ const trayIcon = nativeImage
 let infoWindow = null;
 
 export function createInfoWindow() {
-	if (infoWindow) {
+	if (infoWindow && !infoWindow.isDestroyed()) {
 		infoWindow.focus();
 		return;
 	}
-
 	infoWindow = new BrowserWindow({
 		width: 585,
 		height: 360,
@@ -30,7 +31,7 @@ export function createInfoWindow() {
 		},
 	});
 
-	infoWindow.loadFile(path.join(rendererRoot, "info/info.html"));
+	infoWindow.loadFile(path.join(__dirname, "../../renderer/info/info.html"));
 	infoWindow.setMenu(null);
 	infoWindow.on("closed", () => {
 		infoWindow = null;

@@ -1,9 +1,9 @@
 import { BrowserWindow } from "electron";
-import { appIcon } from "../../config.js";
+import { appIcon, isDev, devUrl } from "../../config.js";
+import { fileURLToPath } from "url";
 import path from "path";
-import { rendererRoot } from "../rendererPath.js";
 
-const loaderPath = path.join(rendererRoot, "loader/loader.html");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let loaderWindow;
 
@@ -22,6 +22,13 @@ export function createLoaderWindow() {
 		icon: appIcon,
 	});
 
-	loaderWindow.loadURL(`file://${loaderPath}`);
+	if (isDev) {
+		loaderWindow.loadURL(`${devUrl}/src/renderer/loader/index.html`);
+	} else {
+		loaderWindow.loadFile(
+			path.join(__dirname, "../../renderer/loader/index.html"),
+		);
+	}
+
 	return loaderWindow;
 }

@@ -4,15 +4,14 @@ import { applyAddons } from "../../loadAddons.js";
 import { mergeAddonExperiments } from "../../addonExperiments.js";
 import { resolveBuiltinExperiments } from "../../builtinExperiments.js";
 import { appIcon } from "../../../config.js";
-import injector from "../../injector.js";
+import { fileURLToPath } from "url";
 import path from "path";
+import injector from "../../injector.js";
 import fs from "fs";
-import { rendererRoot } from "../../rendererPath.js";
 
 import pkg from "../../../../package.json" with { type: "json" };
 const CURRENT_VERSION = pkg.version;
 
-import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -169,7 +168,10 @@ export function createWindow(config) {
 		isMainFrame,
 	) {
 		if (isMainFrame) {
-			mainWindow.loadFile(path.join(rendererRoot, "fallback/fallback.html"));
+			mainWindow.loadFile(
+				__dirname,
+				"../../../renderer/fallback/fallback.html",
+			);
 		}
 	}
 

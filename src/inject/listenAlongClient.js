@@ -27,6 +27,12 @@
 	const CLIENT_ID = _qs.get("__clientId") || null;
 	const AVATAR_URL = _qs.get("__avatarUrl") || null;
 	const SYNC_THRESHOLD_SEC = 3;
+	const scriptSrc = document.currentScript?.src || "";
+	const fontBaseUrl = scriptSrc
+		? new URL("../assets/fonts/", scriptSrc).href
+		: "";
+	const nunito600Url = `${fontBaseUrl}nunito/XRXI3I6Li01BKofiOc5wtlZ2di8HDGUmRTM.ttf`;
+	const nunito700Url = `${fontBaseUrl}nunito/XRXI3I6Li01BKofiOc5wtlZ2di8HDFwmRTM.ttf`;
 
 	let wss = null;
 	let serverName = null;
@@ -86,7 +92,21 @@
 		const s = document.createElement("style");
 		s.id = "__li_styles__";
 		s.textContent = `
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
+        @font-face {
+            font-family: "Nunito";
+            font-style: normal;
+            font-weight: 600;
+            font-display: swap;
+            src: url("${nunito600Url}") format("truetype");
+        }
+
+        @font-face {
+            font-family: "Nunito";
+            font-style: normal;
+            font-weight: 700;
+            font-display: swap;
+            src: url("${nunito700Url}") format("truetype");
+        }
 
         #__li_island__ {
             position: fixed;

@@ -1,13 +1,27 @@
 import { BrowserWindow, nativeImage, ipcMain } from "electron";
 import { getCurrentVersionWV } from "../../lib/getAppVersion.js";
-import { trayIconPath, getPaths } from "../../config.js";
+import { trayIconPath, getPaths, isDev, devUrl } from "../../config.js";
 import { getConfig } from "../../lib/configManager.js";
+import { fileURLToPath } from "url";
 import path from "path";
-import { rendererRoot } from "../rendererPath.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (!ipcMain.listenerCount("get-app-version")) {
 	ipcMain.on("get-app-version", (event) => {
 		event.returnValue = getCurrentVersionWV();
+	});
+}
+
+if (!ipcMain.listenerCount("info-v2:get-init-data")) {
+	ipcMain.handle("info-v2:get-init-data", () => {
+		const { languagesDirectory } = getPaths();
+		const langCode = getConfig().programSettings?.language ?? "en";
+
+		return {
+			languagesDirectory,
+			langCode,
+		};
 	});
 }
 
@@ -40,19 +54,15 @@ export function createInfoV2Window() {
 		},
 	});
 
-	infoWindow.loadFile(path.join(rendererRoot, "info_v2/index.html"));
+	if (isDev) {
+		infoWindow.loadURL(`${devUrl}/src/renderer/info_v2/index.html`);
+	} else {
+		infoWindow.loadFile(
+			path.join(__dirname, "../../renderer/info_v2/index.html"),
+		);
+	}
 
 	infoWindow.setMenu(null);
-
-	infoWindow.webContents.on("did-finish-load", () => {
-		const { languagesDirectory } = getPaths();
-		const langCode = getConfig().programSettings?.language ?? "en";
-
-		infoWindow.webContents.send("init-lang", {
-			languagesDirectory,
-			langCode,
-		});
-	});
 
 	infoWindow.on("closed", () => {
 		infoWindow = null;

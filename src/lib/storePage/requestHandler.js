@@ -76,7 +76,23 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 		".html": "text/html; charset=utf-8",
 		".css": "text/css",
 		".js": "application/javascript",
+		".ttf": "font/ttf",
 	};
+
+	if (method === "GET" && urlPath.startsWith("/assets/fonts/")) {
+		const fontsDir = path.resolve(PUBLIC_DIR, "../../../assets/fonts");
+		const filePath = path.join(fontsDir, urlPath.slice("/assets/fonts/".length));
+
+		if (fs.existsSync(filePath)) {
+			const ext = path.extname(filePath).toLowerCase();
+			return binary(
+				fs.readFileSync(filePath),
+				MIME[ext] || "application/octet-stream",
+			);
+		}
+
+		return notFound();
+	}
 
 	if (method === "GET" && urlPath.startsWith("/public/")) {
 		const filePath = path.join(PUBLIC_DIR, urlPath.slice("/public/".length));
