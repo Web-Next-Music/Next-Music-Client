@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 
 export const isDev = !app.isPackaged;
-export const devUrl = "http://localhost:5173";
+export const devUrl = "http://localhost:6788";
 export const APPNAME = `next-music`;
 
 // App name
