@@ -10,8 +10,21 @@ body {
 	font-family: "Noto Sans", sans-serif;
 }
 
+.loader_wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 50px;
+	width: 240px;
+	height: 280px;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
 .next_icon {
-	position: fixed;
 	width: 100px;
 	height: 100px;
 	background-image: url("../../assets/nm-icons/icon-256.png");
@@ -33,7 +46,6 @@ body {
 }
 
 .loading_spinner {
-	position: fixed;
 	width: 36px;
 	height: 36px;
 	bottom: 18%;
