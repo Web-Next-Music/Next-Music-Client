@@ -100,7 +100,7 @@ function updateActivity(data, config) {
 		largeImageUrl: GITHUB_LINK,
 		statusDisplayType: 1,
 		instance: false,
-		...(trackUrl ? { detailsUrl: trackUrl } : {}),
+		...(trackUrl ? (isUGCTrack ? {} : { detailsUrl: trackUrl }) : {}),
 		...(artistUrl ? { stateUrl: artistUrl } : {}),
 		...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
 		buttons: [
