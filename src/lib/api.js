@@ -11,6 +11,45 @@
 	]);
 	webpackGlobal.pop();
 
+	// FileInfo патч для отслеживания MP3 URL
+	let _lastMp3Url = null;
+
+	function patchFileInfo() {
+		const moduleMap = appRequire?.m;
+		if (!moduleMap) return;
+
+		for (const moduleId of Object.keys(moduleMap)) {
+			try {
+				const mod = appRequire(moduleId);
+				const proto = mod?.v?.prototype;
+				if (!proto?.getFileInfo || !proto?.getFileInfoBatch) continue;
+
+				console.log("[nextmusicApi] Patching FileInfo module:", moduleId);
+
+				const origGetFileInfo = proto.getFileInfo;
+				const origGetFileInfoBatch = proto.getFileInfoBatch;
+
+				proto.getFileInfo = async function (...args) {
+					const result = await origGetFileInfo.call(this, ...args);
+					const url = result?.downloadInfo?.url;
+					if (url) _lastMp3Url = url;
+					return result;
+				};
+
+				proto.getFileInfoBatch = async function (...args) {
+					const result = await origGetFileInfoBatch.call(this, ...args);
+					const url = result?.downloadInfos?.[0]?.url;
+					if (url) _lastMp3Url = url;
+					return result;
+				};
+
+				break;
+			} catch {}
+		}
+	}
+
+	patchFileInfo();
+
 	const VE = appRequire(46663).VE;
 	const found = [];
 
@@ -118,6 +157,10 @@
 	}
 
 	window.nextmusicApi = {
+		getCurrentMp3Url() {
+			return _lastMp3Url;
+		},
+
 		async downloadAsset(url, fileName, addonName) {
 			const port = window.__nextmusicApiAssetPort ?? 2007;
 
@@ -185,35 +228,27 @@
 		setSpeed(speed) {
 			getMainPlayer()?.setSpeed(speed);
 		},
-
 		setProgress(progress) {
 			getMainPlayer()?.setProgress(progress);
 		},
-
 		setVolume(volume) {
 			getMainPlayer()?.setVolume(volume);
 		},
-
 		play() {
 			getMainPlayer()?.play();
 		},
-
 		pause() {
 			getMainPlayer()?.pause();
 		},
-
 		resume() {
 			getMainPlayer()?.resume();
 		},
-
 		togglePause() {
 			getMainPlayer()?.togglePause();
 		},
-
 		next() {
 			getMainPlayer()?.moveForward();
 		},
-
 		prev() {
 			getMainPlayer()?.moveBackward();
 		},
