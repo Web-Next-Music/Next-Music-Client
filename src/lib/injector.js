@@ -11,7 +11,7 @@ export default function injector(mainWindow, config) {
 	try {
 		const isDev = __dirname.includes(path.sep + "src" + path.sep);
 		const injectDir = isDev
-			? path.resolve(__dirname, "../../dist/inject")
+			? path.resolve(__dirname, "../../src/inject")
 			: path.join(__dirname, "../inject");
 
 		for (const item of injectList) {
