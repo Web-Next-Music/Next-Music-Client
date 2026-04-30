@@ -11,6 +11,19 @@
 	]);
 	webpackGlobal.pop();
 
+	function findModuleExport(req, exportKey) {
+		const mods = req.m ?? {};
+		for (const id of Object.keys(mods)) {
+			try {
+				const m = req(id);
+				if (m && typeof m[exportKey] === "function") {
+					return m[exportKey];
+				}
+			} catch {}
+		}
+		return null;
+	}
+
 	// FileInfo патч для отслеживания MP3 URL
 	const _mp3UrlMap = new Map();
 
@@ -23,8 +36,6 @@
 				const mod = appRequire(moduleId);
 				const proto = mod?.v?.prototype;
 				if (!proto?.getFileInfo || !proto?.getFileInfoBatch) continue;
-
-				console.log("[nextmusicApi] Patching FileInfo module:", moduleId);
 
 				const origGetFileInfo = proto.getFileInfo;
 				const origGetFileInfoBatch = proto.getFileInfoBatch;
@@ -63,7 +74,7 @@
 
 	patchFileInfo();
 
-	const VE = appRequire(46663).VE;
+	const VE = findModuleExport(appRequire, "VE");
 	const found = [];
 
 	function searchFiber(fiber, cls, depth = 0) {
@@ -117,7 +128,7 @@
 
 		webpackGlobal.pop();
 
-		const VE = appRequire(46663).VE;
+		const VE = findModuleExport(appRequire, "VE");
 		const found = [];
 
 		function searchFiber(fiber, cls, depth = 0) {
