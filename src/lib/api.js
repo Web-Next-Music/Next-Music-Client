@@ -12,7 +12,7 @@
 	webpackGlobal.pop();
 
 	// FileInfo патч для отслеживания MP3 URL
-	let _lastMp3Url = null;
+	const _mp3UrlMap = new Map();
 
 	function patchFileInfo() {
 		const moduleMap = appRequire?.m;
@@ -31,15 +31,28 @@
 
 				proto.getFileInfo = async function (...args) {
 					const result = await origGetFileInfo.call(this, ...args);
+
 					const url = result?.downloadInfo?.url;
-					if (url) _lastMp3Url = url;
+					const id = result?.downloadInfo?.trackId || result?.trackId;
+
+					if (url && id) {
+						_mp3UrlMap.set(String(id), url);
+					}
+
 					return result;
 				};
 
 				proto.getFileInfoBatch = async function (...args) {
 					const result = await origGetFileInfoBatch.call(this, ...args);
-					const url = result?.downloadInfos?.[0]?.url;
-					if (url) _lastMp3Url = url;
+
+					const infos = result?.downloadInfos ?? [];
+
+					for (const info of infos) {
+						if (info?.url && info?.trackId) {
+							_mp3UrlMap.set(String(info.trackId), info.url);
+						}
+					}
+
 					return result;
 				};
 
@@ -158,7 +171,10 @@
 
 	window.nextmusicApi = {
 		getCurrentMp3Url() {
-			return _lastMp3Url;
+			const meta = getCurrentMeta();
+			if (!meta) return null;
+
+			return _mp3UrlMap.get(String(meta.id)) ?? null;
 		},
 
 		async downloadAsset(url, fileName, addonName) {
