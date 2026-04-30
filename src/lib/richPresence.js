@@ -79,6 +79,7 @@ function updateActivity(data, config) {
 	const img = data.img || "icon";
 	const trackUrl = `https://music.yandex.ru/track/${trackId}` || "";
 	const artistUrl = data.artistUrl || "";
+	const nmUGCPlayerUrl = data.nmUGCPlayerUrl || "";
 
 	const positionSec = data.positionSec ?? 0;
 	const durationSec = data.durationSec ?? 0;
@@ -87,6 +88,8 @@ function updateActivity(data, config) {
 	const now = Math.floor(Date.now() / 1000);
 	const startTimestamp = now - Math.floor(positionSec);
 	const endTimestamp = startTimestamp + Math.floor(durationSec);
+
+	const isUGCTrack = trackId.includes("-");
 
 	const activityObject = {
 		name: config?.programSettings?.richPresence?.rpcTitle || "Next Music",
@@ -104,8 +107,8 @@ function updateActivity(data, config) {
 			...(config?.programSettings?.richPresence?.buttons?.trackButton && trackId
 				? [
 						{
-							label: "Open in Yandex Music",
-							url: trackUrl,
+							label: isUGCTrack ? "Open in UGC Player" : "Open in Yandex Music",
+							url: isUGCTrack ? nmUGCPlayerUrl : trackUrl,
 						},
 					]
 				: []),

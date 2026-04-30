@@ -13,8 +13,6 @@
 	let lastSentData = null;
 	let lastPosition = null;
 
-	function log() {} // stub
-
 	function connect() {
 		ws = new WebSocket(WS_URL);
 
@@ -49,6 +47,9 @@
 			? `https://music.yandex.ru/artist/${track.artistIds[0]}`
 			: null;
 
+		const directMp3UGCLink = api.getCurrentMp3Url();
+		const nmUGCPlayerUrl = `https://nm.diram1x.ru/track?url=${directMp3UGCLink}&cover=${track.coverUrl}&artist=${artistsStr}&title=${track.title}`;
+
 		return {
 			trackId: track.id ?? null,
 			title: track.title ?? null,
@@ -59,6 +60,7 @@
 			positionSec: state.progress?.position ?? 0,
 			durationSec: (track.durationMs ?? 0) / 1000,
 			playerState: state.status ?? null,
+			nmUGCPlayerUrl: nmUGCPlayerUrl ?? null,
 		};
 	}
 
