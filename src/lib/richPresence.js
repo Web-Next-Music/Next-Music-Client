@@ -3,6 +3,7 @@ import WebSocket from "ws";
 
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
+const NM_WEBSITE_LINK = `https://nm.diram1x.ru`;
 const WSPORT = 6972;
 
 let rpc;
@@ -113,7 +114,7 @@ function updateActivity(data, config) {
 					]
 				: []),
 			...(config?.programSettings?.richPresence?.buttons?.githubButton
-				? [{ label: "Next Music Project", url: GITHUB_LINK }]
+				? [{ label: "Next Music Project", url: NM_WEBSITE_LINK }]
 				: []),
 		],
 	};
