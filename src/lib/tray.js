@@ -8,7 +8,7 @@ import {
 	ipcMain,
 } from "electron";
 import { checkForUpdates } from "../lib/updater.js";
-import { getCurrentVersion } from "./getAppVersion.js";
+import { getCurrentVersionWV } from "./getAppVersion.js";
 import { trayIconPath, getPaths } from "../config.js";
 import { getConfig } from "../lib/configManager.js";
 import { getBuiltinExperimentState } from "./builtinExperiments.js";
@@ -40,7 +40,7 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
 
 	return Menu.buildFromTemplate([
 		{
-			label: t("tray.appTitle", { version: getCurrentVersion() }),
+			label: t("tray.appTitle", { version: getCurrentVersionWV() }),
 			enabled: false,
 		},
 		{ type: "separator" },
