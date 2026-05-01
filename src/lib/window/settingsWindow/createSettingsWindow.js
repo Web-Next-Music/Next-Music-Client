@@ -32,8 +32,8 @@ export function createSettingsWindow() {
 	}
 
 	settingsWindow = new BrowserWindow({
-		width: 810,
-		height: 545,
+		width: 842,
+		height: 587,
 		minWidth: 560,
 		minHeight: 440,
 		frame: false,
