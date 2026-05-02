@@ -52,6 +52,7 @@ export const defaultConfig = {
 		checkUpdates: true,
 		obsWidget: false,
 		alwaysExpandedPlayer: false,
+		ugcShare: true,
 		disableAutoZoom: false,
 		antiSelect: false,
 		language: "en",
@@ -106,6 +107,10 @@ export const injectList = [
 	{
 		file: "siteRPCServer.js",
 		condition: (config) => config?.programSettings?.richPresence?.enable,
+	},
+	{
+		file: "ugcShare.js",
+		condition: (config) => config?.programSettings?.ugcShare,
 	},
 	{
 		file: "volumeNormalization.js",

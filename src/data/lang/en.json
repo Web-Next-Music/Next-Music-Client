@@ -114,7 +114,8 @@
 			"clientId": "Client ID",
 			"avatarUrl": "Avatar",
 			"antiSelect": "Anti-Select",
-			"experiments": "Experiments"
+			"experiments": "Experiments",
+			"ugcShare": "UGC Share"
 		},
 		"desc": {
 			"loaderWindow": "Show a loader window before the main window appears",
@@ -136,7 +137,8 @@
 			"roomId": "Room ID to connect to",
 			"clientId": "ID = client nickname",
 			"avatarUrl": "URL to the avatar image",
-			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics"
+			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics",
+			"ugcShare": "Allow UGC tracks to be shared"
 		},
 		"experiments": {
 			"search": "Search experiments…",

@@ -92,8 +92,25 @@ function updateActivity(data, config) {
 
 	const isUGCTrack = trackId.includes("-");
 
+	const { trackButton, githubButton } =
+		config?.programSettings?.richPresence?.buttons ?? {};
+
+	const isUGCShareEnabled = config?.programSettings?.ugcShare;
+	const rpcTitle = config?.programSettings?.richPresence?.rpcTitle;
+
+	const trackButtonLabel =
+		isUGCTrack && isUGCShareEnabled
+			? "Open in UGC Player"
+			: "Open in Yandex Music";
+
+	const trackButtonUrl =
+		isUGCTrack && isUGCShareEnabled ? nmUGCPlayerUrl : trackUrl;
+
+	const detailsUrlField =
+		trackUrl && !isUGCTrack ? { detailsUrl: trackUrl } : {};
+
 	const activityObject = {
-		name: config?.programSettings?.richPresence?.rpcTitle || "Next Music",
+		name: rpcTitle || "Next Music",
 		type: 2,
 		details: title,
 		state: artist,
@@ -101,19 +118,14 @@ function updateActivity(data, config) {
 		largeImageUrl: GITHUB_LINK,
 		statusDisplayType: 1,
 		instance: false,
-		...(trackUrl ? (isUGCTrack ? {} : { detailsUrl: trackUrl }) : {}),
+		...detailsUrlField,
 		...(artistUrl ? { stateUrl: artistUrl } : {}),
 		...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
 		buttons: [
-			...(config?.programSettings?.richPresence?.buttons?.trackButton && trackId
-				? [
-						{
-							label: isUGCTrack ? "Open in UGC Player" : "Open in Yandex Music",
-							url: isUGCTrack ? nmUGCPlayerUrl : trackUrl,
-						},
-					]
+			...(trackButton && trackId && (!isUGCTrack || isUGCShareEnabled)
+				? [{ label: trackButtonLabel, url: trackButtonUrl }]
 				: []),
-			...(config?.programSettings?.richPresence?.buttons?.githubButton
+			...(githubButton
 				? [{ label: "Next Music Project", url: NM_WEBSITE_LINK }]
 				: []),
 		],
