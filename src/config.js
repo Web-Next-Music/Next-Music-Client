@@ -50,6 +50,7 @@ export const defaultConfig = {
 			onlineScripts: [],
 		},
 		checkUpdates: true,
+		downloader: true,
 		obsWidget: false,
 		alwaysExpandedPlayer: false,
 		ugcShare: true,
@@ -83,6 +84,10 @@ export const injectList = [
 	{
 		file: "antiSelect.css",
 		condition: (config) => config?.programSettings?.antiSelect,
+	},
+	{
+		file: "downloader.js",
+		condition: (config) => config?.programSettings?.downloader,
 	},
 	{
 		file: "listenAlongClient.js",

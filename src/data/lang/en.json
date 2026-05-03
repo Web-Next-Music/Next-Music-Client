@@ -115,7 +115,8 @@
 			"avatarUrl": "Avatar",
 			"antiSelect": "Anti-Select",
 			"experiments": "Experiments",
-			"ugcShare": "UGC Share"
+			"ugcShare": "UGC Share",
+			"downloader": "Downloader"
 		},
 		"desc": {
 			"loaderWindow": "Show a loader window before the main window appears",
@@ -138,7 +139,8 @@
 			"clientId": "ID = client nickname",
 			"avatarUrl": "URL to the avatar image",
 			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics",
-			"ugcShare": "Allow UGC tracks to be shared"
+			"ugcShare": "Allow UGC tracks to be shared",
+			"downloader": "Allows downloading tracks"
 		},
 		"experiments": {
 			"search": "Search experiments…",
