@@ -261,6 +261,7 @@
 	// FileInfo patch
 
 	const _mp3UrlMap = new Map();
+	const _mp3KeyMap = new Map(); // AES-128-CTR key hex per trackId
 
 	function patchFileInfo() {
 		const moduleMap = appRequire?.m;
@@ -277,17 +278,23 @@
 
 				proto.getFileInfo = async function (...args) {
 					const result = await origGetFileInfo.call(this, ...args);
-					const url = result?.downloadInfo?.url;
-					const id = result?.downloadInfo?.trackId || result?.trackId;
-					if (url && id) _mp3UrlMap.set(String(id), url);
+					const di = result?.downloadInfo;
+					const id = di?.trackId || result?.trackId;
+					if (di?.url && id) {
+						_mp3UrlMap.set(String(id), di.url);
+						// Capture AES key while it's still present (before FckCensor clears it)
+						_mp3KeyMap.set(String(id), di.key ?? "");
+					}
 					return result;
 				};
 
 				proto.getFileInfoBatch = async function (...args) {
 					const result = await origGetFileInfoBatch.call(this, ...args);
 					for (const info of result?.downloadInfos ?? []) {
-						if (info?.url && info?.trackId)
+						if (info?.url && info?.trackId) {
 							_mp3UrlMap.set(String(info.trackId), info.url);
+							_mp3KeyMap.set(String(info.trackId), info.key ?? "");
+						}
 					}
 					return result;
 				};
@@ -420,6 +427,12 @@
 			const meta = getCurrentMeta();
 			if (!meta) return null;
 			return _mp3UrlMap.get(String(meta.id)) ?? null;
+		},
+
+		getCurrentTrackKey() {
+			const meta = getCurrentMeta();
+			if (!meta) return "";
+			return _mp3KeyMap.get(String(meta.id)) ?? "";
 		},
 
 		async downloadAsset(url, fileName, addonName) {
