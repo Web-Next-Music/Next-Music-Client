@@ -1,5 +1,3 @@
-@import url("/assets/fonts/local-fonts.css");
-
 :root {
 	--bg: var(--ym-background-color-primary-enabled-basic);
 	--sur: var(--ym-background-color-primary-enabled-content);
