@@ -103,12 +103,13 @@ function updateActivity(data, config) {
 	const rpcTitle = userHasStarred ? rpcTitleRaw : null;
 
 	if (rpcTitleRaw && !userHasStarred) {
-		console.log("[RPC] rpcTitle ignored — user has not starred the repo.");
+		console.log("[RPC] rpcTitle ignored — user has not starred the repo");
 	}
 
-	const configLargeImageUrl = config?.programSettings?.richPresence?.largeImageUrl;
+	const configLargeImageUrl =
+		config?.programSettings?.richPresence?.largeImageUrl;
 	const resolvedLargeImageUrl = userHasStarred
-		? (configLargeImageUrl || undefined)
+		? configLargeImageUrl || undefined
 		: GITHUB_LINK;
 
 	const trackButtonLabel =
@@ -130,7 +131,7 @@ function updateActivity(data, config) {
 	}
 
 	if (githubButton && !userHasStarred) {
-		console.log("[RPC] GitHub button ignored — user has not starred the repo.");
+		console.log("[RPC] GitHub button ignored — user has not starred the repo");
 	}
 
 	const activityObject = {

@@ -117,8 +117,7 @@
 	font-weight: 700;
 	letter-spacing: 0.2em;
 	color: $accent;
-	user-select: text;
-	-webkit-user-select: text;
+	user-select: all;
 }
 
 .gh-device-timer {

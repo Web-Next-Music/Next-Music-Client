@@ -107,7 +107,7 @@ export async function checkGitHubStar() {
 	const accessToken = config.github?.accessToken ?? null;
 
 	if (!accessToken) {
-		console.log("[GitHub Auth] No token found.");
+		console.log("[GitHub Auth] No token found");
 		return { hasStarred: false };
 	}
 
