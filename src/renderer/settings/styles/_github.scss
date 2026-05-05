@@ -1,0 +1,128 @@
+@use "variables" as *;
+
+.star-gate-blocked {
+	opacity: 0.4;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.star-gate-notice {
+	margin-top: 3px;
+	font-size: 10px;
+	color: #e3a000;
+	line-height: 1.3;
+}
+
+.gh-star-block {
+	margin-bottom: 16px;
+	padding: 14px;
+	border: 1px solid $line;
+	border-radius: $r;
+	background: $bg;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.gh-star-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.gh-star-icon {
+	color: $muted;
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.gh-star-title {
+	font-size: 13px;
+	font-weight: 500;
+	color: $text;
+	flex: 1;
+}
+
+.gh-star-badge {
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: 20px;
+	background: rgba($muted, 0.12);
+	color: $muted;
+	border: 1px solid $line;
+	white-space: nowrap;
+
+	&--ok {
+		background: rgba(#2bfe8f, 0.1);
+		color: #2bfe8f;
+		border-color: rgba(#2bfe8f, 0.25);
+	}
+}
+
+.gh-star-desc {
+	font-size: 11px;
+	color: $muted;
+	line-height: 1.5;
+}
+
+.gh-star-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.gh-star-error {
+	font-size: 11px;
+	color: $danger;
+}
+
+.gh-star-connect-btn {
+	background: rgba($accent, 0.08);
+	border-color: rgba($accent, 0.3);
+	color: $accent;
+
+	&:hover:not(:disabled) {
+		background: rgba($accent, 0.15);
+	}
+}
+
+.gh-star-disconnect-btn {
+	color: $danger;
+	border-color: rgba($danger, 0.3);
+
+	&:hover:not(:disabled) {
+		background: rgba($danger, 0.08);
+	}
+}
+
+.gh-device-area {
+	background: rgba($accent, 0.04);
+	border: 1px solid rgba($accent, 0.15);
+	border-radius: $r - 2px;
+	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.gh-device-instr {
+	font-size: 11px;
+	color: $muted;
+}
+
+.gh-device-code {
+	font-size: 20px;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+	color: $accent;
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+.gh-device-timer {
+	font-size: 11px;
+	color: $muted;
+	font-variant-numeric: tabular-nums;
+}

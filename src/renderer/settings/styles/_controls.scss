@@ -1,0 +1,367 @@
+@use "variables" as *;
+
+.sec-title {
+	font-family: $font-heading-large;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.15em;
+	text-transform: uppercase;
+	color: $muted;
+	margin: 18px 0 10px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid $line;
+
+	&:first-child {
+		margin-top: 0;
+	}
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 9px 13px;
+	background: $bg2;
+	border: 1px solid $line;
+	border-radius: $r;
+	margin-bottom: 5px;
+	gap: 12px;
+	transition:
+		border-color 0.15s,
+		background 0.15s;
+
+	&:hover {
+		background: $bg2;
+		border-color: $dim-accent;
+	}
+
+	&.col {
+		flex-direction: column;
+		align-items: stretch;
+	}
+}
+
+.lbl {
+	flex: 1;
+	min-width: 0;
+}
+
+.lbl-name {
+	font-family: $font-heading-large;
+	font-weight: 600;
+	font-size: 12px;
+	color: $text;
+	margin-bottom: 2px;
+}
+
+.lbl-desc {
+	font-size: 11px;
+	color: $muted;
+	line-height: 1.4;
+	margin-top: 2px;
+}
+
+.toggle {
+	position: relative;
+	width: 36px;
+	height: 20px;
+	flex-shrink: 0;
+
+	input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+
+		&:checked + .t-track {
+			background: $dim-accent;
+			border-color: $accent;
+
+			&::after {
+				left: 19px;
+				background: $accent;
+			}
+		}
+	}
+}
+
+.t-track {
+	position: absolute;
+	inset: 0;
+	background: $bg2;
+	border: 1px solid $line;
+	border-radius: 10px;
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		border-color 0.2s;
+
+	&::after {
+		content: "";
+		position: absolute;
+		left: 3px;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: $muted;
+		transition:
+			left 0.2s,
+			background 0.2s;
+	}
+}
+
+.inp {
+	background: $bg;
+	border: 1px solid $line;
+	border-radius: $r;
+	color: $text;
+	font-size: 12px;
+	padding: 5px 9px;
+	outline: none;
+	transition: border-color 0.15s;
+	width: 160px;
+	font-family: $font-base;
+
+	&:focus {
+		border-color: $accent;
+	}
+
+	&.sm {
+		width: 80px;
+	}
+
+	&.num {
+		width: 80px;
+
+		&::-webkit-outer-spin-button,
+		&::-webkit-inner-spin-button {
+			-webkit-appearance: none;
+		}
+	}
+}
+
+.sel {
+	font-family: $font-base;
+	background: $bg;
+	border: 1px solid $line;
+	border-radius: $r;
+	color: $text;
+	font-size: 12px;
+	padding: 5px 28px 5px 9px;
+	outline: none;
+	cursor: pointer;
+	appearance: none;
+	-webkit-appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6b80' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 8px center;
+	transition: border-color 0.15s;
+	min-width: 120px;
+
+	&:focus {
+		border-color: $accent;
+	}
+
+	option {
+		background: #1a1a20;
+	}
+}
+
+.ta {
+	font-family: $font-base;
+	background: $bg;
+	border: 1px solid $line;
+	border-radius: $r;
+	color: $text;
+	font-size: 11px;
+	padding: 8px 10px;
+	resize: vertical;
+	outline: none;
+	width: 100%;
+	line-height: 1.6;
+	transition: border-color 0.15s;
+	min-height: 80px;
+
+	&:focus {
+		border-color: $accent;
+	}
+}
+
+.btn {
+	padding: 5px 13px;
+	border-radius: $r;
+	font-family: $font-heading-large;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	cursor: pointer;
+	border: 1px solid $line;
+	background: $bg2;
+	color: $text;
+	transition: all 0.15s;
+
+	&:hover {
+		background: $bg2;
+		border-color: $muted;
+	}
+}
+
+.group-card {
+	border: 1px solid $line;
+	border-radius: $r;
+	margin-bottom: 5px;
+	overflow: hidden;
+
+	&.deep {
+		border-color: $bg2;
+
+		.group-card-head {
+			background: $bg2;
+			border-bottom-color: $bg2;
+		}
+	}
+}
+
+.group-card-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 7px 13px;
+	background: $bg2;
+	border-bottom: 1px solid $line;
+}
+
+.group-head-toggle {
+	flex-shrink: 0;
+	margin-left: auto;
+}
+
+.group-card-title {
+	font-family: $font-heading-large;
+	font-weight: 700;
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: $muted;
+}
+
+.group-card-body {
+	padding: 6px 8px;
+	background: $bg2;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+
+	.row {
+		border-radius: 4px;
+		border-color: transparent;
+		background: transparent;
+
+		&:hover {
+			background: $bg2;
+			border-color: $line;
+		}
+	}
+}
+
+.divider {
+	height: 1px;
+	background: $line;
+	margin: 14px 0;
+}
+
+.save-restart-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 0 8px;
+	padding: 7px 13px;
+	border-radius: $r;
+	font-family: $font-heading-large;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	cursor: pointer;
+	border: 1px solid $accent;
+	background: $dim-accent;
+	color: $accent;
+	transition:
+		opacity 0.2s,
+		transform 0.2s,
+		background 0.15s;
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(-4px);
+	flex-shrink: 0;
+
+	&.visible {
+		opacity: 1;
+		pointer-events: auto;
+		transform: translateY(0);
+	}
+
+	&:hover {
+		background: $accent-gradient;
+	}
+}
+
+.sec-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 18px 0 10px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid $line;
+	padding: 0 13px 10px 10px;
+
+	&:first-child {
+		margin-top: 0;
+	}
+}
+
+.sec-title-label {
+	font-family: $font-heading-large;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.15em;
+	text-transform: uppercase;
+	color: $muted;
+}
+
+.sec-body-wrap,
+.group-card-body {
+	transition: opacity 0.2s ease;
+}
+
+.group-body--disabled {
+	opacity: 0.5;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.star-project-btn {
+	display: block;
+	width: 100%;
+	margin-bottom: 6px;
+	padding: 7px 10px;
+	border-radius: $r;
+	border: 1px solid rgba(#e3a000, 0.35);
+	background: rgba(#e3a000, 0.07);
+	color: #e3a000;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	text-align: center;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
+
+	&:hover {
+		background: rgba(#e3a000, 0.14);
+		border-color: rgba(#e3a000, 0.5);
+	}
+}
