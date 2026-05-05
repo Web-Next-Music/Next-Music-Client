@@ -12,6 +12,9 @@ let lastActivity = null;
 let lastPlayerState = null;
 let globalConfig = null;
 
+// Star flag
+let userHasStarred = false;
+
 let lastRawData = null;
 
 function initRPC() {
@@ -38,7 +41,6 @@ const wss = new WebSocket.Server({ port: WSPORT }, () =>
 	console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 );
 
-// Broadcast raw to all site clients
 function broadcastToSiteClients(data, sender) {
 	const msg = JSON.stringify(data);
 
@@ -96,7 +98,13 @@ function updateActivity(data, config) {
 		config?.programSettings?.richPresence?.buttons ?? {};
 
 	const isUGCShareEnabled = config?.programSettings?.ugcShare;
-	const rpcTitle = config?.programSettings?.richPresence?.rpcTitle;
+
+	const rpcTitleRaw = config?.programSettings?.richPresence?.rpcTitle;
+	const rpcTitle = userHasStarred ? rpcTitleRaw : null;
+
+	if (rpcTitleRaw && !userHasStarred) {
+		console.log("[RPC] rpcTitle ignored — user has not starred the repo.");
+	}
 
 	const trackButtonLabel =
 		isUGCTrack && isUGCShareEnabled
@@ -108,6 +116,17 @@ function updateActivity(data, config) {
 
 	const detailsUrlField =
 		trackUrl && !isUGCTrack ? { detailsUrl: trackUrl } : {};
+
+	let showGithubButton;
+	if (!userHasStarred) {
+		showGithubButton = true;
+	} else {
+		showGithubButton = githubButton;
+	}
+
+	if (githubButton && !userHasStarred) {
+		console.log("[RPC] GitHub button ignored — user has not starred the repo.");
+	}
 
 	const activityObject = {
 		name: rpcTitle || "Next Music",
@@ -125,7 +144,7 @@ function updateActivity(data, config) {
 			...(trackButton && trackId && (!isUGCTrack || isUGCShareEnabled)
 				? [{ label: trackButtonLabel, url: trackButtonUrl }]
 				: []),
-			...(githubButton
+			...(showGithubButton
 				? [{ label: "Next Music Project", url: NM_WEBSITE_LINK }]
 				: []),
 		],
@@ -172,9 +191,14 @@ function updateActivity(data, config) {
 	}
 }
 
-// Initialize Discord RPC if enabled
-function presenceService(config) {
+function presenceService(config, hasStarred = false) {
 	globalConfig = config;
+	userHasStarred = hasStarred;
+
+	console.log(
+		`[RPC] Repo star: ${userHasStarred ? "✔ premium features enabled" : "❌ premium features disabled"}`,
+	);
+
 	initRPC();
 }
 

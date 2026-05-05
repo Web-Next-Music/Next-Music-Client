@@ -97,6 +97,7 @@ function buildSchema() {
 
 	for (const [tabKey, tabVal] of Object.entries(CONFIG)) {
 		if (tabKey === "experiments") continue;
+		if (tabKey === "github") continue; // managed internally, never shown in UI
 		if (typeof tabVal !== "object" || Array.isArray(tabVal) || tabVal === null)
 			continue;
 
@@ -499,16 +500,52 @@ function renderexperimentsPanel(panel) {
 	});
 }
 
-// UI builder — remembers active tab across rebuilds
+// UI builder
 const langSelects = [];
 let _activeTab = null;
+
+// GitHub star — live-checked via IPC
+let HAS_STARRED = false;
+
+// Paths that require a GitHub star to edit
+const STAR_GATED_PATHS = [
+	"programSettings.richPresence.rpcTitle",
+	"programSettings.richPresence.buttons.githubButton",
+];
+
+function isStarGated(path) {
+	return STAR_GATED_PATHS.some(
+		(gated) => path === gated || path.startsWith(gated + "."),
+	);
+}
+
+function maybeGate(element, path) {
+	if (HAS_STARRED || !isStarGated(path)) return element;
+
+	element.querySelectorAll("input, select, textarea, button").forEach((el) => {
+		el.disabled = true;
+	});
+	const control = element.querySelector(
+		"label.toggle, input.inp, select.sel, textarea.ta",
+	);
+	if (control) control.classList.add("star-gate-blocked");
+
+	const lbl = element.querySelector(".lbl");
+	if (lbl) {
+		const notice = document.createElement("div");
+		notice.className = "star-gate-notice";
+		notice.textContent = t("settings.starGate");
+		lbl.append(notice);
+	}
+
+	return element;
+}
 
 function renderNodes(nodes, container, depth) {
 	depth = depth || 0;
 	let lastKind = null;
 
 	nodes.forEach((node) => {
-		// Divider only when coming out of groups back to flat fields
 		if (lastKind === "group" && node.kind === "field") {
 			const hr = document.createElement("div");
 			hr.className = "divider";
@@ -518,7 +555,7 @@ function renderNodes(nodes, container, depth) {
 
 		if (node.kind === "field") {
 			const { row, control } = mkRow(node);
-			container.append(row);
+			container.append(maybeGate(row, node.path));
 			if (node.type === "select" && node.path.endsWith("language")) {
 				langSelects.push(control);
 			}
@@ -615,6 +652,136 @@ function renderNodes(nodes, container, depth) {
 	});
 }
 
+// GitHub Star block
+
+function buildGitHubStarBlock() {
+	const hasStarred = HAS_STARRED;
+	const hasToken = !!CONFIG?.github?.accessToken;
+
+	const wrap = document.createElement("div");
+	wrap.className = "gh-star-block";
+
+	const header = document.createElement("div");
+	header.className = "gh-star-header";
+
+	const icon = document.createElement("span");
+	icon.className = "gh-star-icon";
+	icon.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`;
+
+	const title = document.createElement("span");
+	title.className = "gh-star-title";
+	title.textContent = t("settings.github.title");
+
+	const badge = document.createElement("span");
+	badge.className = "gh-star-badge" + (hasStarred ? " gh-star-badge--ok" : "");
+	badge.textContent = hasStarred
+		? t("settings.github.starred")
+		: t("settings.github.notStarred");
+
+	header.append(icon, title, badge);
+	wrap.append(header);
+
+	const desc = document.createElement("div");
+	desc.className = "gh-star-desc";
+	desc.textContent = t("settings.github.desc");
+	wrap.append(desc);
+
+	const deviceArea = document.createElement("div");
+	deviceArea.className = "gh-device-area";
+	deviceArea.hidden = true;
+
+	const deviceInstr = document.createElement("div");
+	deviceInstr.className = "gh-device-instr";
+	deviceInstr.textContent = t("settings.github.deviceInstr");
+	const deviceCode = document.createElement("div");
+	deviceCode.className = "gh-device-code";
+	const deviceTimer = document.createElement("div");
+	deviceTimer.className = "gh-device-timer";
+
+	deviceArea.append(deviceInstr, deviceCode, deviceTimer);
+	wrap.append(deviceArea);
+
+	const errLine = document.createElement("div");
+	errLine.className = "gh-star-error";
+	errLine.hidden = true;
+	wrap.append(errLine);
+
+	const actRow = document.createElement("div");
+	actRow.className = "gh-star-actions";
+
+	async function doConnect() {
+		actRow.querySelectorAll("button").forEach((b) => (b.disabled = true));
+		deviceArea.hidden = true;
+		errLine.hidden = true;
+		deviceCode.textContent = "…";
+		deviceTimer.textContent = "";
+
+		const unsubCode = window.electronAPI?.onGitHubDeviceCode?.((info) => {
+			deviceArea.hidden = false;
+			deviceCode.textContent = info.userCode;
+			deviceTimer.textContent = `${info.expiresIn}s`;
+		});
+		const unsubProgress = window.electronAPI?.onGitHubDeviceProgress?.(
+			(secondsLeft) => {
+				deviceTimer.textContent = `${secondsLeft}s`;
+			},
+		);
+
+		const result = await window.electronAPI?.connectGitHub?.();
+
+		unsubCode?.();
+		unsubProgress?.();
+		deviceArea.hidden = true;
+		actRow.querySelectorAll("button").forEach((b) => (b.disabled = false));
+
+		if (result?.error) {
+			errLine.textContent = result.error;
+			errLine.hidden = false;
+			return;
+		}
+
+		if (!CONFIG.github) CONFIG.github = {};
+		HAS_STARRED = result?.hasStarred ?? false;
+		CONFIG.github.accessToken = "__has_token__";
+		refresh();
+	}
+
+	async function doDisconnect() {
+		actRow.querySelectorAll("button").forEach((b) => (b.disabled = true));
+		await window.electronAPI?.disconnectGitHub?.();
+
+		if (!CONFIG.github) CONFIG.github = {};
+		HAS_STARRED = false;
+		CONFIG.github.accessToken = null;
+
+		// Full refresh so gate overlays on rpcTitle/githubButton apply immediately
+		refresh();
+	}
+
+	if (!hasToken) {
+		const connectBtn = document.createElement("button");
+		connectBtn.className = "btn gh-star-connect-btn";
+		connectBtn.textContent = t("settings.github.connect");
+		connectBtn.addEventListener("click", doConnect);
+		actRow.append(connectBtn);
+	} else {
+		const recheckBtn = document.createElement("button");
+		recheckBtn.className = "btn";
+		recheckBtn.textContent = t("settings.github.recheck");
+		recheckBtn.addEventListener("click", doConnect);
+
+		const disconnectBtn = document.createElement("button");
+		disconnectBtn.className = "btn gh-star-disconnect-btn";
+		disconnectBtn.textContent = t("settings.github.disconnect");
+		disconnectBtn.addEventListener("click", doDisconnect);
+
+		actRow.append(recheckBtn, disconnectBtn);
+	}
+
+	wrap.append(actRow);
+	return wrap;
+}
+
 function buildUI() {
 	const sidebar = document.getElementById("sidebar-nav");
 	const content = document.getElementById("content");
@@ -634,10 +801,13 @@ function buildUI() {
 		_activeTab = tabs.length ? tabs[0].key : "experiments";
 	}
 
-	// Save & Restart button — rendered into sidebar-footer, above version info
+	// Save & Restart
 	const sidebarFooter = document.getElementById("sidebar-footer");
 	const existingSaveBtn = document.getElementById("save-restart-btn");
 	if (existingSaveBtn) existingSaveBtn.remove();
+	const existingStarBtn = document.getElementById("star-project-btn");
+	if (existingStarBtn) existingStarBtn.remove();
+
 	const saveBtn = document.createElement("button");
 	saveBtn.id = "save-restart-btn";
 	saveBtn.className =
@@ -650,6 +820,22 @@ function buildUI() {
 		_hasPendingChanges = false;
 		window.electronAPI?.restartApp?.();
 	});
+
+	// Star Project
+	if (!HAS_STARRED) {
+		const starBtn = document.createElement("button");
+		starBtn.id = "star-project-btn";
+		starBtn.className = "star-project-btn";
+		starBtn.dataset.i18n = "settings.starProject";
+		starBtn.textContent = t("settings.starProject");
+		starBtn.addEventListener("click", () => {
+			window.electronAPI?.openExternal?.(
+				"https://github.com/Web-Next-Music/Next-Music-Client",
+			);
+		});
+		sidebarFooter.prepend(starBtn);
+	}
+
 	sidebarFooter.prepend(saveBtn);
 
 	tabs.forEach((tab) => {
@@ -663,6 +849,11 @@ function buildUI() {
 		const panel = document.createElement("div");
 		panel.className = "tab-panel" + (tab.key === _activeTab ? " active" : "");
 		panel.id = "panel-" + tab.key;
+
+		// GitHub star block
+		if (tab.key === "programSettings") {
+			panel.append(buildGitHubStarBlock());
+		}
 
 		renderNodes(tab.nodes, panel, 0);
 
@@ -743,12 +934,26 @@ window.electronAPI?.onMaximizeChange?.((maximized) => {
 
 // Init
 async function init() {
-	const [cfg, strings, langList, addonExps, builtinExps] = await Promise.all([
+	const [
+		cfg,
+		strings,
+		langList,
+		addonExps,
+		builtinExps,
+		starResult,
+		tokenResult,
+	] = await Promise.all([
 		window.electronAPI?.loadConfig().catch(() => ({})),
 		window.electronAPI?.loadLangStrings?.().catch(() => null),
 		window.electronAPI?.getLangList?.().catch(() => []),
 		window.electronAPI?.getAddonExperiments?.().catch(() => []),
 		window.electronAPI?.getBuiltinExperiments?.().catch(() => ({})),
+		window.electronAPI
+			?.getGitHubStarStatus?.()
+			.catch(() => ({ hasStarred: false })),
+		window.electronAPI
+			?.getGitHubHasToken?.()
+			.catch(() => ({ hasToken: false })),
 	]);
 
 	CONFIG = cfg || {};
@@ -758,6 +963,11 @@ async function init() {
 	ADDON_EXPERIMENTS = Array.isArray(addonExps) ? addonExps : [];
 	BUILTIN_EXPERIMENTS =
 		builtinExps && typeof builtinExps === "object" ? builtinExps : {};
+	HAS_STARRED = starResult?.hasStarred ?? false;
+
+	// Read real token presence from main process
+	if (!CONFIG.github) CONFIG.github = {};
+	CONFIG.github.accessToken = tokenResult?.hasToken ? "__has_token__" : null;
 
 	// Populate version info in sidebar footer
 	const versions = await window.electronAPI?.getVersions?.().catch(() => null);

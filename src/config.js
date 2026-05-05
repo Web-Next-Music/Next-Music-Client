@@ -73,6 +73,10 @@ export const defaultConfig = {
 	},
 
 	experiments: {},
+
+	github: {
+		accessToken: null,
+	},
 };
 
 // Injector list

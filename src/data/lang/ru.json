@@ -148,6 +148,18 @@
 			"requiredBy": "Требуется аддоном {addonName}",
 			"blockedBy": "Заблокировано — experiments.override активен в {addonName}",
 			"builtin": "Встроенный эксперимент Next Music"
-		}
+		},
+		"github": {
+			"title": "GitHub",
+			"starred": "★ В избранном",
+			"notStarred": "Не добавлено",
+			"desc": "Подключите GitHub и поставьте звезду проекту Next Music Client, чтобы открыть дополнительные функции!",
+			"deviceInstr": "Введите этот код на GitHub (браузер откроется автоматически):",
+			"connect": "Войти",
+			"recheck": "Перепроверить",
+			"disconnect": "Выйти"
+		},
+		"starGate": "Добавьте в избранное проект на GitHub, чтобы разблокировать",
+		"starProject": "В избранное"
 	}
 }

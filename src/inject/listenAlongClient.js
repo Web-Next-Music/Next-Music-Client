@@ -1021,7 +1021,7 @@
 			if (currentId === expectedId) {
 				clearInterval(wait);
 				console.log(
-					`✅ Track "${expectedId}" is now active (playing=${isPlaying})`,
+					`✔ Track "${expectedId}" is now active (playing=${isPlaying})`,
 				);
 				setTimeout(() => finishNavigation(), 400);
 				return;

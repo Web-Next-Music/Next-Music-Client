@@ -148,6 +148,18 @@
 			"requiredBy": "Required by {addonName}",
 			"blockedBy": "Blocked — experiments.override is active in {addonName}",
 			"builtin": "Built-in Next Music experiment"
-		}
+		},
+		"github": {
+			"title": "GitHub",
+			"starred": "★ Starred",
+			"notStarred": "Not starred",
+			"desc": "Connect GitHub and star Next Music Client to unlock extra features!",
+			"deviceInstr": "Enter this code on GitHub (browser opened automatically):",
+			"connect": "Sign in",
+			"recheck": "Re-check star",
+			"disconnect": "Log out"
+		},
+		"starGate": "Star the project on GitHub to unlock",
+		"starProject": "Star Project"
 	}
 }

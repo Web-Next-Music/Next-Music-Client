@@ -6,18 +6,21 @@ if (!require) {
 	throw new Error("Electron require is not available in info_v2 module");
 }
 
-if (window.location.protocol === "file:") {
-	const link = document.createElement("link");
-	link.rel = "stylesheet";
-	link.href = "style.css";
-	document.head.append(link);
-} else {
-	await import("./style.scss");
-}
-
 const { shell, ipcRenderer } = require("electron");
 const fs = require("fs");
 const path = require("path");
+
+const initPayload = await ipcRenderer.invoke("info-v2:get-init-data");
+
+const buttonsRow = document.querySelector(".buttons_row");
+if (buttonsRow && !initPayload.hasStarred) {
+	const btn = document.createElement("button");
+	btn.className = "btn";
+	btn.id = "githubRepoBtn";
+	btn.setAttribute("data-i18n", "info.titleBarStarBtnText");
+
+	buttonsRow.prepend(btn);
+}
 
 let currentLang = {};
 let languagesDirectory = null;
@@ -95,15 +98,17 @@ const buttonActions = {
 	twitterBtn: () => shell.openExternal("https://x.com/Diram1x"),
 	boostyBtn: () => shell.openExternal("https://boosty.to/diramix"),
 	youtubeBtn: () => shell.openExternal("https://www.youtube.com/@Diram1x"),
-	githubRepoBtn: () =>
-		shell.openExternal("https://github.com/Web-Next-Music/Next-Music-Client"),
+
+	...(!initPayload.hasStarred && {
+		githubRepoBtn: () =>
+			shell.openExternal("https://github.com/Web-Next-Music/Next-Music-Client"),
+	}),
 };
 
 Object.entries(buttonActions).forEach(([id, action]) => {
 	document.getElementById(id)?.addEventListener("click", action);
 });
 
-const initPayload = await ipcRenderer.invoke("info-v2:get-init-data");
 languagesDirectory = initPayload.languagesDirectory;
 loadLanguage(initPayload.langCode);
 applyTranslations();

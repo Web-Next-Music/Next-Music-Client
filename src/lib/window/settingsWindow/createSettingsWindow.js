@@ -5,6 +5,7 @@ import { getAddonExperimentOverrides } from "../../addonExperiments.js";
 import { getBuiltinExperiments } from "../../builtinExperiments.js";
 import { getPaths, isDev, devUrl } from "../../../config.js";
 import { fileURLToPath } from "url";
+
 import path from "path";
 
 import {

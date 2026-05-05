@@ -1,4 +1,5 @@
-import { app, BrowserWindow, protocol } from "electron";
+import { app, BrowserWindow, protocol, shell } from "electron";
+import { checkGitHubStar } from "./lib/githubStarAuth.js";
 import path from "path";
 
 // ESM __dirname fix
@@ -163,6 +164,12 @@ app.whenReady().then(() => {
 
 	// Discord rich presence
 	if (config?.programSettings?.richPresence?.enable) {
-		presenceService(config);
+		checkGitHubStar()
+			.then(({ hasStarred }) => {
+				presenceService(config, hasStarred);
+			})
+			.catch(() => {
+				presenceService(config, false);
+			});
 	}
 });
