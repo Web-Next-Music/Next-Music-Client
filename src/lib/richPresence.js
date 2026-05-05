@@ -1,5 +1,7 @@
 import { Client } from "@xhayper/discord-rpc";
 import WebSocket from "ws";
+import { loadConfig } from "./configManager.js";
+import { checkGitHubStar } from "./githubStarAuth.js";
 
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
@@ -10,10 +12,12 @@ let rpc;
 let isReady = false;
 let lastActivity = null;
 let lastPlayerState = null;
-let globalConfig = null;
 
 // Star flag
 let userHasStarred = false;
+let lastStarCheckAt = 0;
+let lastStarCheckToken = null;
+let starCheckPromise = null;
 
 let lastRawData = null;
 
@@ -66,15 +70,65 @@ wss.on("connection", (ws) => {
 			lastRawData = data;
 
 			broadcastToSiteClients(data, ws);
-			updateActivity(data, globalConfig);
+			updateActivity(data);
 		} catch (e) {
 			console.error("[WS] ❌ Error parsing data:", e);
 		}
 	});
 });
 
-function updateActivity(data, config) {
+function clearActivity(reason = "unknown") {
+	if (lastPlayerState !== "pause") {
+		console.log(`[RPC] Clearing activity (${reason})`);
+		rpc.user?.clearActivity().catch(console.error);
+		lastPlayerState = "pause";
+		lastActivity = null;
+	}
+}
+
+function refreshGitHubStarState(config) {
+	const accessToken = config?.github?.accessToken ?? null;
+
+	if (!accessToken) {
+		lastStarCheckToken = null;
+		lastStarCheckAt = 0;
+		userHasStarred = false;
+		return;
+	}
+
+	const tokenChanged = accessToken !== lastStarCheckToken;
+	const checkExpired = Date.now() - lastStarCheckAt > 5 * 60 * 1000;
+
+	if (!tokenChanged && !checkExpired) return;
+	if (starCheckPromise) return;
+
+	lastStarCheckToken = accessToken;
+	lastStarCheckAt = Date.now();
+
+	starCheckPromise = checkGitHubStar()
+		.then(({ hasStarred }) => {
+			const hasChanged = userHasStarred !== hasStarred;
+			userHasStarred = hasStarred;
+			if (hasChanged && lastRawData) updateActivity(lastRawData);
+		})
+		.catch(() => {
+			userHasStarred = false;
+			if (lastRawData) updateActivity(lastRawData);
+		})
+		.finally(() => {
+			starCheckPromise = null;
+		});
+}
+
+function updateActivity(data) {
 	if (!rpc || !isReady) return;
+	const config = loadConfig();
+	refreshGitHubStarState(config);
+
+	if (!config?.programSettings?.richPresence?.enable) {
+		clearActivity("disabled");
+		return;
+	}
 
 	const trackId = data.trackId || "";
 	const title = data.title || "";
@@ -159,12 +213,7 @@ function updateActivity(data, config) {
 	const playerState = (data.playerState || "").toLowerCase();
 
 	if (playerState !== "playing") {
-		if (lastPlayerState !== "pause") {
-			console.log(`[RPC] Clearing activity (${playerState || "unknown"})`);
-			rpc.user?.clearActivity().catch(console.error);
-			lastPlayerState = "pause";
-			lastActivity = null;
-		}
+		clearActivity(playerState || "unknown");
 		return;
 	}
 
@@ -197,8 +246,7 @@ function updateActivity(data, config) {
 	}
 }
 
-function presenceService(config, hasStarred = false) {
-	globalConfig = config;
+function presenceService(hasStarred = false) {
 	userHasStarred = hasStarred;
 
 	console.log(

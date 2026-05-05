@@ -226,10 +226,13 @@ export function buildUI() {
 	saveBtn.dataset.i18n = "settings.saveRestart";
 	saveBtn.textContent = t("settings.saveRestart");
 	saveBtn.addEventListener("click", async () => {
-		await window.electronAPI?.saveConfig(state.CONFIG);
+		const result = await window.electronAPI?.saveConfig(state.CONFIG);
 		state.ORIGINAL_CONFIG = JSON.parse(JSON.stringify(state.CONFIG));
 		state.hasPendingChanges = false;
-		window.electronAPI?.restartApp?.();
+		saveBtn.classList.remove("visible");
+		if (result?.needRestart) {
+			window.electronAPI?.restartApp?.();
+		}
 	});
 
 	if (!state.HAS_STARRED) {

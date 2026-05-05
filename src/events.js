@@ -4,7 +4,7 @@ import {
 	disconnectGitHub,
 	checkGitHubStar,
 } from "./lib/githubStarAuth.js";
-import { loadConfig } from "./config.js";
+import { loadConfig } from "./lib/configManager.js";
 
 export default function registerEvents(mainWindow) {
 	// Titlebar

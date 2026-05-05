@@ -1,5 +1,5 @@
 import { shell } from "electron";
-import { loadConfig, saveConfig } from "../config.js";
+import { loadConfig, saveConfig } from "./configManager.js";
 
 // Config
 

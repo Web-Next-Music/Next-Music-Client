@@ -1,5 +1,6 @@
 import { app, BrowserWindow, protocol, shell } from "electron";
 import { checkGitHubStar } from "./lib/githubStarAuth.js";
+import { loadConfig } from "./lib/configManager.js";
 import path from "path";
 
 // ESM __dirname fix
@@ -8,7 +9,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Config
-import { loadConfig } from "./config.js";
 import { appIcon, getPaths, APPNAME } from "./config.js";
 
 const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
@@ -163,13 +163,11 @@ app.whenReady().then(() => {
 	}
 
 	// Discord rich presence
-	if (config?.programSettings?.richPresence?.enable) {
-		checkGitHubStar()
-			.then(({ hasStarred }) => {
-				presenceService(config, hasStarred);
-			})
-			.catch(() => {
-				presenceService(config, false);
-			});
-	}
+	checkGitHubStar()
+		.then(({ hasStarred }) => {
+			presenceService(hasStarred);
+		})
+		.catch(() => {
+			presenceService(false);
+		});
 });

@@ -90,6 +90,8 @@ export function buildGitHubStarBlock(onRefresh) {
 		if (!state.CONFIG.github) state.CONFIG.github = {};
 		state.HAS_STARRED = result?.hasStarred ?? false;
 		state.CONFIG.github.accessToken = "__has_token__";
+		if (!state.ORIGINAL_CONFIG.github) state.ORIGINAL_CONFIG.github = {};
+		state.ORIGINAL_CONFIG.github.accessToken = "__has_token__";
 		onRefresh();
 	}
 
@@ -100,6 +102,8 @@ export function buildGitHubStarBlock(onRefresh) {
 		if (!state.CONFIG.github) state.CONFIG.github = {};
 		state.HAS_STARRED = false;
 		state.CONFIG.github.accessToken = null;
+		if (!state.ORIGINAL_CONFIG.github) state.ORIGINAL_CONFIG.github = {};
+		state.ORIGINAL_CONFIG.github.accessToken = null;
 
 		// Full refresh so gate overlays on rpcTitle/githubButton apply immediately
 		onRefresh();

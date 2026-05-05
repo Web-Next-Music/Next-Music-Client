@@ -3,6 +3,7 @@ import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
 import { getAddonExperimentOverrides } from "../../addonExperiments.js";
 import { getBuiltinExperiments } from "../../builtinExperiments.js";
+import { configChangeNeedsRestart } from "../../internalConfig.js";
 import { getPaths, isDev, devUrl } from "../../../config.js";
 import { fileURLToPath } from "url";
 
@@ -136,7 +137,16 @@ if (!ipcMain.listenerCount("settings:get-builtin-experiments")) {
 
 if (!ipcMain.listenerCount("settings:save-config")) {
 	ipcMain.handle("settings:save-config", (_event, newConfig) => {
-		updateConfig(normalizeConfigFromRenderer(newConfig));
+		const currentConfig = getConfig();
+		const normalizedConfig = normalizeConfigFromRenderer(newConfig);
+		const { needRestart } = configChangeNeedsRestart(
+			currentConfig,
+			normalizedConfig,
+		);
+
+		updateConfig(normalizedConfig);
+
+		return { needRestart };
 	});
 }
 
