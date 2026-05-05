@@ -510,6 +510,7 @@ let HAS_STARRED = false;
 // Paths that require a GitHub star to edit
 const STAR_GATED_PATHS = [
 	"programSettings.richPresence.rpcTitle",
+	"programSettings.richPresence.largeImageUrl",
 	"programSettings.richPresence.buttons.githubButton",
 ];
 

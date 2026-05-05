@@ -106,6 +106,11 @@ function updateActivity(data, config) {
 		console.log("[RPC] rpcTitle ignored — user has not starred the repo.");
 	}
 
+	const configLargeImageUrl = config?.programSettings?.richPresence?.largeImageUrl;
+	const resolvedLargeImageUrl = userHasStarred
+		? (configLargeImageUrl || undefined)
+		: GITHUB_LINK;
+
 	const trackButtonLabel =
 		isUGCTrack && isUGCShareEnabled
 			? "Open in UGC Player"
@@ -134,7 +139,7 @@ function updateActivity(data, config) {
 		details: title,
 		state: artist,
 		largeImageKey: img,
-		largeImageUrl: GITHUB_LINK,
+		...(resolvedLargeImageUrl ? { largeImageUrl: resolvedLargeImageUrl } : {}),
 		statusDisplayType: 1,
 		instance: false,
 		...detailsUrlField,

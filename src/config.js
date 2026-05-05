@@ -40,6 +40,7 @@ export const defaultConfig = {
 		richPresence: {
 			enable: true,
 			rpcTitle: "Next Music",
+			largeImageUrl: "",
 			buttons: {
 				trackButton: true,
 				githubButton: true,
