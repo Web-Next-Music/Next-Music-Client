@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, shell, app } from "electron";
 import { getCurrentVersion } from "../../getAppVersion.js";
-import { getConfig, updateConfig } from "../../configManager.js";
+import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
 import { getAddonExperimentOverrides } from "../../addonExperiments.js";
 import { getBuiltinExperiments } from "../../builtinExperiments.js";
 import { getPaths, isDev, devUrl } from "../../../config.js";
@@ -20,6 +20,36 @@ const __dirname = path.dirname(__filename);
 
 let settingsWindow = null;
 let _rebuildTray = null;
+const GITHUB_TOKEN_PLACEHOLDER = "__has_token__";
+
+function maskConfigForRenderer(config) {
+	const safeConfig = structuredClone(config ?? {});
+
+	if (!safeConfig.github) safeConfig.github = {};
+	safeConfig.github.accessToken = config?.github?.accessToken
+		? GITHUB_TOKEN_PLACEHOLDER
+		: null;
+
+	return safeConfig;
+}
+
+function normalizeConfigFromRenderer(newConfig) {
+	const normalizedConfig = structuredClone(newConfig ?? {});
+	const currentConfig = loadConfig();
+	const incomingToken = normalizedConfig?.github?.accessToken;
+
+	if (!normalizedConfig.github) normalizedConfig.github = {};
+
+	if (
+		incomingToken === GITHUB_TOKEN_PLACEHOLDER ||
+		incomingToken === undefined
+	) {
+		normalizedConfig.github.accessToken =
+			currentConfig?.github?.accessToken ?? null;
+	}
+
+	return normalizedConfig;
+}
 
 export function setTrayRebuilder(fn) {
 	_rebuildTray = fn;
@@ -87,7 +117,9 @@ if (!ipcMain.listenerCount("settings:get-versions")) {
 }
 
 if (!ipcMain.listenerCount("settings:load-config")) {
-	ipcMain.handle("settings:load-config", () => getConfig());
+	ipcMain.handle("settings:load-config", () =>
+		maskConfigForRenderer(getConfig()),
+	);
 }
 
 if (!ipcMain.listenerCount("settings:get-addon-experiments")) {
@@ -104,7 +136,7 @@ if (!ipcMain.listenerCount("settings:get-builtin-experiments")) {
 
 if (!ipcMain.listenerCount("settings:save-config")) {
 	ipcMain.handle("settings:save-config", (_event, newConfig) => {
-		updateConfig(newConfig);
+		updateConfig(normalizeConfigFromRenderer(newConfig));
 	});
 }
 
