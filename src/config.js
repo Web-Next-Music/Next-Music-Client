@@ -29,7 +29,10 @@ export const defaultConfig = {
 	windowSettings: {
 		titleBar: {
 			enable: true,
-			nextText: true,
+			nextText: {
+				enable: true,
+				displayYandexMusicVersion: false,
+			},
 		},
 		alwaysOnTop: false,
 		freeWindowResize: false,

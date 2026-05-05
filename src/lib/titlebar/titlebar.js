@@ -1,5 +1,5 @@
-(function () {
-	if (document.querySelector("TitleBar_root")) return;
+(async function () {
+	if (document.querySelector(".TitleBar_root")) return;
 	if (!window.nmcWindow) return;
 
 	const ICONS = {
@@ -23,9 +23,26 @@
 	if (window.__nmcTitleBarConfig?.showNextText) {
 		const label = document.createElement("span");
 		label.className = "TitleBar_nextText";
-		const version = window.__nmcTitleBarConfig?.version || "";
-		label.textContent = `Next Music ${version}`;
-		bar.appendChild(label);
+
+		let displayVersion;
+
+		if (window.__nmcTitleBarConfig?.showYandexMusicVersion) {
+			label.textContent = "Yandex Music";
+			bar.appendChild(label);
+
+			(function trySetVersion() {
+				const ver = window.nextmusicApi?.getCurrentYandexMusicVersion();
+				if (ver) {
+					label.textContent = `Yandex Music ${ver}`;
+				} else {
+					setTimeout(trySetVersion, 500);
+				}
+			})();
+		} else {
+			displayVersion = window.__nmcTitleBarConfig?.version || "";
+			label.textContent = `Next Music ${displayVersion || ""}`;
+			bar.appendChild(label);
+		}
 	}
 
 	const btnHide = document.createElement("button");
@@ -52,6 +69,7 @@
 	bar.appendChild(btnHide);
 	bar.appendChild(btnExpand);
 	bar.appendChild(btnClose);
+
 	document.body.prepend(bar);
 
 	bar.addEventListener("dblclick", (e) => {

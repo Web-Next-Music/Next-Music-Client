@@ -134,8 +134,16 @@ export function createWindow(config) {
 			"utf-8",
 		);
 
+		const showNextText =
+			config.windowSettings?.titleBar?.nextText?.enable === true;
+		const showYandexMusicVersion =
+			showNextText &&
+			config.windowSettings?.titleBar?.nextText?.displayYandexMusicVersion ===
+				true;
+
 		const titleBarConfig = {
-			showNextText: config.windowSettings?.titleBar?.nextText === true,
+			showNextText,
+			showYandexMusicVersion,
 			version: CURRENT_VERSION,
 		};
 
