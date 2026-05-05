@@ -423,6 +423,15 @@
 
 		ContainerId,
 
+		getCurrentYandexMusicVersion() {
+			var entries = performance.getEntriesByType("resource");
+			for (var i = 0; i < entries.length; i++) {
+				var m = entries[i].name.match(/\/v(\d+\.\d+\.\d+)\//);
+				if (m) return m[1];
+			}
+			return null;
+		},
+
 		getCurrentMp3Url() {
 			const meta = getCurrentMeta();
 			if (!meta) return null;
@@ -453,6 +462,10 @@
 		},
 
 		nextText(text) {
+			if (window.__nmcTitleBarConfig?.showYandexMusicVersion) {
+				console.warn(`nextText ignored: Yandex Music version mode is enabled`);
+				return;
+			}
 			const el = document.querySelector(".TitleBar_nextText");
 			if (el) el.textContent = text;
 		},
