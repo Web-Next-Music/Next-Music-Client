@@ -35,7 +35,7 @@ if (!env.ENCRYPTION_KEY) {
 const SRC = "src";
 const DIST = "dist";
 
-const EXTRA_COPY_DIRS = ["data"];
+const EXTRA_COPY_DIRS = ["src/data"];
 
 const RENDERER_BASE = join(SRC, "renderer");
 const STATIC_RENDERER_DIRS = ["fallback", "info"];
