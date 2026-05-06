@@ -64,10 +64,45 @@ function compileScss(srcFile, outFile) {
 	writeFileSync(outFile.replace(/\.scss$/, ".css"), minified.code);
 }
 
+function minifyCSS(css, isProperties = false) {
+	const placeholders = new Map();
+	let counter = 0;
+	let temp = css;
+	temp = temp.replace(/\$\{[^}]+\}/g, (match) => {
+		const key = `__PLACEHOLDER_${counter++}__`;
+		placeholders.set(key, match);
+		return key;
+	});
+
+	let minified;
+	if (isProperties) {
+		minified = temp
+			.replace(/\/\*[\s\S]*?\*\//g, "") // Remove comments
+			.replace(/\s+/g, " ") // Collapse whitespace
+			.replace(/\s*([{};:,])\s*/g, "$1") // Remove spaces around punctuation
+			.replace(/;\s*$/g, ";") // Clean up end
+			.trim();
+	} else {
+		const result = lightningcss.transform({
+			code: Buffer.from(temp),
+			minify: true,
+		});
+		minified = result.code.toString();
+	}
+
+	for (const [key, value] of placeholders) {
+		minified = minified.replace(key, value);
+	}
+	return minified;
+}
+
 function minifyJS(file, outFile) {
 	let code = readFileSync(file, "utf8");
 	const isInjectFile = file.includes(join(SRC, "inject"));
-	if (isInjectFile && code.includes("const ENCRYPTION_KEY = __ENCRYPTION_KEY__")) {
+	if (
+		isInjectFile &&
+		code.includes("const ENCRYPTION_KEY = __ENCRYPTION_KEY__")
+	) {
 		if (!ENCRYPTION_KEY_VALUE) {
 			console.warn(`⚠️  ENCRYPTION_KEY not found in .env for ${file}`);
 		} else {
@@ -117,7 +152,29 @@ function processDir(srcDir, distDir, allowHtml = false) {
 			});
 			writeFileSync(outFile, result.code);
 		} else if (ext === ".js" || ext === ".cjs") {
-			minifyJS(file, outFile);
+			let code = readFileSync(file, "utf8");
+			const isInjectFile = file.includes(join(SRC, "inject"));
+			if (
+				isInjectFile &&
+				code.includes("const ENCRYPTION_KEY = __ENCRYPTION_KEY__")
+			) {
+				if (ENCRYPTION_KEY_VALUE) {
+					code = code.replace(
+						/const ENCRYPTION_KEY = __ENCRYPTION_KEY__;/g,
+						`const ENCRYPTION_KEY = ${JSON.stringify(ENCRYPTION_KEY_VALUE)};`,
+					);
+				}
+			}
+
+			const result = esbuild.transformSync(code, {
+				minify: true,
+				format: "esm",
+				target: "es2022",
+			});
+
+			// Post-process: make file single-line
+			let output = result.code.replace(/\n/g, " ").trimEnd() + "\n";
+			writeFileSync(outFile, output);
 		} else if (ext === ".html" && allowHtml) {
 			minifyHTML(file, outFile);
 		} else {

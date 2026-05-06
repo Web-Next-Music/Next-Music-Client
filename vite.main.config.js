@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 import { builtinModules } from "module";
-import { readdirSync, statSync, readFileSync } from "fs";
+import { readdirSync, statSync, readFileSync, writeFileSync } from "fs";
 import { join, extname } from "path";
 import dotenv from "dotenv";
 
@@ -35,10 +35,28 @@ const entries = walk("src").filter(
 	(f) => !f.startsWith(join("src", "renderer")),
 );
 
+function processOutputFiles() {
+	return {
+		name: "process-output-files",
+		async closeBundle() {
+			const distFiles = walk("dist").filter(f => extname(f) === ".js");
+			for (const file of distFiles) {
+				let code = readFileSync(file, "utf8");
+				let output = code.replace(/\n/g, ' ').trimEnd() + '\n';
+				if (output !== code) {
+					writeFileSync(file, output);
+				}
+			}
+		},
+	};
+}
+
 export default defineConfig({
 	define: {
 		__ENCRYPTION_KEY__: JSON.stringify(ENCRYPTION_KEY_VALUE),
 	},
+
+	plugins: [processOutputFiles()],
 
 	build: {
 		outDir: "dist",
