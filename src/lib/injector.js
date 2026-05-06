@@ -1,7 +1,6 @@
 import { injectList } from "../config.js";
 import path from "path";
 import fs from "fs";
-import dotenv from "dotenv";
 
 // ESM __dirname fix
 import { fileURLToPath } from "url";
@@ -9,7 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load encryption key
-dotenv.config();
 const ENCRYPTION_KEY =
 	process.env.ENCRYPTION_KEY ||
 	(() => {

@@ -66,14 +66,15 @@ function compileScss(srcFile, outFile) {
 
 function minifyJS(file, outFile) {
 	let code = readFileSync(file, "utf8");
-	if (code.includes("__ENCRYPTION_KEY__")) {
+	const isInjectFile = file.includes(join(SRC, "inject"));
+	if (isInjectFile && code.includes("const ENCRYPTION_KEY = __ENCRYPTION_KEY__")) {
 		if (!ENCRYPTION_KEY_VALUE) {
 			console.warn(`⚠️  ENCRYPTION_KEY not found in .env for ${file}`);
 		} else {
 			console.log(`✓ Replacing __ENCRYPTION_KEY__ in ${basename(file)}`);
 			code = code.replace(
-				/__ENCRYPTION_KEY__/g,
-				JSON.stringify(ENCRYPTION_KEY_VALUE),
+				/const ENCRYPTION_KEY = __ENCRYPTION_KEY__;/g,
+				`const ENCRYPTION_KEY = ${JSON.stringify(ENCRYPTION_KEY_VALUE)};`,
 			);
 		}
 	}
