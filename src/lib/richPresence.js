@@ -170,7 +170,7 @@ function updateActivity(data) {
 
 	const trackButtonLabel =
 		isUGCTrack && isUGCShareEnabled
-			? "Open in UGC Player"
+			? "Open in UGC player"
 			: "Open in Yandex Music";
 
 	const trackButtonUrl =
