@@ -262,6 +262,7 @@
 
 	const _mp3UrlMap = new Map();
 	const _mp3KeyMap = new Map(); // AES-128-CTR key hex per trackId
+	const _customTrackMap = new Map(); // trackId -> { url, key, codec, bitrate, quality }
 
 	function patchFileInfo() {
 		const moduleMap = appRequire?.m;
@@ -277,6 +278,28 @@
 				const origGetFileInfoBatch = proto.getFileInfoBatch;
 
 				proto.getFileInfo = async function (...args) {
+					const arg = args[0];
+					const trackId = arg?.trackId ?? arg?.id ?? String(arg);
+
+					if (_customTrackMap.has(String(trackId))) {
+						const custom = _customTrackMap.get(String(trackId));
+						// Return downloadInfo for custom track instead of calling API
+						return {
+							trackId: String(trackId),
+							downloadInfo: {
+								trackId: String(trackId),
+								url: custom.url,
+								urls: [custom.url],
+								key: custom.key ?? "",
+								codec: custom.codec ?? "mp3",
+								bitrate: custom.bitrate ?? 320,
+								gain: false,
+								preview: false,
+								transport: "raw",
+							},
+						};
+					}
+
 					const result = await origGetFileInfo.call(this, ...args);
 					const di = result?.downloadInfo;
 					const id = di?.trackId || result?.trackId;
@@ -305,6 +328,58 @@
 	}
 
 	patchFileInfo();
+
+	// Custom track mediaSourceData watcher
+
+	function watchEntityForCustomTrack(entity, trackId) {
+		const custom = _customTrackMap.get(String(trackId));
+		if (!custom) return;
+
+		function buildMediaSource() {
+			return {
+				type: "downloadInfoSource",
+				vsid: "",
+				sourceIndex: 0,
+				loadingTime: 0,
+				data: {
+					trackId: String(trackId),
+					realId: String(trackId),
+					url: custom.url,
+					urls: [custom.url],
+					key: custom.key ?? "",
+					codec: custom.codec ?? "mp3",
+					quality: custom.quality ?? "high",
+					bitrate: custom.bitrate ?? 320,
+					transport: "raw", // "raw" for unencrypted URLs
+					gain: false,
+					size: 0,
+				},
+			};
+		}
+
+		entity.mediaSourceData = buildMediaSource();
+
+		let _msd = entity.mediaSourceData;
+		let guarded = false;
+
+		Object.defineProperty(entity, "mediaSourceData", {
+			get() {
+				return _msd;
+			},
+			set(v) {
+				if (!guarded) {
+					guarded = true;
+					_msd = v;
+					setTimeout(() => {
+						_msd = buildMediaSource();
+					}, 0);
+				} else {
+					_msd = buildMediaSource();
+				}
+			},
+			configurable: true,
+		});
+	}
 
 	// Player
 
@@ -502,6 +577,130 @@
 			}, 100);
 		},
 
+		/**
+		 * Play a custom track with arbitrary audio URL.
+		 *
+		 * @param {object} trackData
+		 * @param {string}   trackData.id          — unique ID (e.g., "custom_1")
+		 * @param {string}   trackData.url         — direct link to audio file (mp3/aac/flac)
+		 * @param {string}   [trackData.title]     — track title
+		 * @param {{id, name}[]} [trackData.artists] — list of artists
+		 * @param {string|number} [trackData.albumId] — album ID
+		 * @param {string}   [trackData.coverUri]  — cover: "avatars.yandex.net/.../%%" or full https://
+		 * @param {string}   [trackData.cover]     — alternatively: direct link to cover image
+		 * @param {number}   [trackData.durationMs] — duration in milliseconds
+		 * @param {string}   [trackData.key]       — AES decryption key, usually ""
+		 * @param {string}   [trackData.codec]     — "mp3" by default
+		 * @param {number}   [trackData.bitrate]   — 320 by default
+		 * @param {string}   [trackData.quality]   — "high" by default
+		 */
+		playCustomTrack(trackData) {
+			const id = String(trackData.id);
+
+			// Register custom track
+			_customTrackMap.set(id, {
+				url: trackData.url,
+				key: trackData.key ?? "",
+				codec: trackData.codec ?? "mp3",
+				bitrate: trackData.bitrate ?? 320,
+				quality: trackData.quality ?? "high",
+			});
+			_mp3UrlMap.set(id, trackData.url);
+
+			const player = getMainPlayer();
+			if (!player) {
+				console.warn("[nextmusicApi] playCustomTrack: player not found");
+				return;
+			}
+
+			const queue = player.queueController;
+			const currentIndex = player.playbackState.queueState.index.value;
+
+			let coverUri = trackData.coverUri ?? "";
+			if (trackData.cover) {
+				coverUri = trackData.cover;
+			}
+
+			// Metadata in the format the player expects
+			const meta = {
+				id,
+				realId: id,
+				title: trackData.title ?? "Custom Track",
+				type: "music",
+				artists: trackData.artists ?? [],
+				albums: trackData.albumId ? [{ id: trackData.albumId }] : [],
+				coverUri,
+				durationMs: trackData.durationMs ?? 0,
+				available: true,
+				availableForPremiumUsers: true,
+				availableFullWithoutPermission: true,
+				lyricsAvailable: false,
+				lyricsInfo: {
+					hasAvailableSyncLyrics: false,
+					hasAvailableTextLyrics: false,
+				},
+				rememberPosition: false,
+				fileSize: 0,
+				storageDir: "",
+				r128: { i: 0, tp: 0 },
+				fade: { inStart: 0, inStop: 0, outStart: 0, outStop: 0 },
+				previewDurationMs: 0,
+				trackSource: "OWN",
+			};
+
+			// Function to set mediaSourceData when entity appears in queue
+			const applyMediaSourceToQueue = () => {
+				const entityList = queue.playerQueue.queueState.entityList.value;
+				for (let i = 0; i < entityList.length; i++) {
+					const ent = entityList[i]?.entity;
+					if (
+						ent &&
+						(ent.entityData?.meta?.id === id || ent._customTrackId === id)
+					) {
+						watchEntityForCustomTrack(ent, id);
+						ent._customTrackId = id;
+						return i;
+					}
+				}
+				return -1;
+			};
+
+			// Inject track into queue
+			queue.inject({
+				entitiesData: [
+					{
+						type: "music",
+						meta,
+						fromCurrentContext: false,
+						loadEntityMeta: false,
+					},
+				],
+				position: currentIndex + 1,
+				silent: false,
+			});
+
+			// Multiple attempts to set mediaSourceData
+			let attempts = 0;
+			const tryApplyMediaSource = () => {
+				attempts++;
+				const idx = applyMediaSourceToQueue();
+				if (idx !== -1) {
+					player.setEntityByIndex(idx);
+					player.play();
+				} else if (attempts < 10) {
+					setTimeout(tryApplyMediaSource, 50);
+				} else {
+					console.warn(
+						"[nextmusicApi] Failed to find and set up custom track after",
+						attempts,
+						"attempts",
+					);
+				}
+			};
+
+			tryApplyMediaSource();
+		},
+
 		setSpeed(speed) {
 			getMainPlayer()?.setSpeed(speed);
 		},
@@ -534,9 +733,17 @@
 			const meta = getCurrentMeta();
 			if (!meta) return null;
 
-			const coverUri = meta.coverUri
-				? "https://" + meta.coverUri.replace("%%", "400x400")
-				: null;
+			let coverUrl = null;
+			if (meta.coverUri) {
+				if (
+					meta.coverUri.startsWith("http://") ||
+					meta.coverUri.startsWith("https://")
+				) {
+					coverUrl = meta.coverUri;
+				} else {
+					coverUrl = "https://" + meta.coverUri.replace("%%", "400x400");
+				}
+			}
 
 			const artists = (meta.artists ?? []).map((a) => ({
 				id: a.id,
@@ -552,7 +759,7 @@
 				artistIds: artists.map((a) => a.id),
 				artistNames: artists.map((a) => a.name),
 				albumId: meta.albums?.[0]?.id ?? null,
-				coverUrl: coverUri,
+				coverUrl,
 				trackUrl: `https://music.yandex.ru/track/${meta.id}`,
 				durationMs: meta.durationMs ?? null,
 				contentWarning: meta.contentWarning ?? null,
