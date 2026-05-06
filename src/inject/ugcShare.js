@@ -14,7 +14,7 @@
 }
 `;
 
-	const ENCRYPTION_KEY = __ENCRYPTION_KEY__;
+	const ENCRYPTION_KEY = window.__NEXT_MUSIC_ENCRYPTION_KEY__ || "";
 
 	function getNMAPI() {
 		return window.nextmusicApi;

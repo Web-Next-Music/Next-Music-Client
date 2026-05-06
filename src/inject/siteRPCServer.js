@@ -4,7 +4,7 @@
 	const WSPORT = 6972;
 	const WS_URL = `ws://127.0.0.1:${WSPORT}`;
 	const POLL_INTERVAL = 1000; // ms
-	const ENCRYPTION_KEY = __ENCRYPTION_KEY__;
+	const ENCRYPTION_KEY = window.__NEXT_MUSIC_ENCRYPTION_KEY__ || "";
 
 	let ws;
 

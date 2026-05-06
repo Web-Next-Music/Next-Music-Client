@@ -21,6 +21,32 @@ const ENCRYPTION_KEY =
 		}
 	})();
 
+function serializeInvocation(fn, ...args) {
+	return `(${fn.toString()})(${args.map((arg) => JSON.stringify(arg)).join(",")});`;
+}
+
+function injectCssFile(injectedPath) {
+	if (document.querySelector(`link[data-injected="${injectedPath}"]`)) return;
+
+	const link = document.createElement("link");
+	link.rel = "stylesheet";
+	link.type = "text/css";
+	link.href = `file://${injectedPath}`;
+	link.dataset.injected = injectedPath;
+	document.head.appendChild(link);
+}
+
+function injectJsFile(injectedPath, encryptionKey) {
+	window.__NEXT_MUSIC_ENCRYPTION_KEY__ = encryptionKey;
+	if (document.querySelector(`script[data-injected="${injectedPath}"]`)) return;
+
+	const script = document.createElement("script");
+	script.type = "text/javascript";
+	script.src = `file://${injectedPath}`;
+	script.dataset.injected = injectedPath;
+	document.head.appendChild(script);
+}
+
 export default function injector(mainWindow, config) {
 	try {
 		const isDev = __dirname.includes(path.sep + "src" + path.sep);
@@ -45,44 +71,11 @@ export default function injector(mainWindow, config) {
 
 			const isCSS = file.endsWith(".css");
 			const isJS = file.endsWith(".js");
-
-			let content = "";
-			if (isJS) {
-				content = fs.readFileSync(fullPath, "utf8");
-				if (content.includes("__ENCRYPTION_KEY__")) {
-					content = content.replace(
-						/__ENCRYPTION_KEY__/g,
-						JSON.stringify(ENCRYPTION_KEY),
-					);
-				}
-			}
-
 			const injectScript = isCSS
-				? `
-                (() => {
-                    const injectedPath = "${fullPath}";
-                    if (!document.querySelector('link[data-injected="' + injectedPath + '"]')) {
-                        const l = document.createElement("link");
-                        l.rel = "stylesheet";
-                        l.type = "text/css";
-                        l.href = "file://" + injectedPath;
-                        l.dataset.injected = injectedPath;
-                        document.head.appendChild(l);
-                    }
-                })();
-                `
-				: `
-                (() => {
-                    const injectedPath = "${fullPath}";
-                    if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
-                        const s = document.createElement("script");
-                        s.type = "text/javascript";
-                        s.dataset.injected = injectedPath;
-                        s.textContent = ${JSON.stringify(content)};
-                        document.head.appendChild(s);
-                    }
-                })();
-                `;
+				? serializeInvocation(injectCssFile, fullPath)
+				: isJS
+					? serializeInvocation(injectJsFile, fullPath, ENCRYPTION_KEY)
+					: "";
 
 			mainWindow.webContents
 				.executeJavaScript(injectScript)
