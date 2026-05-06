@@ -176,21 +176,6 @@ export function renderExperimentsPanel(panel) {
 		}
 	}
 
-	// Built-in experiments (not set by user)
-	for (const [name, builtinValue] of builtinEntries) {
-		if (name in userOverrides) continue;
-		const addonLock = addonOverrideMap.get(name);
-		if (addonLock) {
-			rowsWrap.append(
-				mkExperimentsRow(name, addonLock.value, rowsWrap, {
-					addonLock: { addonName: addonLock.addonName, isConflict: false },
-				}),
-			);
-		} else {
-			rowsWrap.append(mkExperimentsRow(name, builtinValue, rowsWrap));
-		}
-	}
-
 	// Addon-only experiments (not set by user or builtin)
 	for (const [name, { addonName, value }] of addonOverrideMap) {
 		if (!(name in userOverrides) && !getBuiltinExperimentDefault(name)) {
