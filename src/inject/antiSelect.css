@@ -1,0 +1,7 @@
+body * {
+	user-select: none;
+}
+
+[class*="FullscreenPlayerDesktopContent_syncLyricsScroller"] * {
+	user-select: text;
+}
