@@ -263,6 +263,7 @@
 	const _mp3UrlMap = new Map();
 	const _mp3KeyMap = new Map(); // AES-128-CTR key hex per trackId
 	const _customTrackMap = new Map(); // trackId -> { url, key, codec, bitrate, quality }
+	const _customTrackMetaMap = new Map(); // trackId -> public meta used by UI/RPC
 
 	function patchFileInfo() {
 		const moduleMap = appRequire?.m;
@@ -474,7 +475,90 @@
 		const entityList = queue?.playerQueue?.queueState?.entityList?.value;
 		const idx = player.playbackState?.queueState?.index?.value;
 		if (idx == null || !entityList) return null;
-		return entityList[idx]?.entity?.entityData?.meta ?? null;
+		const meta = entityList[idx]?.entity?.entityData?.meta ?? null;
+		if (!meta) return null;
+		const customMeta = _customTrackMetaMap.get(String(meta.id));
+		if (!customMeta) return meta;
+
+		return {
+			...customMeta,
+			...meta,
+			durationMs: meta.durationMs || customMeta.durationMs || 0,
+			artists:
+				Array.isArray(meta.artists) && meta.artists.length > 0
+					? meta.artists
+					: customMeta.artists ?? [],
+			albums:
+				Array.isArray(meta.albums) && meta.albums.length > 0
+					? meta.albums
+					: customMeta.albums ?? [],
+			coverUri: meta.coverUri || customMeta.coverUri || "",
+		};
+	}
+
+	function updateCustomTrackDuration(trackId, durationMs) {
+		const normalizedDurationMs = Math.max(0, Math.round(Number(durationMs) || 0));
+		if (!normalizedDurationMs) return;
+
+		const customMeta = _customTrackMetaMap.get(String(trackId));
+		if (customMeta) {
+			customMeta.durationMs = normalizedDurationMs;
+		}
+
+		const player = getMainPlayer();
+		const entityList =
+			player?.queueController?.playerQueue?.queueState?.entityList?.value;
+
+		for (const item of entityList ?? []) {
+			const meta = item?.entity?.entityData?.meta;
+			if (String(meta?.id) === String(trackId)) {
+				meta.durationMs = normalizedDurationMs;
+			}
+		}
+	}
+
+	function resolveCustomTrackDuration(trackId, url, fallbackDurationMs = 0) {
+		const normalizedFallback = Math.max(
+			0,
+			Math.round(Number(fallbackDurationMs) || 0),
+		);
+
+		if (normalizedFallback > 0) {
+			updateCustomTrackDuration(trackId, normalizedFallback);
+			return;
+		}
+
+		if (!url) return;
+
+		const audio = new Audio();
+		audio.preload = "metadata";
+
+		const cleanup = () => {
+			audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+			audio.removeEventListener("durationchange", onLoadedMetadata);
+			audio.removeEventListener("error", onError);
+			audio.src = "";
+		};
+
+		const onLoadedMetadata = () => {
+			if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+			updateCustomTrackDuration(trackId, audio.duration * 1000);
+			cleanup();
+		};
+
+		const onError = () => {
+			console.warn(
+				"[nextmusicApi] Failed to resolve custom track duration:",
+				trackId,
+			);
+			cleanup();
+		};
+
+		audio.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
+		audio.addEventListener("durationchange", onLoadedMetadata);
+		audio.addEventListener("error", onError, { once: true });
+		audio.src = url;
+		audio.load();
 	}
 
 	// Public API
@@ -596,6 +680,7 @@
 		 */
 		playCustomTrack(trackData) {
 			const id = String(trackData.id);
+			const durationMs = Math.max(0, Math.round(Number(trackData.durationMs) || 0));
 
 			// Register custom track
 			_customTrackMap.set(id, {
@@ -630,7 +715,7 @@
 				artists: trackData.artists ?? [],
 				albums: trackData.albumId ? [{ id: trackData.albumId }] : [],
 				coverUri,
-				durationMs: trackData.durationMs ?? 0,
+				durationMs,
 				available: true,
 				availableForPremiumUsers: true,
 				availableFullWithoutPermission: true,
@@ -647,6 +732,7 @@
 				previewDurationMs: 0,
 				trackSource: "OWN",
 			};
+			_customTrackMetaMap.set(id, { ...meta });
 
 			// Function to set mediaSourceData when entity appears in queue
 			const applyMediaSourceToQueue = () => {
@@ -699,6 +785,7 @@
 			};
 
 			tryApplyMediaSource();
+			resolveCustomTrackDuration(id, trackData.url, durationMs);
 		},
 
 		setSpeed(speed) {
