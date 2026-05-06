@@ -14,7 +14,7 @@ const ENCRYPTION_KEY =
 		try {
 			const envPath = path.resolve(__dirname, "../../.env");
 			const envContent = fs.readFileSync(envPath, "utf8");
-			const match = envContent.match(/ENCRYPTION_KEY=(.+)/);
+			const match = envContent.match(/ENCRYPTION_KEY=([^\n\r]+)/);
 			return match ? match[1].trim() : "";
 		} catch {
 			return "";

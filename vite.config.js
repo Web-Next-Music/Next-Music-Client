@@ -22,10 +22,9 @@ const env = process.env;
 if (!env.ENCRYPTION_KEY) {
 	try {
 		const envFile = readFileSync(".env", "utf8");
-		const match = envFile.match(/ENCRYPTION_KEY=(.+)/);
+		const match = envFile.match(/ENCRYPTION_KEY=([^\n\r]+)/);
 		if (match) {
 			env.ENCRYPTION_KEY = match[1].trim();
-			console.log("✓ ENCRYPTION_KEY loaded from .env file");
 		}
 	} catch (e) {
 		console.warn("⚠️  Could not read .env file:", e.message);

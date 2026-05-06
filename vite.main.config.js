@@ -11,7 +11,7 @@ const env = process.env;
 if (!env.ENCRYPTION_KEY) {
 	try {
 		const envFile = readFileSync(".env", "utf8");
-		const match = envFile.match(/ENCRYPTION_KEY=(.+)/);
+		const match = envFile.match(/ENCRYPTION_KEY=([^\n\r]+)/);
 		if (match) {
 			env.ENCRYPTION_KEY = match[1].trim();
 		}
@@ -54,6 +54,7 @@ function processOutputFiles() {
 export default defineConfig({
 	define: {
 		__ENCRYPTION_KEY__: JSON.stringify(ENCRYPTION_KEY_VALUE),
+		"process.env.ENCRYPTION_KEY": JSON.stringify(ENCRYPTION_KEY_VALUE),
 	},
 
 	plugins: [processOutputFiles()],
