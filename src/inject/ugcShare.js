@@ -14,7 +14,11 @@
 }
 `;
 
-	const NM_API = window.nextmusicApi;
+	const ENCRYPTION_KEY = __ENCRYPTION_KEY__;
+
+	function getNMAPI() {
+		return window.nextmusicApi;
+	}
 
 	(function injectStyles() {
 		const style = document.createElement("style");
@@ -22,19 +26,36 @@
 		document.head.appendChild(style);
 	})();
 
-	let lastTrackId = null;
+	// XOR-cipher + base64url
+	function encodeTrackKey(data) {
+		const compact = { u: data.url };
+		if (data.title) compact.t = data.title;
+		if (data.artist) compact.a = data.artist;
+		if (data.cover) compact.c = data.cover;
+
+		const jsonBytes = new TextEncoder().encode(JSON.stringify(compact));
+		const keyBytes = new TextEncoder().encode(ENCRYPTION_KEY);
+		const out = new Uint8Array(jsonBytes.length);
+		for (let i = 0; i < jsonBytes.length; i++) {
+			out[i] = jsonBytes[i] ^ keyBytes[i % keyBytes.length];
+		}
+		return btoa(String.fromCharCode(...out))
+			.replace(/\+/g, "-")
+			.replace(/\//g, "_")
+			.replace(/=/g, "");
+	}
 
 	function buildNmUrl(track) {
-		const mp3Url = NM_API?.getCurrentMp3Url?.();
+		const mp3Url = getNMAPI()?.getCurrentMp3Url?.();
 		if (!mp3Url) return null;
 
-		const params = new URLSearchParams({
+		const key = encodeTrackKey({
 			url: mp3Url,
-			cover: track.coverUrl ?? "",
-			artist: track.artistNames?.[0] ?? "Unknown",
-			title: track.title ?? "Unknown",
+			title: track.title ?? undefined,
+			artist: track.artistNames?.[0] ?? undefined,
+			cover: track.coverUrl ?? undefined,
 		});
-		return `https://nm.diram1x.ru/track?${params.toString()}`;
+		return `https://nm.diram1x.ru/track?key=${key}`;
 	}
 
 	async function shortenUrl(url) {
@@ -50,9 +71,16 @@
 		lastTrackId = null;
 	}
 
+	let lastTrackId = null;
+
 	function injectLinkButton() {
-		const track = NM_API?.getCurrentTrack?.();
-		if (!track?.id?.includes("-")) {
+		const track = getNMAPI()?.getCurrentTrack?.();
+
+		if (!track) {
+			return;
+		}
+
+		if (!track.id?.includes("-")) {
 			removeLinkButton();
 			return;
 		}
@@ -60,7 +88,12 @@
 		const container = document.querySelector(
 			'[class*="PlayerBarDesktopWithBackgroundProgressBar_meta"]',
 		);
-		if (!container) return;
+		if (!container) {
+			// Let's log what containers we can find
+			const allContainers = document.querySelectorAll('[class*="PlayerBar"]');
+
+			return;
+		}
 
 		if (lastTrackId === track.id && document.getElementById(LINK_BTN_ID))
 			return;
@@ -72,14 +105,14 @@
 		btn.id = LINK_BTN_ID;
 		btn.innerHTML = LINK_ICON_SVG;
 		btn.addEventListener("click", async () => {
-			const currentTrack = NM_API?.getCurrentTrack?.();
+			const currentTrack = getNMAPI()?.getCurrentTrack?.();
 			if (!currentTrack) return;
 
 			const url = buildNmUrl(currentTrack);
 			if (!url) {
-				NM_API.showErrorToast(
+				getNMAPI().showErrorToast(
 					"Error: play the track first",
-					NM_API.ContainerId.ERROR,
+					getNMAPI().ContainerId.ERROR,
 				);
 				return;
 			}
@@ -91,12 +124,14 @@
 				await navigator.clipboard.writeText(url);
 			}
 
-			NM_API.showCopyToast(currentTrack.title, "track");
+			getNMAPI().showCopyToast(currentTrack.title, "track");
 		});
 
 		container.insertBefore(btn, container.firstChild);
 	}
 
-	const observer = new MutationObserver(() => injectLinkButton());
+	const observer = new MutationObserver(() => {
+		injectLinkButton();
+	});
 	observer.observe(document.body, { childList: true, subtree: true });
 })();

@@ -4,7 +4,25 @@
 	const WSPORT = 6972;
 	const WS_URL = `ws://127.0.0.1:${WSPORT}`;
 	const POLL_INTERVAL = 1000; // ms
+	const ENCRYPTION_KEY = __ENCRYPTION_KEY__;
+
 	let ws;
+
+	function encodeTrackKey(data) {
+		const compact = { u: data.url };
+		if (data.title) compact.t = data.title;
+		if (data.artist) compact.a = data.artist;
+		if (data.cover) compact.c = data.cover;
+		const jsonBytes = new TextEncoder().encode(JSON.stringify(compact));
+		const keyBytes = new TextEncoder().encode(ENCRYPTION_KEY);
+		const out = new Uint8Array(jsonBytes.length);
+		for (let i = 0; i < jsonBytes.length; i++)
+			out[i] = jsonBytes[i] ^ keyBytes[i % keyBytes.length];
+		return btoa(String.fromCharCode(...out))
+			.replace(/\+/g, "-")
+			.replace(/\//g, "_")
+			.replace(/=/g, "");
+	}
 
 	const pendingData = new Map();
 	const cooldownDuration = 2000;
@@ -47,8 +65,15 @@
 			? `https://music.yandex.ru/artist/${track.artistIds[0]}`
 			: null;
 
-		const directMp3UGCLink = api.getCurrentMp3Url();
-		const nmUGCPlayerUrl = `https://nm.diram1x.ru/track?url=${directMp3UGCLink}&cover=${track.coverUrl}&artist=${artistsStr}&title=${track.title}`;
+		const mp3Url = api.getCurrentMp3Url() ?? null;
+		const nmUGCPlayerUrl = mp3Url
+			? `https://nm.diram1x.ru/track?key=${encodeTrackKey({
+					url: mp3Url,
+					title: track.title,
+					artist: artistsStr,
+					cover: track.coverUrl,
+				})}`
+			: null;
 
 		return {
 			trackId: track.id ?? null,
@@ -56,7 +81,7 @@
 			artists: artistsStr,
 			img: track.coverUrl ?? null,
 			artistUrl,
-			trackUrl: track.trackUrl ?? null,
+			mp3Url,
 			positionSec: state.progress?.position ?? 0,
 			durationSec: (track.durationMs ?? 0) / 1000,
 			playerState: state.status ?? null,

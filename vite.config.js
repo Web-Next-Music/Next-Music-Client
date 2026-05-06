@@ -14,6 +14,23 @@ import { minify as htmlMinify } from "html-minifier-terser";
 import * as lightningcss from "lightningcss";
 import * as sass from "sass";
 import * as esbuild from "esbuild";
+import dotenv from "dotenv";
+
+dotenv.config();
+const env = process.env;
+
+if (!env.ENCRYPTION_KEY) {
+	try {
+		const envFile = readFileSync(".env", "utf8");
+		const match = envFile.match(/ENCRYPTION_KEY=(.+)/);
+		if (match) {
+			env.ENCRYPTION_KEY = match[1].trim();
+			console.log("✓ ENCRYPTION_KEY loaded from .env file");
+		}
+	} catch (e) {
+		console.warn("⚠️  Could not read .env file:", e.message);
+	}
+}
 
 const SRC = "src";
 const DIST = "dist";
@@ -48,7 +65,18 @@ function compileScss(srcFile, outFile) {
 }
 
 function minifyJS(file, outFile) {
-	const code = readFileSync(file, "utf8");
+	let code = readFileSync(file, "utf8");
+	if (code.includes("__ENCRYPTION_KEY__")) {
+		if (!ENCRYPTION_KEY_VALUE) {
+			console.warn(`⚠️  ENCRYPTION_KEY not found in .env for ${file}`);
+		} else {
+			console.log(`✓ Replacing __ENCRYPTION_KEY__ in ${basename(file)}`);
+			code = code.replace(
+				/__ENCRYPTION_KEY__/g,
+				JSON.stringify(ENCRYPTION_KEY_VALUE),
+			);
+		}
+	}
 	const result = esbuild.transformSync(code, {
 		minify: true,
 		format: "esm",
@@ -138,8 +166,53 @@ function minifyRendererDist() {
 	};
 }
 
+function replaceDefinesPlugin() {
+	return {
+		name: "replace-defines",
+		resolveId(id) {
+			if (id.startsWith("virtual:inject/")) {
+				return id;
+			}
+		},
+		load(id) {
+			if (id.includes("src/inject/")) {
+				const filePath = id.replace(/\?.*$/, "");
+				if (existsSync(filePath)) {
+					let code = readFileSync(filePath, "utf8");
+					code = code.replace(
+						/__ENCRYPTION_KEY__/g,
+						JSON.stringify(ENCRYPTION_KEY_VALUE),
+					);
+					return code;
+				}
+			}
+		},
+		transform(code, id) {
+			// Transform loaded modules that contain __ENCRYPTION_KEY__
+			if (id.includes("src/inject/") && code.includes("__ENCRYPTION_KEY__")) {
+				code = code.replace(
+					/__ENCRYPTION_KEY__/g,
+					JSON.stringify(ENCRYPTION_KEY_VALUE),
+				);
+				return { code };
+			}
+		},
+	};
+}
+
+const ENCRYPTION_KEY_VALUE =
+	env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || "";
+console.log(
+	"Vite config: ENCRYPTION_KEY =",
+	ENCRYPTION_KEY_VALUE ? "✓ loaded" : "✗ NOT FOUND",
+);
+
 export default defineConfig(({ command }) => ({
 	base: "./",
+
+	define: {
+		__ENCRYPTION_KEY__: JSON.stringify(ENCRYPTION_KEY_VALUE),
+	},
 
 	...(command === "build" && {
 		root: resolve(__dirname, "src/renderer"),
@@ -164,6 +237,7 @@ export default defineConfig(({ command }) => ({
 	},
 
 	plugins: [
+		replaceDefinesPlugin(),
 		command === "build" && processElectronFiles(),
 		command === "build" && minifyRendererDist(),
 	].filter(Boolean),

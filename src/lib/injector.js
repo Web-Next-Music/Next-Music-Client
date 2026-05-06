@@ -1,11 +1,27 @@
 import { injectList } from "../config.js";
 import path from "path";
 import fs from "fs";
+import dotenv from "dotenv";
 
 // ESM __dirname fix
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load encryption key
+dotenv.config();
+const ENCRYPTION_KEY =
+	process.env.ENCRYPTION_KEY ||
+	(() => {
+		try {
+			const envPath = path.resolve(__dirname, "../../.env");
+			const envContent = fs.readFileSync(envPath, "utf8");
+			const match = envContent.match(/ENCRYPTION_KEY=(.+)/);
+			return match ? match[1].trim() : "";
+		} catch {
+			return "";
+		}
+	})();
 
 export default function injector(mainWindow, config) {
 	try {
@@ -30,6 +46,18 @@ export default function injector(mainWindow, config) {
 			}
 
 			const isCSS = file.endsWith(".css");
+			const isJS = file.endsWith(".js");
+
+			let content = "";
+			if (isJS) {
+				content = fs.readFileSync(fullPath, "utf8");
+				if (content.includes("__ENCRYPTION_KEY__")) {
+					content = content.replace(
+						/__ENCRYPTION_KEY__/g,
+						JSON.stringify(ENCRYPTION_KEY),
+					);
+				}
+			}
 
 			const injectScript = isCSS
 				? `
@@ -50,10 +78,9 @@ export default function injector(mainWindow, config) {
                     const injectedPath = "${fullPath}";
                     if (!document.querySelector('script[data-injected="' + injectedPath + '"]')) {
                         const s = document.createElement("script");
-                        s.src = "file://" + injectedPath;
                         s.type = "text/javascript";
-                        s.defer = true;
                         s.dataset.injected = injectedPath;
+                        s.textContent = ${JSON.stringify(content)};
                         document.head.appendChild(s);
                     }
                 })();

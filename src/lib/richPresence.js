@@ -136,6 +136,10 @@ function updateActivity(data) {
 	const img = data.img || "icon";
 	const trackUrl = `https://music.yandex.ru/track/${trackId}` || "";
 	const artistUrl = data.artistUrl || "";
+	// mp3Url: from siteRPCServer.js
+	const mp3Url = data.mp3Url || data.trackUrl || "";
+
+	const isUGCTrack = trackId.includes("-");
 	const nmUGCPlayerUrl = data.nmUGCPlayerUrl || "";
 
 	const positionSec = data.positionSec ?? 0;
@@ -145,8 +149,6 @@ function updateActivity(data) {
 	const now = Math.floor(Date.now() / 1000);
 	const startTimestamp = now - Math.floor(positionSec);
 	const endTimestamp = startTimestamp + Math.floor(durationSec);
-
-	const isUGCTrack = trackId.includes("-");
 
 	const { trackButton, githubButton } =
 		config?.programSettings?.richPresence?.buttons ?? {};
@@ -230,7 +232,8 @@ function updateActivity(data) {
 			: Infinity;
 
 	if (hasChanged) {
-		console.log(`[RPC] Setting new activity: ${title} — ${artist}`);
+		const msg = `[RPC] Setting new activity: ${title} — ${artist}`;
+		console.log(msg, { isUGCTrack, buttons: activityObject.buttons });
 		rpc.user?.setActivity(activityObject).catch(console.error);
 		lastActivity = { ...activityObject };
 		lastPlayerState = "play";
