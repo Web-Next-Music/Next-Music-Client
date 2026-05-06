@@ -16,7 +16,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const titlebarFolder = path.resolve(__dirname, "..", "..", "titlebar");
-const apiFile = path.resolve(__dirname, "..", "..", "api.js");
+const apiFunctionsDir = path.resolve(__dirname, "..", "..", "api", "functions");
+const apiMainFile = path.resolve(__dirname, "..", "..", "api", "main.js");
+const apiFunctionsOrder = [
+	"utils",
+	"toasts",
+	"filePatch",
+	"player",
+	"customTracks",
+];
 
 let mainWindow;
 
@@ -119,7 +127,11 @@ export function createWindow(config) {
 	}
 
 	function injectApi() {
-		const js = fs.readFileSync(apiFile, "utf-8");
+		const parts = apiFunctionsOrder.map((name) =>
+			fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
+		);
+		const mainJs = fs.readFileSync(apiMainFile, "utf-8");
+		const js = `(() => {\n${parts.join("\n")}\n${mainJs}\n})();`;
 		mainWindow.webContents.executeJavaScript(js).catch(console.error);
 	}
 
