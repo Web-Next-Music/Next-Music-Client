@@ -83,6 +83,8 @@ jobs:
         run: npm install
 
       - name: Build (${{ matrix.cmd }})
+        env:
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: npm run ${{ matrix.cmd }} -- --publish never
 
       - name: Upload Windows/Linux artifacts to release
