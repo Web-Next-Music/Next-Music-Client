@@ -1,9 +1,8 @@
 import { execSync } from "child_process";
 import { app } from "electron";
-import { createRequire } from "module";
+import pkg from "../../package.json" with { type: "json" };
 
-const require = createRequire(import.meta.url);
-const { version } = require("../../package.json");
+const { version } = pkg;
 
 function parsePackageVersion() {
 	return version;
