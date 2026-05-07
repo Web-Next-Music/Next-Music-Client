@@ -1,4 +1,4 @@
-import { BrowserWindow, session, nativeTheme } from "electron";
+import { BrowserWindow, session, nativeTheme, app } from "electron";
 import { createLoaderWindow } from "../createLoaderWindow.js";
 import { applyAddons } from "../../loadAddons.js";
 import { mergeAddonExperiments } from "../../addonExperiments.js";
@@ -8,9 +8,6 @@ import { fileURLToPath } from "url";
 import path from "path";
 import injector from "../../injector.js";
 import fs from "fs";
-
-import pkg from "../../../../package.json" with { type: "json" };
-const CURRENT_VERSION = pkg.version;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,7 +153,7 @@ export function createWindow(config) {
 		const titleBarConfig = {
 			showNextText,
 			showYandexMusicVersion,
-			version: CURRENT_VERSION,
+			version: app.getVersion(),
 		};
 
 		mainWindow.webContents

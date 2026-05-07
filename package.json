@@ -22,7 +22,8 @@
 		"appId": "com.nextmusic.client",
 		"productName": "Next Music",
 		"files": [
-			"dist/**/*"
+			"dist/**/*",
+			"package.json"
 		],
 		"directories": {
 			"buildResources": "src/assets",

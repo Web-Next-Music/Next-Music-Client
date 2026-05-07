@@ -1,14 +1,12 @@
 import { execSync } from "child_process";
 import { app } from "electron";
-import pkg from "../../package.json" with { type: "json" };
-
-const { version } = pkg;
 
 function parsePackageVersion() {
-	return version;
+	return app.getVersion();
 }
 
 function parsePackageVersionWV() {
+	const version = app.getVersion();
 	return version.startsWith("v") ? version : `v${version}`;
 }
 
@@ -21,7 +19,7 @@ function parseGitCommit() {
 
 		return hash;
 	} catch {
-		return version;
+		return app.getVersion();
 	}
 }
 
