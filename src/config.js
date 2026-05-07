@@ -26,6 +26,7 @@ export const defaultConfig = {
 		startMinimized: false,
 		splashScreen: true,
 	},
+
 	windowSettings: {
 		titleBar: {
 			enable: true,
@@ -43,7 +44,7 @@ export const defaultConfig = {
 		richPresence: {
 			enable: true,
 			rpcTitle: "Next Music",
-			largeImageUrl: "",
+			largeImageUrl: "https://github.com/Web-Next-Music/Next-Music-Client",
 			buttons: {
 				trackButton: true,
 				githubButton: true,
