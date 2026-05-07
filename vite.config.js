@@ -182,6 +182,31 @@ function processDir(srcDir, distDir, allowHtml = false) {
 	}
 }
 
+const API_FUNCTIONS_ORDER = ["utils", "toasts", "filePatch", "player", "customTracks"];
+
+function bundleApiFiles() {
+	const apiSrcDir = join(SRC, "lib", "api");
+	const functionsDir = join(apiSrcDir, "functions");
+	const mainFile = join(apiSrcDir, "main.js");
+
+	if (!existsSync(functionsDir) || !existsSync(mainFile)) return;
+
+	const parts = API_FUNCTIONS_ORDER.map((name) =>
+		readFileSync(join(functionsDir, `${name}.js`), "utf-8"),
+	);
+	parts.push(readFileSync(mainFile, "utf-8"));
+
+	const result = esbuild.transformSync(parts.join("\n"), {
+		minify: true,
+		target: "es2022",
+	});
+
+	const outDir = join(DIST, "lib", "api");
+	mkdirSync(outDir, { recursive: true });
+	writeFileSync(join(outDir, "bundle.js"), result.code);
+	console.log("[build] API bundle written to", join(outDir, "bundle.js"));
+}
+
 function processElectronFiles() {
 	return {
 		name: "electron-build",
@@ -192,6 +217,7 @@ function processElectronFiles() {
 
 			processDir(join(SRC, "inject"), join(DIST, "inject"));
 			processDir(join(SRC, "lib"), join(DIST, "lib"));
+			bundleApiFiles();
 			processDir(join(SRC, "assets"), join(DIST, "assets"));
 
 			for (const dir of EXTRA_COPY_DIRS) {
