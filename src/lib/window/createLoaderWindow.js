@@ -13,6 +13,7 @@ export function createLoaderWindow() {
 		height: 280,
 		backgroundColor: "#000",
 		show: true,
+		useContentSize: true,
 		resizable: false,
 		fullscreenable: false,
 		movable: true,
