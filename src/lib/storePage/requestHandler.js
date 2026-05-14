@@ -38,6 +38,14 @@ import { getPaths } from "../../config.js";
 import { getCurrentLangCode } from "../langManager.js";
 import { getConfig } from "../configManager.js";
 
+function skelCard() {
+	return `<div class="card"><div class="card-top"><div class="skel" style="width:44px;height:44px;border-radius:9px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-top:2px"><div class="skel" style="width:62%"></div><div class="skel" style="width:36%;height:10px"></div></div></div><div class="skel" style="height:33px;border-radius:8px"></div></div>`;
+}
+
+function skels(n) {
+	return Array.from({ length: n }, skelCard).join("");
+}
+
 const json = (d, status = 200) => ({
 	status,
 	headers: { "Content-Type": "application/json" },
@@ -72,6 +80,13 @@ const IMG_MIME = {
 };
 
 export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
+	if (method === "GET" && (urlPath === "/" || urlPath === "")) {
+		const htmlPath = path.join(PUBLIC_DIR, "index.html");
+		let html = fs.readFileSync(htmlPath, "utf8");
+		html = html.replace("SKELS_ADDONS", skels(6)).replace("SKELS_THEMES", skels(6));
+		return text(html, "text/html; charset=utf-8");
+	}
+
 	const MIME = {
 		".html": "text/html; charset=utf-8",
 		".css": "text/css",

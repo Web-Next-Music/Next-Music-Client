@@ -1,6 +1,4 @@
 (() => {
-	const STORE_HTML = window.__nextStoreHtml;
-
 	const ICON_HREF = document
 		.querySelector(`[class*="NavbarDesktop_navigation"] * use`)
 		.getAttribute("xlink:href");
@@ -66,7 +64,7 @@
                 `;
 
 				const iframe = document.createElement("iframe");
-				iframe.srcdoc = STORE_HTML;
+				iframe.src = "nextstore://app/";
 				iframe.style.cssText = `
                     width:100%;
                     height:100%;

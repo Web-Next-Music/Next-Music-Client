@@ -19,7 +19,7 @@ import { checkForUpdates } from "./lib/updater.js";
 import { presenceService } from "./lib/richPresence.js";
 import { createWindow } from "./lib/window/mainWindow/createWindow.js";
 import { setupSplashScreen } from "./lib/splashScreen.js";
-import { setupStorePage, injectStoreHtml } from "./lib/storePage/storePage.js";
+import { setupStorePage } from "./lib/storePage/storePage.js";
 import { startServer } from "./lib/obsWidget/obsWidget.js";
 
 // App name
@@ -133,10 +133,6 @@ app.whenReady().then(() => {
 	// Addons store page
 	if (config.programSettings?.addons?.enable) {
 		setupStorePage();
-
-		mainWindow.webContents.on("did-finish-load", () => {
-			injectStoreHtml(mainWindow);
-		});
 	}
 
 	// IPC
