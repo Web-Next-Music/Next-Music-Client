@@ -50,7 +50,6 @@ const patcherCode = `
 (function () {
 	var overrides = ${JSON.stringify(EXPERIMENT_OVERRIDES)};
 
-	// Патчит все вхождения ключа в RSC-строке
 	function patchRSCString(raw) {
 		var result = raw;
 		for (var expKey in overrides) {
@@ -83,7 +82,6 @@ const patcherCode = `
 		return result;
 	}
 
-	// ── __next_f (Next.js RSC путь) ──────────────────────────────────────────
 	function patchChunk(chunk) {
 		if (!Array.isArray(chunk) || chunk[0] !== 1) return;
 		if (typeof chunk[1] !== 'string') return;
@@ -95,7 +93,6 @@ const patcherCode = `
 	}
 
 	var _arr = window.__next_f || [];
-	// Patch chunks already queued before this script ran (e.g. Ctrl+R with disk cache)
 	_arr.forEach(patchChunk);
 	var _customPush = null;
 
@@ -124,7 +121,6 @@ const patcherCode = `
 		enumerable: true,
 	});
 
-	// ── sessionStorage / localStorage ────────────────────────────────────────
 	['sessionStorage', 'localStorage'].forEach(function (storeName) {
 		try {
 			var store = window[storeName];
@@ -140,7 +136,6 @@ const patcherCode = `
 		} catch (e) {}
 	});
 
-	// ── __STATE_SNAPSHOT__ (Redux/Zustand путь) ──────────────────────────────
 	function patchSnapshotItem(item) {
 		if (!item || typeof item !== 'object') return;
 		var root = item.experiments && item.experiments.experiments;
@@ -180,7 +175,6 @@ const patcherCode = `
 		enumerable: true,
 	});
 
-	// ── Script tags (HTML-embedded RSC) ───────────────────────────────────
 	function patchScriptTags() {
 		try {
 			document.querySelectorAll('script').forEach(function (s) {
