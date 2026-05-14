@@ -4,10 +4,6 @@
 	document.title = REQUIRED_TITLE;
 
 	function enforceTitle() {
-		if (document.title !== REQUIRED_TITLE) {
-			document.title = REQUIRED_TITLE;
-		}
-
 		const titleEl = document.querySelector("title");
 		if (titleEl && titleEl.textContent !== REQUIRED_TITLE) {
 			titleEl.textContent = REQUIRED_TITLE;
@@ -27,18 +23,34 @@
 		},
 	});
 
-	const observer = new MutationObserver(enforceTitle);
+	let titleObserver = null;
 
-	observer.observe(document.head || document.documentElement, {
-		childList: true,
-		subtree: true,
-		characterData: true,
+	function observeTitle() {
+		const titleEl = document.querySelector("title");
+		if (titleEl && !titleObserver) {
+			titleObserver = new MutationObserver(enforceTitle);
+			titleObserver.observe(titleEl, {
+				childList: true,
+				characterData: true,
+				subtree: true,
+			});
+		}
+	}
+
+	const headObserver = new MutationObserver(() => {
+		enforceTitle();
+		observeTitle();
 	});
 
-	const interval = setInterval(enforceTitle, 500);
+	headObserver.observe(document.head || document.documentElement, {
+		childList: true,
+		subtree: false,
+	});
+
+	observeTitle();
 
 	window.stopNextTitleShield = () => {
-		observer.disconnect();
-		clearInterval(interval);
+		headObserver.disconnect();
+		titleObserver?.disconnect();
 	};
 })();

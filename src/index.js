@@ -34,11 +34,9 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=512");
 app.commandLine.appendSwitch("disk-cache-size", String(50 * 1024 * 1024));
 app.commandLine.appendSwitch("v8-pool-size", "0");
-app.commandLine.appendSwitch("force-color-profile", "srgb");
 
 if (process.platform === "linux") {
 	app.commandLine.appendSwitch("disable-dev-shm-usage");
-	app.commandLine.appendSwitch("force-color-profile", "srgb");
 }
 
 const disabledFeatures = [
@@ -49,7 +47,20 @@ const disabledFeatures = [
 	"AutofillServerCommunication",
 ];
 
+const enabledFeatures = [
+	// CPU: aggressively throttle JS timers in background tabs/hidden windows
+	"IntensiveWakeUpThrottling",
+	// CPU: throttle unimportant frame timers (cross-origin iframes etc.)
+	"ThrottleUnimportantFrameTimers",
+];
+
+if (process.platform === "linux") {
+	disabledFeatures.push("WaylandWpColorManagerV1");
+}
+
 app.commandLine.appendSwitch("disable-features", disabledFeatures.join(","));
+app.commandLine.appendSwitch("enable-features", enabledFeatures.join(","));
+app.commandLine.appendSwitch("force-color-profile", "srgb");
 
 // Register custom protocol BEFORE ready
 protocol.registerSchemesAsPrivileged([
