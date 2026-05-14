@@ -1,4 +1,4 @@
-[class*="DefaultLayout_root"] {
+[class*="DefaultLayout_root"]:not([class*="NewWave"]) {
 	grid-template:
 		"navbar content" minmax(
 			auto,
