@@ -10,7 +10,7 @@ ws.onmessage = (e) => {
 	document.getElementById("cover").src = data.cover || "assets/icon-256.png";
 	document.getElementById("title").textContent = data.title || "";
 	document.getElementById("artist").textContent = data.artist || "";
-	document.getElementById("widget").style.backgroundColor = data.color || "";
+	document.getElementById("widget").style.setProperty("--track-color", data.color || "#141414");
 	document.getElementById("ts_start").textContent = data.position || "";
 	document.getElementById("ts_end").textContent = data.duration || "";
 };

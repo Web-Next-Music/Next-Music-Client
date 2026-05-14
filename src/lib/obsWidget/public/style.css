@@ -8,6 +8,15 @@
 	src: url("./fonts/ggsans-Bold.ttf") format("truetype");
 }
 
+:root {
+	--nm-obs-border: 1px solid
+		color-mix(
+			in oklab,
+			hsl(240 calc(1 * 4%) 60.784%/0.2) 100%,
+			hsl(0 0% 0%/0.2) 0%
+		);
+}
+
 body {
 	margin: 0;
 	background: transparent;
@@ -26,8 +35,8 @@ body {
 	padding: 10px;
 	border-radius: 12px;
 	box-sizing: border-box;
-	background-color: #141414;
-	border: 1px solid #fff3;
+	background-color: color-mix(in srgb, var(--track-color, #141414) 70%, black);
+	border: var(--nm-obs-border);
 	transition: background-color 0.3s ease-in;
 }
 
@@ -43,15 +52,16 @@ body {
 	position: absolute;
 	inset: 0;
 	z-index: 0;
-	background: linear-gradient(90deg, #0000 0%, #0003 90%);
+	background: linear-gradient(90deg, #0001 0%, #0003 90%);
 }
 
 .cover {
-	width: 80px; /* increase cover size */
+	width: 80px;
 	height: 80px;
 	border-radius: 12px;
 	flex-shrink: 0;
 	z-index: 2;
+	border: var(--nm-obs-border);
 }
 
 .title {

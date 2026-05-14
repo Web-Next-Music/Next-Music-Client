@@ -22,6 +22,7 @@ const apiFunctionsOrder = [
 	"filePatch",
 	"player",
 	"customTracks",
+	"playerColor",
 ];
 
 let mainWindow;

@@ -4,10 +4,9 @@
 	const WS_URL = "ws://localhost:4091";
 	let ws = null;
 	let lastPayload = "";
-	let observing = false;
 
 	function log(...args) {
-		console.log("[YM-OBSERVER]", ...args);
+		console.log("[OBS Widget]", ...args);
 	}
 
 	function connect() {
@@ -24,109 +23,50 @@
 
 	connect();
 
-	function qs(selector) {
-		return document.querySelector(selector);
-	}
-
-	function getText(selector) {
-		return qs(selector)?.textContent.trim() || "";
-	}
-
-	function getCover() {
-		const img = qs(
-			'[class*="PlayerBar_root"] * [class*="PlayerBarDesktopWithBackgroundProgressBar_cover"] > img',
-		);
-		return img?.src || "";
-	}
-
-	function getPlayerColor() {
-		const root = qs('[class*="PlayerBar_root"]');
-		if (!root) return null;
-		const style = getComputedStyle(root);
-		return (
-			style.getPropertyValue("--player-average-color-background")?.trim() ||
-			null
-		);
-	}
-
-	function getCurrentTime() {
-		return getText(
-			'[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_current_animation"] > span',
-		);
-	}
-
-	function getDuration() {
-		return getText(
-			'[class*="PlayerBar_root"] * [class*="TimecodeGroup_timecode_end"] > span',
-		);
+	function formatTime(seconds) {
+		if (!isFinite(seconds) || seconds < 0) return "0:00";
+		const m = Math.floor(seconds / 60);
+		const s = Math.floor(seconds % 60);
+		return `${m}:${s.toString().padStart(2, "0")}`;
 	}
 
 	function collectAndSend() {
 		if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
+		const api = window.nextmusicApi;
+		if (!api) return;
+
+		const track = api.getCurrentTrack();
+		const state = api.getState();
+		if (!track) return;
+
+		const positionSec = state?.progress?.position ?? 0;
+		const durationSec = (track.durationMs ?? 0) / 1000;
 		const data = {
-			title: getText('[class*="PlayerBar_root"] * [class*="Meta_title"]'),
-			artist: getText(
-				'[class*="PlayerBar_root"] * [class*="SeparatedArtists_root_clamp"]',
-			),
-			cover: getCover(),
-			color: getPlayerColor(),
-			position: getCurrentTime(),
-			duration: getDuration(),
+			title: track.title || "",
+			artist: track.artistNames?.join(", ") || "",
+			cover: track.coverUrl || "",
+			color: api.getCurrentAverageColor() || "",
+			position: formatTime(positionSec),
+			duration: formatTime(durationSec),
 		};
 
-		if (!data.title) return;
-
 		const payload = JSON.stringify(data);
-
 		if (payload !== lastPayload) {
 			lastPayload = payload;
-			log("DOM change → sending", data);
+			log("State change → sending", data);
 			ws.send(payload);
 		}
 	}
 
-	function waitForPlayerAndObserve() {
-		if (observing) return;
-
-		const root = qs('[class*="PlayerBar_root"]');
-		if (!root) {
-			setTimeout(waitForPlayerAndObserve, 500);
-			return;
+	function waitForApi() {
+		if (window.nextmusicApi) {
+			log("nextmusicApi found, starting polling…");
+			setInterval(collectAndSend, 500);
+		} else {
+			setTimeout(waitForApi, 500);
 		}
-
-		log("PlayerBar found, observing…");
-		observing = true;
-
-		const observer = new MutationObserver(() => {
-			collectAndSend();
-		});
-
-		observer.observe(root, {
-			childList: true,
-			subtree: true,
-			characterData: true,
-			attributes: true,
-		});
-
-		// Reset flag if PlayerBar is gone
-		const disconnectObserver = new MutationObserver(() => {
-			if (!document.contains(root)) {
-				log("PlayerBar removed from DOM");
-				observer.disconnect();
-				disconnectObserver.disconnect();
-				observing = false;
-				waitForPlayerAndObserve();
-			}
-		});
-
-		disconnectObserver.observe(document.body, {
-			childList: true,
-			subtree: true,
-		});
-
-		collectAndSend();
 	}
 
-	waitForPlayerAndObserve();
+	waitForApi();
 })();

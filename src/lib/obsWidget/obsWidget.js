@@ -1,6 +1,9 @@
 import express from "express";
 import WebSocket from "ws";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let app = null;
 let server = null;
@@ -12,8 +15,7 @@ function log(...args) {
 }
 
 export function startServer(options = {}) {
-	const { port = 4091, staticDir = path.join(process.cwd(), "public") } =
-		options;
+	const { port = 4091, staticDir = path.join(__dirname, "public") } = options;
 
 	if (server) return;
 

@@ -55,6 +55,7 @@ window.nextmusicApi = {
 	playCustomTrack,
 	getCurrentTrack,
 	getState,
+	getCurrentAverageColor,
 
 	setSpeed: (speed) => getMainPlayer()?.setSpeed(speed),
 	setProgress: (progress) => getMainPlayer()?.setProgress(progress),
