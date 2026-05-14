@@ -277,21 +277,25 @@ async function doToggle(name, btn, event) {
 	delete btn.dataset.prevHtml;
 
 	if (data.ok) {
-		const card = btn.closest(".card");
 		const nowEnabled = !wasEnabled;
-		const isIconMode = btn.classList.contains("btn-toggle-icon");
 
-		if (nowEnabled) {
-			btn.className = "btn btn-on" + (isIconMode ? " btn-toggle-icon" : "");
-			btn.innerHTML = isIconMode ? ICONS.disable : t("store.btnDisable");
-			btn.title = isIconMode ? t("store.tooltipDisable") : "";
-			card && card.classList.remove("item-disabled");
-		} else {
-			btn.className = "btn btn-off" + (isIconMode ? " btn-toggle-icon" : "");
-			btn.innerHTML = isIconMode ? ICONS.enable : t("store.btnEnable");
-			btn.title = isIconMode ? t("store.tooltipEnable") : "";
-			card && card.classList.add("item-disabled");
-		}
+		document.querySelectorAll(".card").forEach((c) => {
+			if ((c.dataset.name || "").toLowerCase() !== name.toLowerCase()) return;
+			const toggleBtn = c.querySelector(".btn-on, .btn-off");
+			if (!toggleBtn) return;
+			const isIcon = toggleBtn.classList.contains("btn-toggle-icon");
+			if (nowEnabled) {
+				toggleBtn.className = "btn btn-on" + (isIcon ? " btn-toggle-icon" : "");
+				toggleBtn.innerHTML = isIcon ? ICONS.disable : t("store.btnDisable");
+				toggleBtn.title = isIcon ? t("store.tooltipDisable") : "";
+				c.classList.remove("item-disabled");
+			} else {
+				toggleBtn.className = "btn btn-off" + (isIcon ? " btn-toggle-icon" : "");
+				toggleBtn.innerHTML = isIcon ? ICONS.enable : t("store.btnEnable");
+				toggleBtn.title = isIcon ? t("store.tooltipEnable") : "";
+				c.classList.add("item-disabled");
+			}
+		});
 
 		showRestartBanner();
 		broadcastChange("toggled", { name, enabled: nowEnabled });
@@ -346,6 +350,40 @@ async function doDelete(name, btn, event) {
 
 					setTimeout(loadInstalled, 100);
 				}, 280);
+
+				// Reset matching addons/themes cards in other grids
+				["addons", "themes"].forEach((section) => {
+					const sCard = document.querySelector(`#grid-${section} .card`);
+					const match = sCard
+						? [...document.querySelectorAll(`#grid-${section} .card`)].find(
+								(c) => (c.dataset.name || "").toLowerCase() === name.toLowerCase(),
+							)
+						: null;
+
+					if (!match || !match.classList.contains("installed")) return;
+
+					match.classList.remove("installed", "item-disabled");
+					const allSectionItems = allItems[section] || [];
+					const f = allSectionItems.find(
+						(x) => x.name.toLowerCase() === name.toLowerCase(),
+					);
+
+					if (f) {
+						const dlArg = encodeURIComponent(
+							JSON.stringify({
+								name: f.name,
+								folderPath: f.path,
+								section,
+								submodule: !!f.submodule,
+								subUrl: f.subUrl || "",
+							}),
+						);
+						match.querySelector(".card-actions").innerHTML =
+							`<button class="btn btn-primary" onclick="doDownload(decodeURIComponent('${dlArg}'),this,event)">Download</button>`;
+					}
+
+					match.querySelectorAll(".badge").forEach((b) => b.remove());
+				});
 			} else {
 				card.classList.remove("installed", "item-disabled");
 
@@ -370,6 +408,23 @@ async function doDelete(name, btn, event) {
 				}
 
 				card.querySelectorAll(".badge").forEach((b) => b.remove());
+
+				// Remove matching cards from installed/custom grids
+				["grid-installed", "grid-custom"].forEach((gridId) => {
+					const c = [...document.querySelectorAll(`#${gridId} .card`)].find(
+						(c) => (c.dataset.name || "").toLowerCase() === name.toLowerCase(),
+					);
+					if (c) c.remove();
+				});
+				const customGrid = document.getElementById("grid-custom");
+				const remaining = customGrid
+					? customGrid.querySelectorAll(".card").length
+					: 0;
+				const tcCustom = document.getElementById("tc-custom");
+				if (tcCustom) tcCustom.textContent = remaining;
+				const tabCustom = document.getElementById("tab-custom");
+				if (tabCustom && remaining === 0) tabCustom.style.display = "none";
+
 				setTimeout(loadInstalled, 300);
 			}
 		}
