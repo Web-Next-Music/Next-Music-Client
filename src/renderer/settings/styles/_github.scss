@@ -112,12 +112,27 @@
 	color: $muted;
 }
 
+@keyframes gh-code-copied {
+	0%,
+	50% {
+		color: #2bfe8f;
+	}
+	100% {
+		color: $accent;
+	}
+}
+
 .gh-device-code {
 	font-size: 20px;
 	font-weight: 700;
 	letter-spacing: 0.2em;
 	color: $accent;
-	user-select: all;
+	user-select: none;
+	cursor: pointer;
+
+	&--copied {
+		animation: gh-code-copied 2s ease-out forwards;
+	}
 }
 
 .gh-device-timer {

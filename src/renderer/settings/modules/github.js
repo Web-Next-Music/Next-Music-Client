@@ -45,13 +45,27 @@ export function buildGitHubStarBlock(onRefresh) {
 	const deviceTimer = document.createElement("div");
 	deviceTimer.className = "gh-device-timer";
 
+	deviceCode.addEventListener("click", () => {
+		const code = deviceCode.textContent.trim();
+		if (!code || code === "…") return;
+		navigator.clipboard.writeText(code).catch(() => {});
+		deviceCode.classList.remove("gh-device-code--copied");
+		void deviceCode.offsetWidth;
+		deviceCode.classList.add("gh-device-code--copied");
+	});
+
+	deviceCode.addEventListener("animationend", () => {
+		deviceCode.classList.remove("gh-device-code--copied");
+	});
+
 	deviceArea.append(deviceInstr, deviceCode, deviceTimer);
 	wrap.append(deviceArea);
 
 	const errLine = document.createElement("div");
 	errLine.className = "gh-star-error";
 	errLine.hidden = !state.TOKEN_EXPIRED;
-	if (state.TOKEN_EXPIRED) errLine.textContent = t("settings.github.tokenExpired");
+	if (state.TOKEN_EXPIRED)
+		errLine.textContent = t("settings.github.tokenExpired");
 	wrap.append(errLine);
 
 	const actRow = document.createElement("div");
