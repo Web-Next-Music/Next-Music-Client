@@ -117,12 +117,10 @@ export async function checkGitHubStar() {
 		return { hasStarred };
 	} catch (err) {
 		if (err.message === "401") {
-			console.warn("[GitHub Auth] Token expired, clearing.");
-			config.github.accessToken = null;
-			saveConfig(config);
-		} else {
-			console.error("[GitHub Auth] Check error:", err.message);
+			console.warn("[GitHub Auth] Token expired or revoked.");
+			return { hasStarred: false, tokenExpired: true };
 		}
+		console.error("[GitHub Auth] Check error:", err.message);
 		return { hasStarred: false };
 	}
 }
@@ -175,6 +173,7 @@ export async function connectGitHubDeviceFlow(onUserCode, onProgress) {
 	}
 
 	const config = loadConfig();
+	config.github ??= {};
 	config.github.accessToken = accessToken;
 	saveConfig(config);
 

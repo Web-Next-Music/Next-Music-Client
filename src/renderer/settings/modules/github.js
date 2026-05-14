@@ -3,7 +3,7 @@ import { t } from "./i18n.js";
 
 export function buildGitHubStarBlock(onRefresh) {
 	const hasStarred = state.HAS_STARRED;
-	const hasToken = !!state.CONFIG?.github?.accessToken;
+	const hasToken = !!state.CONFIG?.github?.accessToken && !state.TOKEN_EXPIRED;
 
 	const wrap = document.createElement("div");
 	wrap.className = "gh-star-block";
@@ -50,7 +50,8 @@ export function buildGitHubStarBlock(onRefresh) {
 
 	const errLine = document.createElement("div");
 	errLine.className = "gh-star-error";
-	errLine.hidden = true;
+	errLine.hidden = !state.TOKEN_EXPIRED;
+	if (state.TOKEN_EXPIRED) errLine.textContent = t("settings.github.tokenExpired");
 	wrap.append(errLine);
 
 	const actRow = document.createElement("div");
@@ -89,6 +90,7 @@ export function buildGitHubStarBlock(onRefresh) {
 
 		if (!state.CONFIG.github) state.CONFIG.github = {};
 		state.HAS_STARRED = result?.hasStarred ?? false;
+		state.TOKEN_EXPIRED = false;
 		state.CONFIG.github.accessToken = "__has_token__";
 		if (!state.ORIGINAL_CONFIG.github) state.ORIGINAL_CONFIG.github = {};
 		state.ORIGINAL_CONFIG.github.accessToken = "__has_token__";
@@ -101,6 +103,7 @@ export function buildGitHubStarBlock(onRefresh) {
 
 		if (!state.CONFIG.github) state.CONFIG.github = {};
 		state.HAS_STARRED = false;
+		state.TOKEN_EXPIRED = false;
 		state.CONFIG.github.accessToken = null;
 		if (!state.ORIGINAL_CONFIG.github) state.ORIGINAL_CONFIG.github = {};
 		state.ORIGINAL_CONFIG.github.accessToken = null;

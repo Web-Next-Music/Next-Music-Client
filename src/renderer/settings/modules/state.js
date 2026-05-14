@@ -9,6 +9,7 @@ export const state = {
 	toastTimer: null,
 	activeTab: null,
 	HAS_STARRED: false,
+	TOKEN_EXPIRED: false,
 };
 
 export const STAR_GATED_PATHS = [

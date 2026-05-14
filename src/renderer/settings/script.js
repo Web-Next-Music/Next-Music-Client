@@ -54,6 +54,7 @@ async function init() {
 	state.BUILTIN_EXPERIMENTS =
 		builtinExps && typeof builtinExps === "object" ? builtinExps : {};
 	state.HAS_STARRED = starResult?.hasStarred ?? false;
+	state.TOKEN_EXPIRED = starResult?.tokenExpired ?? false;
 
 	if (!state.CONFIG.github) state.CONFIG.github = {};
 	state.CONFIG.github.accessToken = tokenResult?.hasToken

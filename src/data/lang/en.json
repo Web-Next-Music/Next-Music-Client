@@ -159,7 +159,8 @@
 			"deviceInstr": "Enter this code on GitHub (browser opened automatically):",
 			"connect": "Sign in",
 			"recheck": "Re-check star",
-			"disconnect": "Log out"
+			"disconnect": "Log out",
+			"tokenExpired": "Session expired. Please sign in again."
 		},
 		"starGate": "Star the project on GitHub to unlock",
 		"starProject": "Star Project"
