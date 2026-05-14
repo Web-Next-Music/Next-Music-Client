@@ -46,6 +46,44 @@ https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
 
 </details>
 
+<details>
+  <summary>UGC Share</summary>
+
+  > Allows sharing and downloading tracks that the user has uploaded to Yandex Music.
+  
+  https://github.com/user-attachments/assets/73bf3536-d59c-4be5-a53c-0ff38f3844d1
+
+</details>
+
+<details>
+  <summary>Downloader</summary>
+
+  > Allows downloading tracks directly from Yandex Music.
+
+</details>
+
+<details>
+  <summary>Wide Player Panel</summary>
+  <blockquote><strong>Important:</strong> This mod has been adapted from PulseSync (formerly YandexMusicModClient).</blockquote>
+
+  > Expands the Yandex Music player panel.
+</details>
+
+<details>
+  <summary>Disable Auto Zoom</summary>
+
+  > Disables automatic scaling of the Yandex Music interface.
+
+</details>
+
+<details>
+  <summary>Yandex Experiments Override</summary>
+
+  > Allows overriding Yandex Music experiments and enabling unavailable features.
+
+  <img width="810" height="545" alt="image" src="https://github.com/user-attachments/assets/375ea00c-094f-45bc-b4da-70cd3d9f5dd8" />
+</details>
+
 ## Installation
 
 ### Windows
