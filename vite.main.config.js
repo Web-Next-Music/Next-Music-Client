@@ -56,17 +56,17 @@ function walkAll(dir, out = []) {
 const CM_SRC = join("node_modules", "codemirror");
 const CM_DEST = join("dist", "lib", "storePage", "public", "cm");
 const CM_FILES = [
-	["lib/codemirror.css",                    "codemirror.css"],
-	["lib/codemirror.js",                     "codemirror.js"],
-	["addon/lint/lint.css",                   "addon/lint/lint.css"],
-	["addon/fold/foldgutter.css",             "addon/fold/foldgutter.css"],
-	["mode/javascript/javascript.js",         "mode/javascript/javascript.js"],
-	["addon/edit/matchbrackets.js",           "addon/edit/matchbrackets.js"],
-	["addon/edit/closebrackets.js",           "addon/edit/closebrackets.js"],
-	["addon/selection/active-line.js",        "addon/selection/active-line.js"],
-	["addon/fold/foldcode.js",                "addon/fold/foldcode.js"],
-	["addon/fold/foldgutter.js",              "addon/fold/foldgutter.js"],
-	["addon/fold/brace-fold.js",              "addon/fold/brace-fold.js"],
+	["lib/codemirror.css", "codemirror.css"],
+	["lib/codemirror.js", "codemirror.js"],
+	["addon/lint/lint.css", "addon/lint/lint.css"],
+	["addon/fold/foldgutter.css", "addon/fold/foldgutter.css"],
+	["mode/javascript/javascript.js", "mode/javascript/javascript.js"],
+	["addon/edit/matchbrackets.js", "addon/edit/matchbrackets.js"],
+	["addon/edit/closebrackets.js", "addon/edit/closebrackets.js"],
+	["addon/selection/active-line.js", "addon/selection/active-line.js"],
+	["addon/fold/foldcode.js", "addon/fold/foldcode.js"],
+	["addon/fold/foldgutter.js", "addon/fold/foldgutter.js"],
+	["addon/fold/brace-fold.js", "addon/fold/brace-fold.js"],
 ];
 
 function copyStorePublic() {

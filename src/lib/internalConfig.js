@@ -1,7 +1,5 @@
 function isPlainObject(value) {
-	return (
-		value !== null && typeof value === "object" && !Array.isArray(value)
-	);
+	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isEqualValue(prevValue, nextValue) {
@@ -15,7 +13,10 @@ function isEqualValue(prevValue, nextValue) {
 	}
 
 	if (isPlainObject(prevValue) && isPlainObject(nextValue)) {
-		const keys = new Set([...Object.keys(prevValue), ...Object.keys(nextValue)]);
+		const keys = new Set([
+			...Object.keys(prevValue),
+			...Object.keys(nextValue),
+		]);
 		for (const key of keys) {
 			if (!isEqualValue(prevValue[key], nextValue[key])) return false;
 		}
@@ -55,7 +56,9 @@ function collectChangedPaths(prevValue, nextValue, basePath = "") {
 
 	for (const key of keys) {
 		const path = basePath ? `${basePath}.${key}` : key;
-		changedPaths.push(...collectChangedPaths(prevValue[key], nextValue[key], path));
+		changedPaths.push(
+			...collectChangedPaths(prevValue[key], nextValue[key], path),
+		);
 	}
 
 	return changedPaths;

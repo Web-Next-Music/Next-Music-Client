@@ -89,8 +89,7 @@ export async function getLatestNmRelease(owner, repo) {
 
 	const release = JSON.parse(r.body.toString());
 	const asset =
-		release.assets &&
-		release.assets.find((a) => a.name.endsWith("nm.tar.gz"));
+		release.assets && release.assets.find((a) => a.name.endsWith("nm.tar.gz"));
 
 	if (!asset) return null;
 

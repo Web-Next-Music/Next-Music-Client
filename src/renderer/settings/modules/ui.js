@@ -133,7 +133,9 @@ export function renderNodes(nodes, container, depth) {
 						const enabled = !!getPath(state.CONFIG, enableField.path);
 						bodyWrap.classList.toggle("group-body--disabled", !enabled);
 					};
-					toggle.querySelector("input").addEventListener("change", applyDisabled);
+					toggle
+						.querySelector("input")
+						.addEventListener("change", applyDisabled);
 					renderNodes(remainingChildren, bodyWrap, depth + 1);
 					applyDisabled();
 					container.append(bodyWrap);
@@ -253,8 +255,7 @@ export function buildUI() {
 
 	tabs.forEach((tab) => {
 		const nav = document.createElement("div");
-		nav.className =
-			"nav-item" + (tab.key === state.activeTab ? " active" : "");
+		nav.className = "nav-item" + (tab.key === state.activeTab ? " active" : "");
 		nav.textContent = tabName(tab.key);
 		nav.dataset.tab = tab.key;
 		nav.addEventListener("click", () => activateTab(tab.key));

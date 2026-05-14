@@ -41,7 +41,8 @@ export async function checkForUpdates() {
 	try {
 		const release = await getJson(GITHUB_API_URL);
 		if (!release?.name) {
-			if (release?.message) console.warn("[Updater] GitHub API:", release.message);
+			if (release?.message)
+				console.warn("[Updater] GitHub API:", release.message);
 			return;
 		}
 

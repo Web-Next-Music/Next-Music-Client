@@ -56,7 +56,9 @@ async function init() {
 	state.HAS_STARRED = starResult?.hasStarred ?? false;
 
 	if (!state.CONFIG.github) state.CONFIG.github = {};
-	state.CONFIG.github.accessToken = tokenResult?.hasToken ? "__has_token__" : null;
+	state.CONFIG.github.accessToken = tokenResult?.hasToken
+		? "__has_token__"
+		: null;
 
 	const versions = await window.electronAPI?.getVersions?.().catch(() => null);
 	if (versions) {

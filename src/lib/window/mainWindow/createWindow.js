@@ -139,7 +139,9 @@ export function createWindow(config) {
 				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;
 			}
 		}
-		mainWindow.webContents.executeJavaScript(`(() => {\n${cachedApiJs}\n})()`).catch(console.error);
+		mainWindow.webContents
+			.executeJavaScript(`(() => {\n${cachedApiJs}\n})()`)
+			.catch(console.error);
 	}
 
 	function injectTitleBar() {

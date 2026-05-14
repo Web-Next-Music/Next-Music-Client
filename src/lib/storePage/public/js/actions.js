@@ -290,7 +290,8 @@ async function doToggle(name, btn, event) {
 				toggleBtn.title = isIcon ? t("store.tooltipDisable") : "";
 				c.classList.remove("item-disabled");
 			} else {
-				toggleBtn.className = "btn btn-off" + (isIcon ? " btn-toggle-icon" : "");
+				toggleBtn.className =
+					"btn btn-off" + (isIcon ? " btn-toggle-icon" : "");
 				toggleBtn.innerHTML = isIcon ? ICONS.enable : t("store.btnEnable");
 				toggleBtn.title = isIcon ? t("store.tooltipEnable") : "";
 				c.classList.add("item-disabled");
@@ -356,7 +357,8 @@ async function doDelete(name, btn, event) {
 					const sCard = document.querySelector(`#grid-${section} .card`);
 					const match = sCard
 						? [...document.querySelectorAll(`#grid-${section} .card`)].find(
-								(c) => (c.dataset.name || "").toLowerCase() === name.toLowerCase(),
+								(c) =>
+									(c.dataset.name || "").toLowerCase() === name.toLowerCase(),
 							)
 						: null;
 

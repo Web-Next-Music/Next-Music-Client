@@ -182,7 +182,13 @@ function processDir(srcDir, distDir, allowHtml = false) {
 	}
 }
 
-const API_FUNCTIONS_ORDER = ["utils", "toasts", "filePatch", "player", "customTracks"];
+const API_FUNCTIONS_ORDER = [
+	"utils",
+	"toasts",
+	"filePatch",
+	"player",
+	"customTracks",
+];
 
 function bundleApiFiles() {
 	const apiSrcDir = join(SRC, "lib", "api");

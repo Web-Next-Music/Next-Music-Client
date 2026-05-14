@@ -16,7 +16,9 @@
 		"build:win": "npm run build && electron-builder --win",
 		"build:linux": "npm run build && electron-builder --linux",
 		"build:all": "npm run build && electron-builder --win --linux",
-		"start": "electron dist/index.js"
+		"start": "electron dist/index.js",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
 	},
 	"build": {
 		"appId": "com.nextmusic.client",
