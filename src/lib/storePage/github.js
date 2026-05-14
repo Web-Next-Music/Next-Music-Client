@@ -77,27 +77,24 @@ export async function getRemoteHeadCommit(owner, repo) {
 }
 
 export async function getLatestNmRelease(owner, repo) {
-	try {
-		const r = await httpsGet(
-			`https://api.github.com/repos/${owner}/${repo}/releases/latest`,
-		);
+	// Throws on network/API errors → caller treats as "API unavailable"
+	// Returns null → API works, but no nm.tar.gz release exists
+	const r = await httpsGet(
+		`https://api.github.com/repos/${owner}/${repo}/releases/latest`,
+	);
 
-		if (r.statusCode !== 200) return null;
-		const release = JSON.parse(r.body.toString());
+	if (r.statusCode === 404) return null;
+	if (r.statusCode !== 200)
+		throw new Error(`GitHub releases API: HTTP ${r.statusCode}`);
 
-		const asset =
-			release.assets &&
-			release.assets.find((a) => a.name.endsWith("nm.tar.gz"));
+	const release = JSON.parse(r.body.toString());
+	const asset =
+		release.assets &&
+		release.assets.find((a) => a.name.endsWith("nm.tar.gz"));
 
-		if (!asset) return null;
+	if (!asset) return null;
 
-		return {
-			tag: release.tag_name,
-			downloadUrl: asset.browser_download_url,
-		};
-	} catch {
-		return null;
-	}
+	return { tag: release.tag_name, downloadUrl: asset.browser_download_url };
 }
 
 export function normalizeGitUrl(url) {

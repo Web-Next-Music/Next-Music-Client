@@ -37,6 +37,7 @@ import {
 import { getPaths } from "../../config.js";
 import { getCurrentLangCode } from "../langManager.js";
 import { getConfig } from "../configManager.js";
+import { getBuildCache, setBuildCache } from "./buildCache.js";
 
 function skelCard() {
 	return `<div class="card"><div class="card-top"><div class="skel" style="width:44px;height:44px;border-radius:9px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-top:2px"><div class="skel" style="width:62%"></div><div class="skel" style="width:36%;height:10px"></div></div></div><div class="skel" style="height:33px;border-radius:8px"></div></div>`;
@@ -83,7 +84,9 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 	if (method === "GET" && (urlPath === "/" || urlPath === "")) {
 		const htmlPath = path.join(PUBLIC_DIR, "index.html");
 		let html = fs.readFileSync(htmlPath, "utf8");
-		html = html.replace("SKELS_ADDONS", skels(6)).replace("SKELS_THEMES", skels(6));
+		html = html
+			.replace("SKELS_ADDONS", skels(6))
+			.replace("SKELS_THEMES", skels(6));
 		return text(html, "text/html; charset=utf-8");
 	}
 
@@ -96,7 +99,10 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 	if (method === "GET" && urlPath.startsWith("/assets/fonts/")) {
 		const fontsDir = path.resolve(PUBLIC_DIR, "../../../assets/fonts");
-		const filePath = path.join(fontsDir, urlPath.slice("/assets/fonts/".length));
+		const filePath = path.join(
+			fontsDir,
+			urlPath.slice("/assets/fonts/".length),
+		);
 
 		if (fs.existsSync(filePath)) {
 			const ext = path.extname(filePath).toLowerCase();
@@ -247,7 +253,25 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				if (!m) throw new Error("Cannot parse submodule URL: " + subUrl);
 				const [, subOwner, subRepo] = m;
 
-				const nmRelease = await getLatestNmRelease(subOwner, subRepo);
+				const cacheKey = `${subOwner}/${subRepo}`;
+				let nmRelease = null;
+				let apiAvailable = true;
+
+				try {
+					nmRelease = await getLatestNmRelease(subOwner, subRepo);
+					setBuildCache(cacheKey, nmRelease !== null);
+				} catch {
+					apiAvailable = false;
+				}
+
+				if (!apiAvailable) {
+					const cached = getBuildCache(cacheKey);
+					if (cached === true) {
+						throw new Error(
+							`GitHub releases API is unavailable. Skipping "${name}" because it previously had a release build. Try again later.`,
+						);
+					}
+				}
 
 				if (nmRelease) {
 					fs.mkdirSync(dest, { recursive: true });
@@ -258,6 +282,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 						"utf8",
 					);
 				} else {
+					// API works but no nm.tar.gz release (never had one, or author removed it)
 					fs.mkdirSync(dest, { recursive: true });
 					await downloadSourceZip(subOwner, subRepo, dest);
 					try {
