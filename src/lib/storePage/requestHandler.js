@@ -37,8 +37,6 @@ import {
 import { getPaths } from "../../config.js";
 import { getCurrentLangCode } from "../langManager.js";
 import { getConfig } from "../configManager.js";
-import { getBuildCache, setBuildCache } from "./buildCache.js";
-
 function skelCard() {
 	return `<div class="card"><div class="card-top"><div class="skel" style="width:44px;height:44px;border-radius:9px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-top:2px"><div class="skel" style="width:62%"></div><div class="skel" style="width:36%;height:10px"></div></div></div><div class="skel" style="height:33px;border-radius:8px"></div></div>`;
 }
@@ -233,9 +231,13 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 	if (method === "POST" && urlPath === "/api/download") {
 		try {
-			const { name, folderPath, submodule, subUrl } = JSON.parse(
-				await getBody(),
-			);
+			const {
+				name,
+				folderPath,
+				submodule,
+				subUrl,
+				releaseCache = {},
+			} = JSON.parse(await getBody());
 
 			if (!name) throw new Error("Missing name");
 			const dest = path.join(addonsDirectory, name);
@@ -254,19 +256,19 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				const [, subOwner, subRepo] = m;
 
 				const cacheKey = `${subOwner}/${subRepo}`;
+				const releaseCacheKey = cacheKey.toLowerCase();
 				let nmRelease = null;
 				let apiAvailable = true;
+				const hasCachedRelease = !!releaseCache[releaseCacheKey];
 
 				try {
 					nmRelease = await getLatestNmRelease(subOwner, subRepo);
-					setBuildCache(cacheKey, nmRelease !== null);
 				} catch {
 					apiAvailable = false;
 				}
 
 				if (!apiAvailable) {
-					const cached = getBuildCache(cacheKey);
-					if (cached === true) {
+					if (hasCachedRelease) {
 						throw new Error(
 							`GitHub releases API is unavailable. Skipping "${name}" because it previously had a release build. Try again later.`,
 						);
@@ -291,6 +293,16 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 							fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
 					} catch {}
 				}
+
+				applyHandleEventsMerge(dest, oldHandleEvents);
+
+				return json({
+					ok: true,
+					releaseInfo: {
+						key: releaseCacheKey,
+						hasRelease: !!nmRelease,
+					},
+				});
 			} else {
 				const gm = await loadGitmodules(GITHUB_OWNER, GITHUB_REPO);
 				await downloadTree(folderPath, dest, GITHUB_OWNER, GITHUB_REPO, gm);

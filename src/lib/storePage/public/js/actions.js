@@ -1,5 +1,36 @@
 // Cross-tab sync via BroadcastChannel
 const storeChannel = new BroadcastChannel("store-sync");
+const RELEASE_CACHE_KEY = "nextstore-release-cache";
+
+function readReleaseCache() {
+	try {
+		return JSON.parse(localStorage.getItem(RELEASE_CACHE_KEY) || "{}");
+	} catch {
+		return {};
+	}
+}
+
+function writeReleaseCache(cache) {
+	try {
+		localStorage.setItem(RELEASE_CACHE_KEY, JSON.stringify(cache || {}));
+	} catch {}
+}
+
+function attachReleaseCache(payload) {
+	return {
+		...payload,
+		releaseCache: readReleaseCache(),
+	};
+}
+
+function syncReleaseCacheFromResponse(data) {
+	const info = data && data.releaseInfo;
+	if (!info || !info.key) return;
+
+	const cache = readReleaseCache();
+	cache[info.key] = !!info.hasRelease;
+	writeReleaseCache(cache);
+}
 
 function broadcastChange(type, payload) {
 	storeChannel.postMessage({ type, payload });
@@ -87,10 +118,11 @@ async function doDownload(argsJson, btn, event) {
 	if (btn.dataset.downloading) return;
 	const args = JSON.parse(argsJson);
 	const overlay = startDownloadProgress(btn);
-	const data = await api("/api/download", args).catch((e) => ({
+	const data = await api("/api/download", attachReleaseCache(args)).catch((e) => ({
 		ok: false,
 		error: e.message,
 	}));
+	syncReleaseCacheFromResponse(data);
 
 	finishDownloadProgress(btn, overlay);
 
@@ -206,10 +238,11 @@ async function doUpdate(argsJson, btn, event) {
 	btn.disabled = true;
 	btn.innerHTML = `${t("store.btnUpdating")}`;
 
-	const data = await api("/api/download", args).catch((e) => ({
+	const data = await api("/api/download", attachReleaseCache(args)).catch((e) => ({
 		ok: false,
 		error: e.message,
 	}));
+	syncReleaseCacheFromResponse(data);
 
 	delete btn.dataset.downloading;
 
