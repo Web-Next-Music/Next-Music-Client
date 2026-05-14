@@ -62,11 +62,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -80,12 +83,12 @@ jobs:
               rpm
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build (${{ matrix.cmd }})
         env:
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-        run: npm run ${{ matrix.cmd }} -- --publish never
+        run: pnpm run ${{ matrix.cmd }} -- --publish never
 
       - name: Upload Windows/Linux artifacts to release
         uses: softprops/action-gh-release@v2

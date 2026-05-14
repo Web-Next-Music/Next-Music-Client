@@ -4,18 +4,20 @@
 	"description": "Web client for Yandex Music with support for themes, addons, Discord Rich Presence (RPC) and OBS widget",
 	"main": "dist/index.js",
 	"engines": {
-		"node": ">=24.0.0"
+		"node": ">=24.0.0",
+		"pnpm": ">=9.0.0"
 	},
+	"packageManager": "pnpm@11.1.2",
 	"scripts": {
 		"dev:vite": "vite",
 		"dev:electron": "electron src/index.js",
-		"dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+		"dev": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
 		"build:renderer": "vite build",
 		"build:electron": "vite build --config vite.main.config.js",
-		"build": "npm run build:renderer && npm run build:electron",
-		"build:win": "npm run build && electron-builder --win",
-		"build:linux": "npm run build && electron-builder --linux",
-		"build:all": "npm run build && electron-builder --win --linux",
+		"build": "pnpm run build:renderer && pnpm run build:electron",
+		"build:win": "pnpm run build && electron-builder --win",
+		"build:linux": "pnpm run build && electron-builder --linux",
+		"build:all": "pnpm run build && electron-builder --win --linux",
 		"start": "electron dist/index.js",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
@@ -75,6 +77,14 @@
 	"author": "Diramix <39developer@diram1x.ru>",
 	"license": "MIT",
 	"type": "module",
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"@parcel/watcher",
+			"electron",
+			"electron-winstaller",
+			"esbuild"
+		]
+	},
 	"bugs": {
 		"url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
 	},

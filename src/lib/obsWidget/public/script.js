@@ -15,10 +15,9 @@ ws.onmessage = (e) => {
 	document.getElementById("cover").src = state.cover || "assets/icon-256.png";
 	document.getElementById("title").textContent = state.title || "";
 	document.getElementById("artist").textContent = state.artist || "";
-	document.getElementById("widget").style.setProperty(
-		"--track-color",
-		state.color || "#141414",
-	);
+	document
+		.getElementById("widget")
+		.style.setProperty("--track-color", state.color || "#141414");
 	document.getElementById("ts_end").textContent = formatTime(state.durationSec);
 };
 
