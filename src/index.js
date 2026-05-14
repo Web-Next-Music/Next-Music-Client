@@ -31,13 +31,25 @@ import setupIpcEvents from "./events.js";
 // Flags & Fixes
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 
-// Fix color rendering on Linux (Wayland issue)
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=512");
+app.commandLine.appendSwitch("disk-cache-size", String(50 * 1024 * 1024));
+app.commandLine.appendSwitch("v8-pool-size", "0");
+app.commandLine.appendSwitch("force-color-profile", "srgb");
+
 if (process.platform === "linux") {
-	app.commandLine.appendSwitch("disable-features", "WaylandWpColorManagerV1");
+	app.commandLine.appendSwitch("disable-dev-shm-usage");
+	app.commandLine.appendSwitch("force-color-profile", "srgb");
 }
 
-// Normalize color profile across platforms
-app.commandLine.appendSwitch("force-color-profile", "srgb");
+const disabledFeatures = [
+	"SpareRendererForSitePerProcess",
+	"BackForwardCache",
+	"MediaRouter",
+	"Translate",
+	"AutofillServerCommunication",
+];
+
+app.commandLine.appendSwitch("disable-features", disabledFeatures.join(","));
 
 // Register custom protocol BEFORE ready
 protocol.registerSchemesAsPrivileged([
@@ -158,12 +170,14 @@ app.whenReady().then(() => {
 		startServer({ port: 4091 });
 	}
 
-	// Discord rich presence
-	checkGitHubStar()
-		.then(({ hasStarred }) => {
-			presenceService(hasStarred);
-		})
-		.catch(() => {
-			presenceService(false);
-		});
+	// Discord rich presence — only start if enabled
+	if (config.programSettings?.richPresence?.enable) {
+		checkGitHubStar()
+			.then(({ hasStarred }) => {
+				presenceService(hasStarred);
+			})
+			.catch(() => {
+				presenceService(false);
+			});
+	}
 });

@@ -25,6 +25,7 @@ const apiFunctionsOrder = [
 ];
 
 let mainWindow;
+let cachedApiJs = null;
 
 export function createWindow(config) {
 	const startMinimized = config?.launchSettings?.startMinimized;
@@ -51,6 +52,8 @@ export function createWindow(config) {
 			webSecurity: false,
 			nodeIntegration: false,
 			contextIsolation: true,
+			spellcheck: false,
+			backgroundThrottling: true,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,
@@ -125,17 +128,18 @@ export function createWindow(config) {
 	}
 
 	function injectApi() {
-		let js;
-		if (fs.existsSync(apiBundleFile)) {
-			js = fs.readFileSync(apiBundleFile, "utf-8");
-		} else {
-			const parts = apiFunctionsOrder.map((name) =>
-				fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
-			);
-			const mainJs = fs.readFileSync(apiMainFile, "utf-8");
-			js = `${parts.join("\n")}\n${mainJs}`;
+		if (!cachedApiJs) {
+			if (fs.existsSync(apiBundleFile)) {
+				cachedApiJs = fs.readFileSync(apiBundleFile, "utf-8");
+			} else {
+				const parts = apiFunctionsOrder.map((name) =>
+					fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
+				);
+				const mainJs = fs.readFileSync(apiMainFile, "utf-8");
+				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;
+			}
 		}
-		mainWindow.webContents.executeJavaScript(`(() => {\n${js}\n})()`).catch(console.error);
+		mainWindow.webContents.executeJavaScript(`(() => {\n${cachedApiJs}\n})()`).catch(console.error);
 	}
 
 	function injectTitleBar() {

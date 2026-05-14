@@ -120,7 +120,7 @@ export const injectList = [
 	},
 	{
 		file: "siteRPCServer.js",
-		condition: () => true,
+		condition: (config) => config?.programSettings?.richPresence?.enable !== false,
 	},
 	{
 		file: "ugcShare.js",

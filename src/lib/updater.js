@@ -40,7 +40,10 @@ function getJson(url) {
 export async function checkForUpdates() {
 	try {
 		const release = await getJson(GITHUB_API_URL);
-		if (!release?.name) return;
+		if (!release?.name) {
+			if (release?.message) console.warn("[Updater] GitHub API:", release.message);
+			return;
+		}
 
 		const latestVersion = release.name;
 
@@ -113,24 +116,22 @@ export async function checkForUpdates() {
 }
 
 function showUpdateDialog(version, releaseUrl) {
-	if (CURRENT_VERSION.startsWith("v")) {
-		dialog
-			.showMessageBox({
-				type: "info",
-				title: t("updater.title"),
-				message: t("updater.message", { version }),
-				detail: t("updater.detail"),
-				buttons: [t("updater.buttons.0"), t("updater.buttons.1")],
-				defaultId: 0,
-				cancelId: 1,
-				noLink: true,
-			})
-			.then(({ response }) => {
-				if (response === 0) {
-					shell.openExternal(releaseUrl);
-				}
-			});
-	} else {
-		return;
-	}
+	if (!CURRENT_VERSION.startsWith("v")) return;
+
+	dialog
+		.showMessageBox({
+			type: "info",
+			title: t("updater.title"),
+			message: t("updater.message", { version }),
+			detail: t("updater.detail"),
+			buttons: [t("updater.buttons.0"), t("updater.buttons.1")],
+			defaultId: 0,
+			cancelId: 1,
+			noLink: true,
+		})
+		.then(({ response }) => {
+			if (response === 0) {
+				shell.openExternal(releaseUrl);
+			}
+		});
 }

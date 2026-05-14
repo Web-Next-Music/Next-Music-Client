@@ -54,6 +54,7 @@ export function createInfoV2Window() {
 		webPreferences: {
 			nodeIntegration: true,
 			contextIsolation: false,
+			backgroundThrottling: false,
 		},
 	});
 

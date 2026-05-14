@@ -1,6 +1,6 @@
 import { Client } from "@xhayper/discord-rpc";
 import WebSocket from "ws";
-import { loadConfig } from "./configManager.js";
+import { getConfig } from "./configManager.js";
 import { checkGitHubStar } from "./githubStarAuth.js";
 
 const CLIENT_ID = "1300258490815741952";
@@ -9,6 +9,7 @@ const NM_WEBSITE_LINK = `https://nm.diram1x.ru`;
 const WSPORT = 6972;
 
 let rpc;
+let wss = null;
 let isReady = false;
 let lastActivity = null;
 let lastPlayerState = null;
@@ -40,12 +41,36 @@ function initRPC() {
 	rpc.login().catch(console.error);
 }
 
-// WebSocket server
-const wss = new WebSocket.Server({ port: WSPORT }, () =>
-	console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
-);
+function initWS() {
+	wss = new WebSocket.Server({ port: WSPORT }, () =>
+		console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
+	);
+
+	wss.on("connection", (ws) => {
+		console.log("[WS] New connection");
+
+		if (lastRawData) {
+			try {
+				ws.send(JSON.stringify(lastRawData));
+			} catch {}
+		}
+
+		ws.on("message", (msg) => {
+			try {
+				const data = JSON.parse(msg.toString());
+				lastRawData = data;
+
+				broadcastToSiteClients(data, ws);
+				updateActivity(data);
+			} catch (e) {
+				console.error("[WS] ❌ Error parsing data:", e);
+			}
+		});
+	});
+}
 
 function broadcastToSiteClients(data, sender) {
+	if (!wss) return;
 	const msg = JSON.stringify(data);
 
 	wss.clients.forEach((client) => {
@@ -54,28 +79,6 @@ function broadcastToSiteClients(data, sender) {
 		}
 	});
 }
-
-wss.on("connection", (ws) => {
-	console.log("[WS] New connection");
-
-	if (lastRawData) {
-		try {
-			ws.send(JSON.stringify(lastRawData));
-		} catch {}
-	}
-
-	ws.on("message", (msg) => {
-		try {
-			const data = JSON.parse(msg.toString());
-			lastRawData = data;
-
-			broadcastToSiteClients(data, ws);
-			updateActivity(data);
-		} catch (e) {
-			console.error("[WS] ❌ Error parsing data:", e);
-		}
-	});
-});
 
 function clearActivity(reason = "unknown") {
 	if (lastPlayerState !== "pause") {
@@ -122,7 +125,7 @@ function refreshGitHubStarState(config) {
 
 function updateActivity(data) {
 	if (!rpc || !isReady) return;
-	const config = loadConfig();
+	const config = getConfig();
 	refreshGitHubStarState(config);
 
 	if (!config?.programSettings?.richPresence?.enable) {
@@ -256,6 +259,7 @@ function presenceService(hasStarred = false) {
 		`[RPC] Repo star: ${userHasStarred ? "✔ premium features enabled" : "❌ premium features disabled"}`,
 	);
 
+	initWS();
 	initRPC();
 }
 
