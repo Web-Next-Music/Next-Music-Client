@@ -59,6 +59,7 @@ export const defaultConfig = {
 		obsWidget: false,
 		alwaysExpandedPlayer: false,
 		ugcShare: true,
+		fastPlay: true,
 		disableAutoZoom: false,
 		antiSelect: false,
 		language: "en",
@@ -93,6 +94,10 @@ export const injectList = [
 	{
 		file: "antiSelect.css",
 		condition: (config) => config?.programSettings?.antiSelect,
+	},
+	{
+		file: "fastPlay.js",
+		condition: (config) => config?.programSettings?.fastPlay,
 	},
 	{
 		file: "downloader.js",

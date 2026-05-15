@@ -118,7 +118,8 @@
 			"antiSelect": "Anti-Select",
 			"experiments": "Experiments",
 			"ugcShare": "UGC Share",
-			"downloader": "Downloader"
+			"downloader": "Downloader",
+			"fastPlay": "Fast Play"
 		},
 		"desc": {
 			"loaderWindow": "Show a loader window before the main window appears",
@@ -142,7 +143,8 @@
 			"avatarUrl": "URL to the avatar image",
 			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics",
 			"ugcShare": "Allow UGC tracks to be shared",
-			"downloader": "Allows downloading tracks"
+			"downloader": "Allows downloading tracks",
+			"fastPlay": "Plays a track when pressing Ctrl + V with a saved link or a direct ID"
 		},
 		"experiments": {
 			"search": "Search experiments…",
