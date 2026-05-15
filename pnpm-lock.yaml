@@ -26,12 +26,6 @@ importers:
       '@xhayper/discord-rpc':
         specifier: ^1.3.4
         version: 1.3.4
-      express:
-        specifier: ^5.2.1
-        version: 5.2.1
-      fs:
-        specifier: ^0.0.1-security
-        version: 0.0.1-security
       ws:
         specifier: ^8.20.1
         version: 8.20.1

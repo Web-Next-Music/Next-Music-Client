@@ -1,16 +1,26 @@
-const webpackGlobal = window.webpackChunk_N_E;
 let appRequire = null;
 
-webpackGlobal.push([
-	[Symbol()],
-	{},
-	(r) => {
-		appRequire = r;
-	},
-]);
-webpackGlobal.pop();
+function getAppRequire() {
+	if (appRequire) return appRequire;
+
+	const webpackGlobal = window.webpackChunk_N_E;
+	if (!webpackGlobal?.push || !webpackGlobal?.pop) return null;
+
+	webpackGlobal.push([
+		[Symbol()],
+		{},
+		(r) => {
+			appRequire = r;
+		},
+	]);
+	webpackGlobal.pop();
+
+	return appRequire;
+}
 
 function findModuleExport(req, exportKey) {
+	if (!req) return null;
+
 	const mods = req.m ?? {};
 	for (const id of Object.keys(mods)) {
 		try {
@@ -24,6 +34,8 @@ function findModuleExport(req, exportKey) {
 }
 
 function searchFiber(fiber, cls, depth = 0) {
+	if (typeof cls !== "function") return [];
+
 	const found = [];
 
 	function search(fiber, depth) {

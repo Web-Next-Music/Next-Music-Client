@@ -1,60 +1,25 @@
-const VE = findModuleExport(appRequire, "VE");
-const _foundPlayers = searchFiber(
-	(document.getElementById("__next") || document.body)[
-		Object.keys(document.getElementById("__next") || document.body).find((k) =>
-			k.startsWith("__reactFiber"),
-		)
-	],
-	VE,
-);
-window._ymPlayers = [...new Map(_foundPlayers.map((p) => [p.id, p])).values()];
+function refreshPlayers() {
+	const req = getAppRequire();
+	const cls = findModuleExport(req, "VE");
+	if (typeof cls !== "function") return [];
+
+	const root = document.getElementById("__next") || document.body;
+	const fiberKey = Object.keys(root).find((k) => k.startsWith("__reactFiber"));
+	if (!fiberKey) return [];
+
+	const foundPlayers = searchFiber(root[fiberKey], cls);
+	window._ymPlayers = [
+		...new Map(foundPlayers.map((player) => [player.id, player])).values(),
+	];
+
+	return window._ymPlayers;
+}
 
 function getMainPlayer() {
 	const cached = window._ymPlayers?.find((p) => p.id === "MAIN");
 	if (cached) return cached;
 
-	const wg = window.webpackChunk_N_E;
-	let req = null;
-	wg.push([
-		[Symbol()],
-		{},
-		(r) => {
-			req = r;
-		},
-	]);
-	wg.pop();
-
-	const cls = findModuleExport(req, "VE");
-	const players = [];
-
-	function sf(fiber, depth = 0) {
-		if (!fiber || depth > 50) return;
-		if (fiber.stateNode instanceof cls) players.push(fiber.stateNode);
-		let state = fiber.memoizedState;
-		while (state) {
-			if (state.memoizedState instanceof cls) players.push(state.memoizedState);
-			state = state.next;
-		}
-		function so(obj, visited = new Set()) {
-			if (!obj || typeof obj !== "object" || visited.has(obj)) return;
-			visited.add(obj);
-			if (obj instanceof cls) {
-				players.push(obj);
-				return;
-			}
-			for (const v of Object.values(obj)) so(v, visited);
-		}
-		so(fiber.memoizedProps);
-		sf(fiber.child, depth + 1);
-		sf(fiber.sibling, depth + 1);
-	}
-
-	const root = document.getElementById("__next") || document.body;
-	const fk = Object.keys(root).find((k) => k.startsWith("__reactFiber"));
-	sf(root[fk]);
-
-	window._ymPlayers = [...new Map(players.map((p) => [p.id, p])).values()];
-	return window._ymPlayers.find((p) => p.id === "MAIN");
+	return refreshPlayers().find((p) => p.id === "MAIN");
 }
 
 function getCurrentMeta() {

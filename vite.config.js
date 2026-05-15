@@ -188,6 +188,7 @@ const API_FUNCTIONS_ORDER = [
 	"filePatch",
 	"player",
 	"customTracks",
+	"playerColor",
 ];
 
 function bundleApiFiles() {

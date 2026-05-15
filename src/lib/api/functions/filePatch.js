@@ -4,6 +4,7 @@ const _customTrackMap = new Map(); // trackId -> { url, key, codec, bitrate, qua
 const _customTrackMetaMap = new Map(); // trackId -> public meta used by UI/RPC
 
 function patchFileInfo() {
+	const appRequire = getAppRequire();
 	const moduleMap = appRequire?.m;
 	if (!moduleMap) return;
 

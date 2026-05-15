@@ -2,3 +2,7 @@ allowBuilds:
   "@parcel/watcher": true
   electron-winstaller: true
   esbuild: true
+nodeLinker: hoisted
+enableGlobalVirtualStore: false
+storeDir: .pnpm-store
+verifyDepsBeforeRun: false

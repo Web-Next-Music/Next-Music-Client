@@ -14,10 +14,10 @@
 		"dev": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:electron\"",
 		"build:renderer": "vite build",
 		"build:electron": "vite build --config vite.main.config.js",
-		"build": "pnpm run build:renderer && pnpm run build:electron",
-		"build:win": "pnpm run build && electron-builder --win",
-		"build:linux": "pnpm run build && electron-builder --linux",
-		"build:all": "pnpm run build && electron-builder --win --linux",
+		"build": "vite build && vite build --config vite.main.config.js",
+		"build:win": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --win",
+		"build:linux": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --linux",
+		"build:all": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --win --linux",
 		"start": "electron dist/index.js",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
@@ -112,8 +112,6 @@
 		"@fontsource/space-mono": "^5.2.9",
 		"@fontsource/syne": "^5.2.7",
 		"@xhayper/discord-rpc": "^1.3.4",
-		"express": "^5.2.1",
-		"fs": "^0.0.1-security",
 		"ws": "^8.20.1"
 	}
 }
