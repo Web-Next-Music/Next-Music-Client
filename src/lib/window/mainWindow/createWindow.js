@@ -17,6 +17,7 @@ const apiBundleFile = path.resolve(__dirname, "..", "..", "api", "bundle.js");
 const apiFunctionsDir = path.resolve(__dirname, "..", "..", "api", "functions");
 const apiMainFile = path.resolve(__dirname, "..", "..", "api", "main.js");
 const apiFunctionsOrder = [
+	"enableDevPanel",
 	"utils",
 	"toasts",
 	"filePatch",

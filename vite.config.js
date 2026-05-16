@@ -183,6 +183,7 @@ function processDir(srcDir, distDir, allowHtml = false) {
 }
 
 const API_FUNCTIONS_ORDER = [
+	"enableDevPanel",
 	"utils",
 	"toasts",
 	"filePatch",
