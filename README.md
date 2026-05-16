@@ -78,6 +78,31 @@ https://github.com/user-attachments/assets/73bf3536-d59c-4be5-a53c-0ff38f3844d1
 </details>
 
 <details>
+  <summary>Fast Play</summary>
+
+> Plays a track when pressing Ctrl + V with a saved link or a direct ID.
+
+</details>
+
+<details>
+  <summary>Dev Panel</summary>
+
+> Enables the Yandex Music Dev Panel.
+
+<img width="368" height="418" alt="image" src="https://github.com/user-attachments/assets/b9441d37-be8b-4f1f-8475-6247cdc34d1d" />
+
+</details>
+
+<details>
+  <summary>Lite Mode Control</summary>
+
+> Always shows the Lite Mode toggle slider in the settings.
+
+<img width="640" height="357" alt="image" src="https://github.com/user-attachments/assets/7b2112e1-0a0c-46d6-8357-1b5a040cf609" />
+
+</details>
+
+<details>
   <summary>Yandex Experiments Override</summary>
 
 > Allows overriding Yandex Music experiments and enabling unavailable features.
