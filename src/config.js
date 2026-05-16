@@ -82,6 +82,8 @@ export const defaultConfig = {
 
 	github: {
 		accessToken: null,
+		refreshToken: null,
+		expiresAt: null,
 	},
 };
 

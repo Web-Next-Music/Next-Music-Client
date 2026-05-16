@@ -9,6 +9,32 @@ const REPO_NAME = "Next-Music-Client";
 
 // Utils
 
+async function refreshAccessToken(refreshToken) {
+	const res = await fetch("https://github.com/login/oauth/access_token", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({
+			client_id: GITHUB_CLIENT_ID,
+			refresh_token: refreshToken,
+			grant_type: "refresh_token",
+		}),
+	});
+
+	const data = await res.json();
+	if (data.error) {
+		throw new Error(`Token refresh failed: ${data.error}`);
+	}
+
+	return {
+		accessToken: data.access_token,
+		refreshToken: data.refresh_token || refreshToken,
+		expiresAt: Date.now() + (data.expires_in || 28800) * 1000,
+	};
+}
+
 async function checkRepoStarred(accessToken) {
 	const res = await fetch(
 		`https://api.github.com/user/starred/${REPO_OWNER}/${REPO_NAME}`,
@@ -31,7 +57,10 @@ async function requestDeviceCodes() {
 	const res = await fetch("https://github.com/login/device/code", {
 		method: "POST",
 		headers: { "Content-Type": "application/json", Accept: "application/json" },
-		body: JSON.stringify({ client_id: GITHUB_CLIENT_ID, scope: "" }),
+		body: JSON.stringify({
+			client_id: GITHUB_CLIENT_ID,
+			scope: "offline_access",
+		}),
 	});
 
 	const data = await res.json();
@@ -71,7 +100,11 @@ async function pollForToken(deviceCode, intervalSec, expiresIn, onProgress) {
 				const data = await res.json();
 
 				if (data.access_token) {
-					resolve(data.access_token);
+					resolve({
+						accessToken: data.access_token,
+						refreshToken: data.refresh_token || null,
+						expiresAt: Date.now() + (data.expires_in || 28800) * 1000,
+					});
 					return;
 				}
 
@@ -104,7 +137,9 @@ async function pollForToken(deviceCode, intervalSec, expiresIn, onProgress) {
 
 export async function checkGitHubStar() {
 	const config = loadConfig();
-	const accessToken = config.github?.accessToken ?? null;
+	const github = config.github ?? {};
+	const accessToken = github.accessToken ?? null;
+	const refreshToken = github.refreshToken ?? null;
 
 	if (!accessToken) {
 		console.log("[GitHub Auth] No token found");
@@ -116,6 +151,30 @@ export async function checkGitHubStar() {
 		console.log(`[GitHub Auth] Star: ${hasStarred ? "✔" : "❌"}`);
 		return { hasStarred };
 	} catch (err) {
+		if (err.message === "401" && refreshToken) {
+			console.warn("[GitHub Auth] Token expired, attempting refresh...");
+			try {
+				const refreshed = await refreshAccessToken(refreshToken);
+				config.github = {
+					accessToken: refreshed.accessToken,
+					refreshToken: refreshed.refreshToken,
+					expiresAt: refreshed.expiresAt,
+				};
+				saveConfig(config);
+				console.log("[GitHub Auth] Token refreshed successfully");
+
+				const hasStarred = await checkRepoStarred(refreshed.accessToken);
+				console.log(`[GitHub Auth] Star: ${hasStarred ? "✔" : "❌"}`);
+				return { hasStarred };
+			} catch (refreshErr) {
+				console.error("[GitHub Auth] Token refresh failed:", refreshErr.message);
+				config.github.accessToken = null;
+				config.github.refreshToken = null;
+				saveConfig(config);
+				return { hasStarred: false, tokenExpired: true };
+			}
+		}
+
 		if (err.message === "401") {
 			console.warn("[GitHub Auth] Token expired or revoked.");
 			return { hasStarred: false, tokenExpired: true };
@@ -146,9 +205,9 @@ export async function connectGitHubDeviceFlow(onUserCode, onProgress) {
 
 	console.log(`[GitHub Auth] Code: ${user_code} → ${verification_uri}`);
 
-	let accessToken;
+	let tokenData;
 	try {
-		accessToken = await pollForToken(
+		tokenData = await pollForToken(
 			device_code,
 			interval,
 			expires_in,
@@ -167,14 +226,16 @@ export async function connectGitHubDeviceFlow(onUserCode, onProgress) {
 
 	let hasStarred = false;
 	try {
-		hasStarred = await checkRepoStarred(accessToken);
+		hasStarred = await checkRepoStarred(tokenData.accessToken);
 	} catch (err) {
 		console.error("[GitHub Auth] ❌ Star check error:", err.message);
 	}
 
 	const config = loadConfig();
 	config.github ??= {};
-	config.github.accessToken = accessToken;
+	config.github.accessToken = tokenData.accessToken;
+	config.github.refreshToken = tokenData.refreshToken;
+	config.github.expiresAt = tokenData.expiresAt;
 	saveConfig(config);
 
 	console.log(`[GitHub Auth] Done. Star: ${hasStarred ? "✔" : "❌"}`);
@@ -184,6 +245,8 @@ export async function connectGitHubDeviceFlow(onUserCode, onProgress) {
 export function disconnectGitHub() {
 	const config = loadConfig();
 	config.github.accessToken = null;
+	config.github.refreshToken = null;
+	config.github.expiresAt = null;
 	saveConfig(config);
 	console.log("[GitHub Auth] Token cleared.");
 }
