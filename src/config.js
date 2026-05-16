@@ -110,6 +110,9 @@ export const injectList = [
 		condition: (config) => config?.alpha?.listenAlong?.enable,
 	},
 	{
+		file: "liteVersionMode.js",
+	},
+	{
 		file: "nextStore.js",
 		condition: (config) => config?.programSettings?.addons?.enable,
 	},
