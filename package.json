@@ -15,9 +15,9 @@
 		"build:renderer": "vite build",
 		"build:electron": "vite build --config vite.main.config.js",
 		"build": "vite build && vite build --config vite.main.config.js",
-		"build:win": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --win",
-		"build:linux": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --linux",
-		"build:all": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --win --linux",
+		"build:win": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --win --publish never",
+		"build:linux": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --linux --publish never",
+		"build:all": "vite build && vite build --config vite.main.config.js && pnpm_config_verify_deps_before_run=false electron-builder --win --linux --publish never",
 		"start": "electron dist/index.js",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
