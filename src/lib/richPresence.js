@@ -147,7 +147,7 @@ function updateActivity(data) {
 
 	const positionSec = data.positionSec ?? 0;
 	const durationSec = data.durationSec ?? 0;
-	const hasTimestamps = durationSec > 0 && positionSec > 0;
+	const hasTimestamps = durationSec > 0 && positionSec >= 0;
 
 	const now = Math.floor(Date.now() / 1000);
 	const startTimestamp = now - Math.floor(positionSec);
