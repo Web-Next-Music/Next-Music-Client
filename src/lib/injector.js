@@ -1,4 +1,5 @@
 import { injectList } from "../config.js";
+import { app } from "electron";
 import path from "path";
 import fs from "fs";
 
@@ -53,6 +54,10 @@ export default function injector(mainWindow, config) {
 		const injectDir = isDev
 			? path.resolve(__dirname, "../../src/inject")
 			: path.join(__dirname, "../inject");
+
+		mainWindow.webContents.executeJavaScript(
+			`window.__APP_VERSION__ = ${JSON.stringify(`Next Music/${app.getVersion()}`)};`,
+		);
 
 		for (const item of injectList) {
 			const { file, condition } = item;

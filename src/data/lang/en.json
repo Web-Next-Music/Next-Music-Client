@@ -119,7 +119,8 @@
 			"experiments": "Experiments",
 			"ugcShare": "UGC Share",
 			"downloader": "Downloader",
-			"fastPlay": "Fast Play"
+			"fastPlay": "Fast Play",
+			"lrclib": "LRCLib"
 		},
 		"desc": {
 			"loaderWindow": "Show a loader window before the main window appears",
@@ -144,7 +145,8 @@
 			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics",
 			"ugcShare": "Allow UGC tracks to be shared",
 			"downloader": "Allows downloading tracks",
-			"fastPlay": "Plays a track when pressing Ctrl + V with a saved link or a direct ID"
+			"fastPlay": "Plays a track when pressing Ctrl + V with a saved link or a direct ID",
+			"lrclib": "Enables loading synchronized lyrics from lrclib.net"
 		},
 		"experiments": {
 			"search": "Search experiments…",

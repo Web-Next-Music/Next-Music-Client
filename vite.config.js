@@ -19,6 +19,8 @@ import dotenv from "dotenv";
 dotenv.config();
 const env = process.env;
 
+const APP_VERSION = `Next Music/${JSON.parse(readFileSync("package.json", "utf8")).version}`;
+
 if (!env.ENCRYPTION_KEY) {
 	try {
 		const envFile = readFileSync(".env", "utf8");
@@ -164,6 +166,9 @@ function processDir(srcDir, distDir, allowHtml = false) {
 					);
 				}
 			}
+			if (isInjectFile) {
+				code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
+			}
 
 			const result = esbuild.transformSync(code, {
 				minify: true,
@@ -274,17 +279,21 @@ function replaceDefinesPlugin() {
 						/__ENCRYPTION_KEY__/g,
 						JSON.stringify(ENCRYPTION_KEY_VALUE),
 					);
+					code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
 					return code;
 				}
 			}
 		},
 		transform(code, id) {
-			// Transform loaded modules that contain __ENCRYPTION_KEY__
 			if (id.includes("src/inject/") && code.includes("__ENCRYPTION_KEY__")) {
 				code = code.replace(
 					/__ENCRYPTION_KEY__/g,
 					JSON.stringify(ENCRYPTION_KEY_VALUE),
 				);
+				return { code };
+			}
+			if (id.includes("src/inject/") && code.includes("__APP_VERSION__")) {
+				code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
 				return { code };
 			}
 		},
@@ -303,6 +312,7 @@ export default defineConfig(({ command }) => ({
 
 	define: {
 		__ENCRYPTION_KEY__: JSON.stringify(ENCRYPTION_KEY_VALUE),
+		__APP_VERSION__: JSON.stringify(APP_VERSION),
 	},
 
 	...(command === "build" && {

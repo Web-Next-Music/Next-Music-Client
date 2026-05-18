@@ -60,6 +60,7 @@ export const defaultConfig = {
 		alwaysExpandedPlayer: false,
 		ugcShare: true,
 		fastPlay: true,
+		lrclib: false,
 		disableAutoZoom: false,
 		antiSelect: false,
 		language: "en",
@@ -111,6 +112,10 @@ export const injectList = [
 	},
 	{
 		file: "liteVersionMode.js",
+	},
+	{
+		file: "lrclib.js",
+		condition: (config) => config?.programSettings?.lrclib,
 	},
 	{
 		file: "nextStore.js",
