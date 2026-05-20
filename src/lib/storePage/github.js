@@ -38,12 +38,16 @@ export function httpsGet(url, headers = {}, timeout = 15000) {
 	});
 }
 
-export async function ghContents(owner, repo, p) {
+function authHeader(token) {
+	return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function ghContents(owner, repo, p, token) {
 	const url = p
 		? `https://api.github.com/repos/${owner}/${repo}/contents/${p}`
 		: `https://api.github.com/repos/${owner}/${repo}/contents`;
 
-	const r = await httpsGet(url);
+	const r = await httpsGet(url, authHeader(token));
 	const data = JSON.parse(r.body.toString());
 
 	if (r.statusCode !== 200)
@@ -52,10 +56,11 @@ export async function ghContents(owner, repo, p) {
 	return data;
 }
 
-export async function resolveSubmoduleUrl(owner, repo, itemPath) {
+export async function resolveSubmoduleUrl(owner, repo, itemPath, token) {
 	try {
 		const r = await httpsGet(
 			`https://api.github.com/repos/${owner}/${repo}/contents/${itemPath}`,
+			authHeader(token),
 		);
 		return JSON.parse(r.body.toString()).submodule_git_url || null;
 	} catch {
@@ -63,10 +68,11 @@ export async function resolveSubmoduleUrl(owner, repo, itemPath) {
 	}
 }
 
-export async function getRemoteHeadCommit(owner, repo) {
+export async function getRemoteHeadCommit(owner, repo, token) {
 	try {
 		const r = await httpsGet(
 			`https://api.github.com/repos/${owner}/${repo}/commits/HEAD`,
+			authHeader(token),
 		);
 
 		if (r.statusCode !== 200) return null;
@@ -76,11 +82,12 @@ export async function getRemoteHeadCommit(owner, repo) {
 	}
 }
 
-export async function getLatestNmRelease(owner, repo) {
+export async function getLatestNmRelease(owner, repo, token) {
 	// Throws on network/API errors → caller treats as "API unavailable"
 	// Returns null → API works, but no nm.tar.gz release exists
 	const r = await httpsGet(
 		`https://api.github.com/repos/${owner}/${repo}/releases/latest`,
+		authHeader(token),
 	);
 
 	if (r.statusCode === 404) return null;
@@ -146,22 +153,22 @@ function pickImg(list) {
 	);
 }
 
-async function findLogoRecursive(owner, repo, dirPath, depth = 0) {
+async function findLogoRecursive(owner, repo, dirPath, depth = 0, token) {
 	if (depth > 5) return null;
 	try {
-		const items = await ghContents(owner, repo, dirPath);
+		const items = await ghContents(owner, repo, dirPath, token);
 		const logo = pickImg(items);
 		if (logo) return logo;
 
 		for (const sub of items.filter((i) => i.type === "dir")) {
-			const found = await findLogoRecursive(owner, repo, sub.path, depth + 1);
+			const found = await findLogoRecursive(owner, repo, sub.path, depth + 1, token);
 			if (found) return found;
 		}
 	} catch {}
 	return null;
 }
 
-async function findBrandingDir(owner, repo, items, depth = 0) {
+async function findBrandingDir(owner, repo, items, depth = 0, token) {
 	const branding = items.find(
 		(i) => i.type === "dir" && /^branding$/i.test(i.name),
 	);
@@ -171,8 +178,8 @@ async function findBrandingDir(owner, repo, items, depth = 0) {
 
 	for (const sub of items.filter((i) => i.type === "dir")) {
 		try {
-			const subItems = await ghContents(owner, repo, sub.path);
-			const found = await findBrandingDir(owner, repo, subItems, depth + 1);
+			const subItems = await ghContents(owner, repo, sub.path, token);
+			const found = await findBrandingDir(owner, repo, subItems, depth + 1, token);
 			if (found) return found;
 		} catch {}
 	}
@@ -198,7 +205,7 @@ export async function pLimit(tasks, limit = 3) {
 	return results;
 }
 
-export async function getSection(owner, repo, section) {
+export async function getSection(owner, repo, section, token) {
 	const gitmodules = await loadGitmodules(owner, repo);
 	const prefix = section + "/";
 	const result = [];
@@ -219,7 +226,7 @@ export async function getSection(owner, repo, section) {
 	}
 
 	try {
-		const items = await ghContents(owner, repo, section);
+		const items = await ghContents(owner, repo, section, token);
 
 		for (const item of items) {
 			if (item.type !== "dir") continue;
@@ -236,7 +243,7 @@ export async function getSection(owner, repo, section) {
 	return result;
 }
 
-export async function getFolderMeta(owner, repo, f) {
+export async function getFolderMeta(owner, repo, f, token) {
 	const cacheKey = f.submodule ? f.subUrl || f.name : f.path;
 
 	try {
@@ -255,11 +262,11 @@ export async function getFolderMeta(owner, repo, f) {
 			p = "";
 		}
 
-		const items = await ghContents(o, r, p);
+		const items = await ghContents(o, r, p, token);
 
-		const brandingPath = await findBrandingDir(o, r, items);
+		const brandingPath = await findBrandingDir(o, r, items, 0, token);
 		let logo = brandingPath
-			? await findLogoRecursive(o, r, brandingPath)
+			? await findLogoRecursive(o, r, brandingPath, 0, token)
 			: null;
 
 		if (!logo) logo = pickImg(items);
@@ -267,7 +274,7 @@ export async function getFolderMeta(owner, repo, f) {
 		if (!logo) {
 			for (const sub of items.filter((i) => i.type === "dir")) {
 				try {
-					const subItems = await ghContents(o, r, sub.path);
+					const subItems = await ghContents(o, r, sub.path, token);
 					const hasScript = subItems.some(
 						(i) => i.type === "file" && /\.(css|js)$/i.test(i.name),
 					);

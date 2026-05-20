@@ -141,12 +141,13 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 	if (method === "GET" && urlPath.startsWith("/api/section/")) {
 		const section = urlPath.slice("/api/section/".length);
+		const token = getConfig().github?.accessToken || undefined;
 
 		try {
-			const items = await getSection(GITHUB_OWNER, GITHUB_REPO, section);
+			const items = await getSection(GITHUB_OWNER, GITHUB_REPO, section, token);
 			const result = await pLimit(
 				items.map((f) => async () => {
-					const meta = await getFolderMeta(GITHUB_OWNER, GITHUB_REPO, f);
+					const meta = await getFolderMeta(GITHUB_OWNER, GITHUB_REPO, f, token);
 					return {
 						name: f.name,
 						path: f.path,
@@ -241,6 +242,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 			if (!name) throw new Error("Missing name");
 			const dest = path.join(addonsDirectory, name);
+			const token = getConfig().github?.accessToken || undefined;
 
 			const oldHandleEvents = readOldHandleEvents(dest);
 
@@ -262,7 +264,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				const hasCachedRelease = !!releaseCache[releaseCacheKey];
 
 				try {
-					nmRelease = await getLatestNmRelease(subOwner, subRepo);
+					nmRelease = await getLatestNmRelease(subOwner, subRepo, token);
 				} catch {
 					apiAvailable = false;
 				}
@@ -288,7 +290,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 					fs.mkdirSync(dest, { recursive: true });
 					await downloadSourceZip(subOwner, subRepo, dest);
 					try {
-						const sha = await getRemoteHeadCommit(subOwner, subRepo);
+						const sha = await getRemoteHeadCommit(subOwner, subRepo, token);
 						if (sha)
 							fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
 					} catch {}
@@ -329,9 +331,11 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			if (!m) return json({ hasUpdate: false });
 			const [, owner, repo] = m;
 
+			const token = getConfig().github?.accessToken || undefined;
+
 			const localTag = getLocalReleaseTag(name);
 			if (localTag) {
-				const nmRelease = await getLatestNmRelease(owner, repo);
+				const nmRelease = await getLatestNmRelease(owner, repo, token);
 				if (!nmRelease) return json({ hasUpdate: false });
 				const hasUpdate = nmRelease.tag !== localTag;
 
@@ -343,7 +347,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			}
 
 			const [remoteHash, localHash] = await Promise.all([
-				getRemoteHeadCommit(owner, repo),
+				getRemoteHeadCommit(owner, repo, token),
 				Promise.resolve(getLocalCommitHash(name)),
 			]);
 
