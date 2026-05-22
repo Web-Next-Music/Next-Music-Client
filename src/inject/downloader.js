@@ -8,20 +8,56 @@
   <use xlink:href="/icons/sprite.svg#download_xxs"/>
 </svg>`;
 
+	const DL_SPINNER_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+  aria-hidden="true" focusable="false" class="nm-dl-spinner">
+  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-dasharray="42 14" />
+</svg>`;
+
 	const DL_BTN_STYLE = `
 #nm-download-btn {
   color: var(--ym-controls-color-secondary-text-enabled);
   background: transparent;
   border: 0 solid;
   z-index: 1;
+  position: relative;
+  overflow: visible;
 }
 #nm-download-btn:hover {
   color: var(--ym-controls-color-secondary-on_default-hovered);
   cursor: pointer;
 }
 #nm-download-btn:disabled {
-  opacity: 0.4;
+  opacity: 1;
   cursor: default;
+}
+@keyframes nm-spin {
+  to { transform: rotate(360deg); }
+}
+.nm-dl-spinner {
+  display: block;
+  animation: nm-spin 0.9s linear infinite;
+  transform-origin: center;
+}
+#nm-dl-progress-track {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.2;
+  border-radius: 1px;
+}
+#nm-dl-progress-fill {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: width 0.12s ease;
 }
 `;
 
@@ -435,16 +471,42 @@
 	}
 
 	// Downloading
-	async function downloadTrack(track) {
+	async function fetchWithProgress(url, onProgress) {
+		const res = await fetch(url);
+		if (!res.ok) throw new Error(`Audio download error: HTTP ${res.status}`);
+
+		const contentLength = res.headers.get("Content-Length");
+		if (!contentLength || !res.body)
+			return new Uint8Array(await res.arrayBuffer());
+
+		const total = parseInt(contentLength, 10);
+		const reader = res.body.getReader();
+		const chunks = [];
+		let received = 0;
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			chunks.push(value);
+			received += value.length;
+			onProgress?.(received / total);
+		}
+
+		const out = new Uint8Array(received);
+		let pos = 0;
+		for (const chunk of chunks) {
+			out.set(chunk, pos);
+			pos += chunk.length;
+		}
+		return out;
+	}
+
+	async function downloadTrack(track, onProgress) {
 		const { url: audioUrl, keyHex } = await getTrackFileInfo();
 
-		const [audioRes, cover] = await Promise.all([
-			fetch(audioUrl),
-			fetchAndResizeCover(track.coverUrl),
-		]);
-		if (!audioRes.ok)
-			throw new Error(`Audio download error: HTTP ${audioRes.status}`);
-		let audioBuf = new Uint8Array(await audioRes.arrayBuffer());
+		const coverPromise = fetchAndResizeCover(track.coverUrl);
+		let audioBuf = await fetchWithProgress(audioUrl, onProgress);
+		const cover = await coverPromise;
 
 		if (keyHex) audioBuf = await decryptAesCtr(audioBuf, keyHex);
 
@@ -528,12 +590,23 @@
 			}
 
 			btn.disabled = true;
+			btn.innerHTML =
+				DL_SPINNER_SVG +
+				'<div id="nm-dl-progress-track"></div>' +
+				'<div id="nm-dl-progress-fill"></div>';
+			const fill = btn.querySelector("#nm-dl-progress-fill");
+
 			try {
-				await downloadTrack(currentTrack);
+				await downloadTrack(currentTrack, (ratio) => {
+					fill.style.width = `${Math.min(ratio * 100, 100)}%`;
+				});
+				fill.style.width = "100%";
+				await new Promise((r) => setTimeout(r, 180));
 			} catch (err) {
 				showError(`Error: ${err.message}`);
 			} finally {
 				btn.disabled = false;
+				btn.innerHTML = DL_ICON_SVG;
 			}
 		});
 
