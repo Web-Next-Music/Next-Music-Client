@@ -1,15 +1,48 @@
-function refreshPlayers() {
-	const req = getAppRequire();
-	const cls = findModuleExport(req, "VE");
-	if (typeof cls !== "function") return [];
+function isPlayerLike(obj) {
+	return (
+		obj !== null &&
+		typeof obj === "object" &&
+		typeof obj.id === "string" &&
+		typeof obj.play === "function" &&
+		typeof obj.moveForward === "function" &&
+		obj.playbackState !== undefined &&
+		obj.queueController !== undefined
+	);
+}
 
+function refreshPlayers() {
 	const root = document.getElementById("__next") || document.body;
 	const fiberKey = Object.keys(root).find((k) => k.startsWith("__reactFiber"));
 	if (!fiberKey) return [];
 
-	const foundPlayers = searchFiber(root[fiberKey], cls);
+	const found = [];
+
+	function search(fiber, depth) {
+		if (!fiber || depth > 50) return;
+		if (isPlayerLike(fiber.stateNode)) found.push(fiber.stateNode);
+		let state = fiber.memoizedState;
+		while (state) {
+			if (isPlayerLike(state.memoizedState)) found.push(state.memoizedState);
+			state = state.next;
+		}
+		function searchObj(obj, visited = new Set()) {
+			if (!obj || typeof obj !== "object" || visited.has(obj)) return;
+			visited.add(obj);
+			if (isPlayerLike(obj)) {
+				found.push(obj);
+				return;
+			}
+			for (const v of Object.values(obj)) searchObj(v, visited);
+		}
+		searchObj(fiber.memoizedProps);
+		search(fiber.child, depth + 1);
+		search(fiber.sibling, depth + 1);
+	}
+
+	search(root[fiberKey], 0);
+
 	window._ymPlayers = [
-		...new Map(foundPlayers.map((player) => [player.id, player])).values(),
+		...new Map(found.map((player) => [player.id, player])).values(),
 	];
 
 	return window._ymPlayers;
@@ -122,6 +155,8 @@ function getCurrentTrack() {
 		artistIds: artists.map((a) => a.id),
 		artistNames: artists.map((a) => a.name),
 		albumId: meta.albums?.[0]?.id ?? null,
+		albumTitle: meta.albums?.[0]?.title ?? null,
+		year: meta.albums?.[0]?.year ?? null,
 		coverUrl,
 		trackUrl: `https://music.yandex.ru/track/${meta.id}`,
 		durationMs: meta.durationMs ?? null,

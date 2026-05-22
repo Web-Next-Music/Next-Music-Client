@@ -3,9 +3,6 @@
 	const COVER_SIZE = 1000;
 	window.nextmusicApi;
 
-	// Standard salt for Yandex Music web version (publicly known)
-	const YM_SALT = "XGRlBW9FXlekgbPrRHuSiA";
-
 	const DL_ICON_SVG = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24"
   aria-hidden="true" focusable="false" role="img" class="svg-icon">
   <use xlink:href="/icons/sprite.svg#download_xxs"/>
@@ -37,7 +34,6 @@
 	let lastTrackId = null;
 
 	// Utilities
-
 	const _utf8 = (s) => new TextEncoder().encode(s);
 
 	function sanitize(name) {
@@ -51,171 +47,50 @@
 		);
 	}
 
-	// MD5
-
-	function md5(str) {
-		function RL(v, s) {
-			return (v << s) | (v >>> (32 - s));
-		}
-		function AU(x, y) {
-			const x8 = x & 0x80000000,
-				y8 = y & 0x80000000;
-			const x4 = x & 0x40000000,
-				y4 = y & 0x40000000;
-			const r = (x & 0x3fffffff) + (y & 0x3fffffff);
-			if (x4 & y4) return r ^ 0x80000000 ^ x8 ^ y8;
-			if (x4 | y4)
-				return r & 0x40000000
-					? r ^ 0xc0000000 ^ x8 ^ y8
-					: r ^ 0x40000000 ^ x8 ^ y8;
-			return r ^ x8 ^ y8;
-		}
-		const F = (x, y, z) => (x & y) | (~x & z);
-		const G = (x, y, z) => (x & z) | (y & ~z);
-		const H = (x, y, z) => x ^ y ^ z;
-		const I = (x, y, z) => y ^ (x | ~z);
-		const FF = (a, b, c, d, x, s, ac) =>
-			AU(RL(AU(AU(AU(a, F(b, c, d)), x), ac), s), b);
-		const GG = (a, b, c, d, x, s, ac) =>
-			AU(RL(AU(AU(AU(a, G(b, c, d)), x), ac), s), b);
-		const HH = (a, b, c, d, x, s, ac) =>
-			AU(RL(AU(AU(AU(a, H(b, c, d)), x), ac), s), b);
-		const II = (a, b, c, d, x, s, ac) =>
-			AU(RL(AU(AU(AU(a, I(b, c, d)), x), ac), s), b);
-
-		function toWords(s) {
-			const len = s.length;
-			const nw = ((len + 8 - ((len + 8) % 64)) / 64 + 1) * 16;
-			const wa = new Array(nw - 1).fill(0);
-			for (let i = 0; i < len; i++)
-				wa[(i - (i % 4)) / 4] |= s.charCodeAt(i) << ((i % 4) * 8);
-			wa[(len - (len % 4)) / 4] |= 0x80 << ((len % 4) * 8);
-			wa[nw - 2] = len << 3;
-			wa[nw - 1] = len >>> 29;
-			return wa;
-		}
-		function hex(v) {
-			let h = "";
-			for (let i = 0; i < 4; i++) {
-				const b = (v >>> (i * 8)) & 255;
-				h += ("0" + b.toString(16)).slice(-2);
-			}
-			return h;
-		}
-
-		const x = toWords(str);
-		let a = 0x67452301,
-			b = 0xefcdab89,
-			c = 0x98badcfe,
-			d = 0x10325476;
-
-		for (let k = 0; k < x.length; k += 16) {
-			const [A, B, C, D] = [a, b, c, d];
-			a = FF(a, b, c, d, x[k + 0], 7, 0xd76aa478);
-			d = FF(d, a, b, c, x[k + 1], 12, 0xe8c7b756);
-			c = FF(c, d, a, b, x[k + 2], 17, 0x242070db);
-			b = FF(b, c, d, a, x[k + 3], 22, 0xc1bdceee);
-			a = FF(a, b, c, d, x[k + 4], 7, 0xf57c0faf);
-			d = FF(d, a, b, c, x[k + 5], 12, 0x4787c62a);
-			c = FF(c, d, a, b, x[k + 6], 17, 0xa8304613);
-			b = FF(b, c, d, a, x[k + 7], 22, 0xfd469501);
-			a = FF(a, b, c, d, x[k + 8], 7, 0x698098d8);
-			d = FF(d, a, b, c, x[k + 9], 12, 0x8b44f7af);
-			c = FF(c, d, a, b, x[k + 10], 17, 0xffff5bb1);
-			b = FF(b, c, d, a, x[k + 11], 22, 0x895cd7be);
-			a = FF(a, b, c, d, x[k + 12], 7, 0x6b901122);
-			d = FF(d, a, b, c, x[k + 13], 12, 0xfd987193);
-			c = FF(c, d, a, b, x[k + 14], 17, 0xa679438e);
-			b = FF(b, c, d, a, x[k + 15], 22, 0x49b40821);
-
-			a = GG(a, b, c, d, x[k + 1], 5, 0xf61e2562);
-			d = GG(d, a, b, c, x[k + 6], 9, 0xc040b340);
-			c = GG(c, d, a, b, x[k + 11], 14, 0x265e5a51);
-			b = GG(b, c, d, a, x[k + 0], 20, 0xe9b6c7aa);
-			a = GG(a, b, c, d, x[k + 5], 5, 0xd62f105d);
-			d = GG(d, a, b, c, x[k + 10], 9, 0x02441453);
-			c = GG(c, d, a, b, x[k + 15], 14, 0xd8a1e681);
-			b = GG(b, c, d, a, x[k + 4], 20, 0xe7d3fbc8);
-			a = GG(a, b, c, d, x[k + 9], 5, 0x21e1cde6);
-			d = GG(d, a, b, c, x[k + 14], 9, 0xc33707d6);
-			c = GG(c, d, a, b, x[k + 3], 14, 0xf4d50d87);
-			b = GG(b, c, d, a, x[k + 8], 20, 0x455a14ed);
-			a = GG(a, b, c, d, x[k + 13], 5, 0xa9e3e905);
-			d = GG(d, a, b, c, x[k + 2], 9, 0xfcefa3f8);
-			c = GG(c, d, a, b, x[k + 7], 14, 0x676f02d9);
-			b = GG(b, c, d, a, x[k + 12], 20, 0x8d2a4c8a);
-
-			a = HH(a, b, c, d, x[k + 5], 4, 0xfffa3942);
-			d = HH(d, a, b, c, x[k + 8], 11, 0x8771f681);
-			c = HH(c, d, a, b, x[k + 11], 16, 0x6d9d6122);
-			b = HH(b, c, d, a, x[k + 14], 23, 0xfde5380c);
-			a = HH(a, b, c, d, x[k + 1], 4, 0xa4beea44);
-			d = HH(d, a, b, c, x[k + 4], 11, 0x4bdecfa9);
-			c = HH(c, d, a, b, x[k + 7], 16, 0xf6bb4b60);
-			b = HH(b, c, d, a, x[k + 10], 23, 0xbebfbc70);
-			a = HH(a, b, c, d, x[k + 13], 4, 0x289b7ec6);
-			d = HH(d, a, b, c, x[k + 0], 11, 0xeaa127fa);
-			c = HH(c, d, a, b, x[k + 3], 16, 0xd4ef3085);
-			b = HH(b, c, d, a, x[k + 6], 23, 0x04881d05);
-			a = HH(a, b, c, d, x[k + 9], 4, 0xd9d4d039);
-			d = HH(d, a, b, c, x[k + 12], 11, 0xe6db99e5);
-			c = HH(c, d, a, b, x[k + 15], 16, 0x1fa27cf8);
-			b = HH(b, c, d, a, x[k + 2], 23, 0xc4ac5665);
-
-			a = II(a, b, c, d, x[k + 0], 6, 0xf4292244);
-			d = II(d, a, b, c, x[k + 7], 10, 0x432aff97);
-			c = II(c, d, a, b, x[k + 14], 15, 0xab9423a7);
-			b = II(b, c, d, a, x[k + 5], 21, 0xfc93a039);
-			a = II(a, b, c, d, x[k + 12], 6, 0x655b59c3);
-			d = II(d, a, b, c, x[k + 3], 10, 0x8f0ccc92);
-			c = II(c, d, a, b, x[k + 10], 15, 0xffeff47d);
-			b = II(b, c, d, a, x[k + 1], 21, 0x85845dd1);
-			a = II(a, b, c, d, x[k + 8], 6, 0x6fa87e4f);
-			d = II(d, a, b, c, x[k + 15], 10, 0xfe2ce6e0);
-			c = II(c, d, a, b, x[k + 6], 15, 0xa3014314);
-			b = II(b, c, d, a, x[k + 13], 21, 0x4e0811a1);
-			a = II(a, b, c, d, x[k + 4], 6, 0xf7537e82);
-			d = II(d, a, b, c, x[k + 11], 10, 0xbd3af235);
-			c = II(c, d, a, b, x[k + 2], 15, 0x2ad7d2bb);
-			b = II(b, c, d, a, x[k + 9], 21, 0xeb86d391);
-
-			a = AU(a, A);
-			b = AU(b, B);
-			c = AU(c, C);
-			d = AU(d, D);
-		}
-		return (hex(a) + hex(b) + hex(c) + hex(d)).toLowerCase();
+	// Getting audio URL and decryption key via the players captured file info
+	async function getTrackFileInfo() {
+		const url = window.nextmusicApi?.getCurrentMp3Url?.();
+		if (!url) throw new Error("Audio URL not available - play the track first");
+		const keyHex = window.nextmusicApi?.getCurrentTrackKey?.() ?? "";
+		return { url, keyHex };
 	}
 
-	// Getting direct MP3 link via API
+	// Detect audio format from magic bytes
+	function detectIsMp3(buf) {
+		if (
+			buf.length >= 8 &&
+			buf[4] === 0x66 &&
+			buf[5] === 0x74 &&
+			buf[6] === 0x79 &&
+			buf[7] === 0x70
+		)
+			return false;
+		return true; // ID3, raw MPEG frame, or unknown → treat as MP3
+	}
 
-	async function getDirectMp3Url(trackId) {
-		const ts = Math.floor(Date.now() / 1000);
-		const path = `/handlers/track/${trackId}/web-album_track-track-track-main/download/m?ts=${ts}`;
-		const sign = md5(YM_SALT + path);
-		const apiUrl = `https://music.yandex.ru/api/v2.1${path}&sign=${sign}&external-domain=music.yandex.ru&overembed=no&__t=${ts}`;
+	// AES-128-CTR decryption via Web Crypto API
+	function hexToBytes(hex) {
+		return new Uint8Array(hex.match(/.{2}/g).map((b) => parseInt(b, 16)));
+	}
 
-		const r1 = await fetch(apiUrl, {
-			headers: {
-				"X-Retpath-Y": "https://music.yandex.ru/",
-				"X-Yandex-Music-Client": "YandexMusic/4820",
-			},
-		});
-		if (!r1.ok) throw new Error(`API step 1: HTTP ${r1.status}`);
-		const d1 = await r1.json();
-		if (!d1.src) throw new Error("API did not return src");
-
-		const r2 = await fetch(d1.src + "&format=json");
-		if (!r2.ok) throw new Error(`API step 2: HTTP ${r2.status}`);
-		const d2 = await r2.json();
-
-		const hash = md5(YM_SALT + d2.path.substring(1) + d2.s);
-		const finalUrl = `https://${d2.host}/get-mp3/${hash}/${d2.ts}${d2.path}`;
-		return finalUrl;
+	async function decryptAesCtr(data, keyHex) {
+		const keyBytes = hexToBytes(keyHex);
+		const key = await crypto.subtle.importKey(
+			"raw",
+			keyBytes,
+			{ name: "AES-CTR" },
+			false,
+			["decrypt"],
+		);
+		const decrypted = await crypto.subtle.decrypt(
+			{ name: "AES-CTR", counter: new Uint8Array(16), length: 128 },
+			key,
+			data,
+		);
+		return new Uint8Array(decrypted);
 	}
 
 	// Cover
-
 	function normalizeCoverUrl(url) {
 		if (!url) return null;
 		return url
@@ -266,8 +141,229 @@
 		});
 	}
 
-	// ID3v2.3
+	// M4A / iTunes metadata
+	function _concat(...bufs) {
+		const total = bufs.reduce((s, b) => s + b.length, 0);
+		const out = new Uint8Array(total);
+		let pos = 0;
+		for (const b of bufs) {
+			out.set(b, pos);
+			pos += b.length;
+		}
+		return out;
+	}
 
+	function _box(type, payload) {
+		const size = 8 + payload.length;
+		const out = new Uint8Array(size);
+		out[0] = (size >>> 24) & 0xff;
+		out[1] = (size >>> 16) & 0xff;
+		out[2] = (size >>> 8) & 0xff;
+		out[3] = size & 0xff;
+		for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i) & 0xff;
+		out.set(payload, 8);
+		return out;
+	}
+
+	function _dataAtom(flags, data) {
+		const size = 16 + data.length;
+		const out = new Uint8Array(size);
+		out[0] = (size >>> 24) & 0xff;
+		out[1] = (size >>> 16) & 0xff;
+		out[2] = (size >>> 8) & 0xff;
+		out[3] = size & 0xff;
+		out[4] = 0x64;
+		out[5] = 0x61;
+		out[6] = 0x74;
+		out[7] = 0x61; // "data"
+		out[9] = (flags >>> 16) & 0xff;
+		out[10] = (flags >>> 8) & 0xff;
+		out[11] = flags & 0xff;
+		out.set(data, 16);
+		return out;
+	}
+
+	function _textTag(fourcc, text) {
+		return _box(fourcc, _dataAtom(1, _utf8(text)));
+	}
+
+	function _coverTag(imgData, mime) {
+		return _box("covr", _dataAtom(mime === "image/png" ? 14 : 13, imgData));
+	}
+
+	function _hdlrBox() {
+		// FullBox: version(1)+flags(3)+pre_defined(4)+handler_type(4)+reserved(12)+name\0(1)
+		const p = new Uint8Array(25);
+		p[8] = 0x6d;
+		p[9] = 0x64;
+		p[10] = 0x69;
+		p[11] = 0x72; // "mdir"
+		return _box("hdlr", p);
+	}
+
+	async function buildM4aMeta(track, cover) {
+		const frames = [];
+		if (track.title) frames.push(_textTag("\xA9nam", track.title));
+		if (track.artistNames?.length)
+			frames.push(_textTag("\xA9ART", track.artistNames.join(", ")));
+		if (track.albumTitle) frames.push(_textTag("\xA9alb", track.albumTitle));
+		if (track.year) frames.push(_textTag("\xA9day", String(track.year)));
+
+		if (cover) frames.push(_coverTag(cover.data, cover.mime));
+
+		if (!frames.length) return null;
+
+		const ilst = _box("ilst", _concat(...frames));
+		// meta is a FullBox: 4-byte version+flags prefix required
+		const meta = _box("meta", _concat(new Uint8Array(4), _hdlrBox(), ilst));
+		return _box("udta", meta);
+	}
+
+	// Update stco/co64 chunk offsets inside a moov buffer by delta bytes
+	function _updateChunkOffsets(buf, start, end, delta) {
+		let pos = start;
+		while (pos + 8 <= end) {
+			const size =
+				((buf[pos] << 24) |
+					(buf[pos + 1] << 16) |
+					(buf[pos + 2] << 8) |
+					buf[pos + 3]) >>>
+				0;
+			if (size < 8) break;
+			const type = String.fromCharCode(
+				buf[pos + 4],
+				buf[pos + 5],
+				buf[pos + 6],
+				buf[pos + 7],
+			);
+			const boxEnd = pos + size;
+			if (type === "stco") {
+				const count =
+					((buf[pos + 12] << 24) |
+						(buf[pos + 13] << 16) |
+						(buf[pos + 14] << 8) |
+						buf[pos + 15]) >>>
+					0;
+				for (let i = 0; i < count; i++) {
+					const o = pos + 16 + i * 4;
+					if (o + 4 > boxEnd) break;
+					const v =
+						((buf[o] << 24) |
+							(buf[o + 1] << 16) |
+							(buf[o + 2] << 8) |
+							buf[o + 3]) >>>
+						0;
+					const nv = (v + delta) >>> 0;
+					buf[o] = (nv >>> 24) & 255;
+					buf[o + 1] = (nv >>> 16) & 255;
+					buf[o + 2] = (nv >>> 8) & 255;
+					buf[o + 3] = nv & 255;
+				}
+			} else if (type === "co64") {
+				const count =
+					((buf[pos + 12] << 24) |
+						(buf[pos + 13] << 16) |
+						(buf[pos + 14] << 8) |
+						buf[pos + 15]) >>>
+					0;
+				for (let i = 0; i < count; i++) {
+					const o = pos + 16 + i * 8;
+					if (o + 8 > boxEnd) break;
+					let hi =
+						((buf[o] << 24) |
+							(buf[o + 1] << 16) |
+							(buf[o + 2] << 8) |
+							buf[o + 3]) >>>
+						0;
+					let lo =
+						((buf[o + 4] << 24) |
+							(buf[o + 5] << 16) |
+							(buf[o + 6] << 8) |
+							buf[o + 7]) >>>
+						0;
+					lo += delta;
+					if (lo > 0xffffffff) {
+						hi++;
+						lo -= 0x100000000;
+					}
+					buf[o] = (hi >>> 24) & 255;
+					buf[o + 1] = (hi >>> 16) & 255;
+					buf[o + 2] = (hi >>> 8) & 255;
+					buf[o + 3] = hi & 255;
+					buf[o + 4] = (lo >>> 24) & 255;
+					buf[o + 5] = (lo >>> 16) & 255;
+					buf[o + 6] = (lo >>> 8) & 255;
+					buf[o + 7] = lo & 255;
+				}
+			} else if (["trak", "mdia", "minf", "stbl", "edts"].includes(type)) {
+				_updateChunkOffsets(buf, pos + 8, boxEnd, delta);
+			}
+			pos = boxEnd;
+		}
+	}
+
+	function injectM4aMeta(buf, udtaBox) {
+		let moovStart = -1,
+			moovEnd = -1,
+			mdatStart = Infinity;
+		let pos = 0;
+		while (pos + 8 <= buf.length) {
+			const size =
+				((buf[pos] << 24) |
+					(buf[pos + 1] << 16) |
+					(buf[pos + 2] << 8) |
+					buf[pos + 3]) >>>
+				0;
+			if (size === 0 || size < 8 || pos + size > buf.length) break;
+			const type = String.fromCharCode(
+				buf[pos + 4],
+				buf[pos + 5],
+				buf[pos + 6],
+				buf[pos + 7],
+			);
+			if (type === "moov") {
+				moovStart = pos;
+				moovEnd = pos + size;
+			}
+			if (type === "mdat" && pos < mdatStart) mdatStart = pos;
+			pos += size;
+		}
+		if (moovStart < 0) return buf;
+
+		// Rebuild moov content, stripping any existing udta
+		const moovContent = buf.subarray(moovStart + 8, moovEnd);
+		let filtered = new Uint8Array(0);
+		pos = 0;
+		while (pos + 8 <= moovContent.length) {
+			const size =
+				((moovContent[pos] << 24) |
+					(moovContent[pos + 1] << 16) |
+					(moovContent[pos + 2] << 8) |
+					moovContent[pos + 3]) >>>
+				0;
+			if (size < 8) break;
+			const type = String.fromCharCode(
+				moovContent[pos + 4],
+				moovContent[pos + 5],
+				moovContent[pos + 6],
+				moovContent[pos + 7],
+			);
+			if (type !== "udta")
+				filtered = _concat(filtered, moovContent.subarray(pos, pos + size));
+			pos += size;
+		}
+
+		const newMoov = _box("moov", _concat(filtered, udtaBox));
+		const delta = newMoov.length - (moovEnd - moovStart);
+
+		if (moovStart < mdatStart && delta !== 0) {
+			_updateChunkOffsets(newMoov, 8, newMoov.length, delta);
+		}
+
+		return _concat(buf.subarray(0, moovStart), newMoov, buf.subarray(moovEnd));
+	}
+
+	// ID3v2.3
 	function _id3Frame(id, data) {
 		const buf = new Uint8Array(10 + data.length);
 		const view = new DataView(buf.buffer);
@@ -285,7 +381,7 @@
 		return _id3Frame(id, d);
 	}
 
-	async function buildId3Tag(track) {
+	async function buildId3Tag(track, cover) {
 		const frames = [];
 
 		if (track.title) frames.push(_textFrame("TIT2", track.title));
@@ -294,7 +390,6 @@
 		if (track.albumTitle) frames.push(_textFrame("TALB", track.albumTitle));
 		if (track.year) frames.push(_textFrame("TYER", String(track.year)));
 
-		const cover = await fetchAndResizeCover(track.coverUrl);
 		if (cover) {
 			const mimeBytes = _utf8(cover.mime);
 			const apic = new Uint8Array(
@@ -340,42 +435,51 @@
 	}
 
 	// Downloading
-
 	async function downloadTrack(track) {
-		// 1. Get direct MP3 link via API
-		const mp3Url = await getDirectMp3Url(track.id);
+		const { url: audioUrl, keyHex } = await getTrackFileInfo();
 
-		// 2. In parallel: download MP3 + generate ID3
-		const [audioRes, id3Tag] = await Promise.all([
-			fetch(mp3Url),
-			buildId3Tag(track),
+		const [audioRes, cover] = await Promise.all([
+			fetch(audioUrl),
+			fetchAndResizeCover(track.coverUrl),
 		]);
 		if (!audioRes.ok)
 			throw new Error(`Audio download error: HTTP ${audioRes.status}`);
-		const audioBuf = new Uint8Array(await audioRes.arrayBuffer());
+		let audioBuf = new Uint8Array(await audioRes.arrayBuffer());
 
-		// 3. Strip existing ID3 tag if present
-		let audioStart = 0;
-		if (audioBuf[0] === 0x49 && audioBuf[1] === 0x44 && audioBuf[2] === 0x33) {
-			const existingSize =
-				((audioBuf[6] & 0x7f) << 21) |
-				((audioBuf[7] & 0x7f) << 14) |
-				((audioBuf[8] & 0x7f) << 7) |
-				(audioBuf[9] & 0x7f);
-			audioStart = 10 + existingSize;
+		if (keyHex) audioBuf = await decryptAesCtr(audioBuf, keyHex);
+
+		const isMp3 = detectIsMp3(audioBuf);
+		let output;
+		if (isMp3) {
+			const id3Tag = await buildId3Tag(track, cover);
+			let audioStart = 0;
+			if (
+				audioBuf[0] === 0x49 &&
+				audioBuf[1] === 0x44 &&
+				audioBuf[2] === 0x33
+			) {
+				const existingSize =
+					((audioBuf[6] & 0x7f) << 21) |
+					((audioBuf[7] & 0x7f) << 14) |
+					((audioBuf[8] & 0x7f) << 7) |
+					(audioBuf[9] & 0x7f);
+				audioStart = 10 + existingSize;
+			}
+			output = new Uint8Array(id3Tag.length + audioBuf.length - audioStart);
+			output.set(id3Tag, 0);
+			output.set(audioBuf.subarray(audioStart), id3Tag.length);
+		} else {
+			const udtaBox = await buildM4aMeta(track, cover);
+			output = udtaBox ? injectM4aMeta(audioBuf, udtaBox) : audioBuf;
 		}
 
-		// 4. Assemble final buffer: new ID3 + audio
-		const output = new Uint8Array(id3Tag.length + audioBuf.length - audioStart);
-		output.set(id3Tag, 0);
-		output.set(audioBuf.subarray(audioStart), id3Tag.length);
-
-		// 5. Save file
+		const ext = isMp3 ? "mp3" : "m4a";
+		const mimeType = isMp3 ? "audio/mpeg" : "audio/mp4";
 		const artist = sanitize(track.artistNames?.[0] ?? "Unknown");
 		const title = sanitize(track.title ?? "track");
-		const filename = `${artist} - ${title}.mp3`;
+		const filename = `${artist} - ${title}.${ext}`;
 
-		const blob = new Blob([output], { type: "audio/mpeg" });
+		const blob = new Blob([output], { type: mimeType });
 		const a = document.createElement("a");
 		a.href = URL.createObjectURL(blob);
 		a.download = filename;
@@ -386,7 +490,6 @@
 	}
 
 	// Button Injection
-
 	function removeDownloadButton() {
 		document.getElementById(DL_BTN_ID)?.remove();
 		lastTrackId = null;

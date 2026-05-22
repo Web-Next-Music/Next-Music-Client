@@ -422,7 +422,7 @@ async function applyAddons(mainWindow) {
 	}
 
 	if (!mainWindow) {
-		console.error("[Addons] mainWindow is not provided — aborting applyAddons");
+		console.error("[Addons] mainWindow is not provided - aborting applyAddons");
 		return;
 	}
 

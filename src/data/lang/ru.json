@@ -45,12 +45,12 @@
 		"tooltipEnable": "Включить",
 		"tooltipDisable": "Выключить",
 		"tooltipDelete": "Удалить",
-		"cardFolderLocal": "Папка — локально",
-		"cardFileLocal": "Файл — локально",
+		"cardFolderLocal": "Папка - локально",
+		"cardFileLocal": "Файл - локально",
 		"sectionAddons": "Аддоны",
 		"sectionThemes": "Темы",
 		"sectionInstalled": "Установленные",
-		"sectionLocal": "Локальные — установленные расширения",
+		"sectionLocal": "Локальные - установленные расширения",
 		"statusLoading": "Загрузка…",
 		"statusEmptyInstalled": "Установленных расширений не найдено.",
 		"statusEmptyCustom": "Пользовательские файлы не найдены.",
@@ -63,9 +63,9 @@
 		"statusSaveFailed": "Ошибка сохранения",
 		"statusInvalidJson": "⚠ Некорректный JSON: {message}",
 		"statusFailedReadme": "Не удалось загрузить README.",
-		"modalReadmeTitle": "{name} — README",
+		"modalReadmeTitle": "{name} - README",
 		"modalEditorBadge": "JSON",
-		"modalEditorTitle": "{name} — handleEvents.json",
+		"modalEditorTitle": "{name} - handleEvents.json",
 		"modalLoading": "Загрузка…"
 	},
 	"info": {
@@ -152,7 +152,7 @@
 			"search": "Поиск экспериментов…",
 			"name": "Название эксперимента",
 			"requiredBy": "Требуется аддоном {addonName}",
-			"blockedBy": "Заблокировано — experiments.override активен в {addonName}",
+			"blockedBy": "Заблокировано - experiments.override активен в {addonName}",
 			"builtin": "Встроенный эксперимент Next Music"
 		},
 		"github": {

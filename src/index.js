@@ -181,7 +181,7 @@ app.whenReady().then(() => {
 		startServer({ port: 4091 });
 	}
 
-	// Discord rich presence — only start if enabled
+	// Discord rich presence - only start if enabled
 	if (config.programSettings?.richPresence?.enable) {
 		checkGitHubStar()
 			.then(({ hasStarred }) => {

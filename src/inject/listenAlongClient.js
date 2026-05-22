@@ -69,7 +69,7 @@
 			if (p) lastSentPath = p;
 		}
 
-		console.log("Initialization complete — lastSentPath:", lastSentPath);
+		console.log("Initialization complete - lastSentPath:", lastSentPath);
 	}
 
 	const XLINK = "http://www.w3.org/1999/xlink";
@@ -824,7 +824,7 @@
 			showIsland();
 
 			console.warn(
-				"Listen Along: missing __wss or __room param — not connecting.",
+				"Listen Along: missing __wss or __room param - not connecting.",
 			);
 
 			return;
@@ -889,7 +889,7 @@
 				if (!isSyncPaused) {
 					applySyncState(msg);
 				} else {
-					console.log("⏸️ Sync paused — playback not applied");
+					console.log("⏸️ Sync paused - playback not applied");
 				}
 
 				return;
@@ -949,7 +949,7 @@
 			? (serverState.trackId ?? serverState.path)
 			: null;
 		if (srvId && srvId !== p) {
-			console.warn(`Nav to "${p}" aborted — server now wants "${srvId}"`);
+			console.warn(`Nav to "${p}" aborted - server now wants "${srvId}"`);
 			pendingPath = srvId;
 			processNext();
 			return;
@@ -1176,7 +1176,7 @@
 			const timeSinceDown = Date.now() - _sliderDownAt;
 			if (timeSinceDown > 500) {
 				console.log(
-					`⏭️ seek ignored — no recent click (${timeSinceDown}ms ago)`,
+					`⏭️ seek ignored - no recent click (${timeSinceDown}ms ago)`,
 				);
 				return;
 			}
@@ -1280,7 +1280,7 @@
 		if (!init) {
 			isSyncPaused = true;
 			islandSetSyncPaused();
-			console.log("⏸️ No album href on start — sync paused");
+			console.log("⏸️ No album href on start - sync paused");
 		}
 
 		setInterval(() => {
@@ -1290,12 +1290,12 @@
 				isSyncPaused = true;
 				_pendingSyncAfterNav = false;
 				islandSetSyncPaused();
-				console.log("⏸️ Album href disappeared — sync paused");
+				console.log("⏸️ Album href disappeared - sync paused");
 				return;
 			}
 
 			if (p && isSyncPaused && !isNavigating && !_userPausedSync) {
-				console.log("Album href appeared — auto-resuming sync");
+				console.log("Album href appeared - auto-resuming sync");
 				resumeSync();
 			}
 
@@ -1317,7 +1317,7 @@
 				const p = link.getAttribute("href");
 				if (p) {
 					if (isSyncPaused && !isNavigating && !_userPausedSync) {
-						console.log("Album href appeared (observer) — auto-resuming sync");
+						console.log("Album href appeared (observer) - auto-resuming sync");
 						resumeSync();
 					} else if (!isSyncPaused) {
 						trySend(p);
@@ -1325,7 +1325,7 @@
 				} else if (!isSyncPaused && !isNavigating) {
 					isSyncPaused = true;
 					islandSetSyncPaused();
-					console.log("⏸️ Album href removed (observer) — sync paused");
+					console.log("⏸️ Album href removed (observer) - sync paused");
 				}
 			});
 			attrObs.observe(link, {
@@ -1340,7 +1340,7 @@
 				if (p) {
 					if (isSyncPaused && !isNavigating && !_userPausedSync) {
 						console.log(
-							"Album href appeared (bar observer) — auto-resuming sync",
+							"Album href appeared (bar observer) - auto-resuming sync",
 						);
 						resumeSync();
 					} else if (!isSyncPaused) {
@@ -1349,7 +1349,7 @@
 				} else if (!isSyncPaused && !isNavigating) {
 					isSyncPaused = true;
 					islandSetSyncPaused();
-					console.log("⏸️ Album href gone (bar observer) — sync paused");
+					console.log("⏸️ Album href gone (bar observer) - sync paused");
 				}
 				attachAttrObserver();
 			}).observe(bar, { childList: true, subtree: true });

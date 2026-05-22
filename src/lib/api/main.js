@@ -25,6 +25,11 @@ window.nextmusicApi = {
 		return meta ? (_mp3KeyMap.get(String(meta.id)) ?? "") : "";
 	},
 
+	getCurrentTrackCodec() {
+		const meta = getCurrentMeta();
+		return meta ? (_codecMap.get(String(meta.id)) ?? "mp3") : "mp3";
+	},
+
 	async downloadAsset(url, fileName, addonName) {
 		const port = window.__nextmusicApiAssetPort ?? 2007;
 		const res = await fetch(

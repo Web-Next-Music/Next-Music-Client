@@ -1,5 +1,6 @@
 const _mp3UrlMap = new Map();
 const _mp3KeyMap = new Map(); // AES-128-CTR key hex per trackId
+const _codecMap = new Map(); // codec string per trackId (e.g. "mp3", "aac")
 const _customTrackMap = new Map(); // trackId -> { url, key, codec, bitrate, quality }
 const _customTrackMetaMap = new Map(); // trackId -> public meta used by UI/RPC
 
@@ -11,8 +12,18 @@ function patchFileInfo() {
 	for (const moduleId of Object.keys(moduleMap)) {
 		try {
 			const mod = appRequire(moduleId);
-			const proto = mod?.v?.prototype;
-			if (!proto?.getFileInfo || !proto?.getFileInfoBatch) continue;
+			let proto = null;
+			for (const exp of Object.values(mod ?? {})) {
+				if (
+					typeof exp === "function" &&
+					typeof exp.prototype?.getFileInfo === "function" &&
+					typeof exp.prototype?.getFileInfoBatch === "function"
+				) {
+					proto = exp.prototype;
+					break;
+				}
+			}
+			if (!proto) continue;
 
 			const origGetFileInfo = proto.getFileInfo;
 			const origGetFileInfoBatch = proto.getFileInfoBatch;
@@ -47,6 +58,7 @@ function patchFileInfo() {
 					_mp3UrlMap.set(String(id), di.url);
 					// Capture AES key while it's still present (before FckCensor clears it)
 					_mp3KeyMap.set(String(id), di.key ?? "");
+					_codecMap.set(String(id), di.codec ?? "mp3");
 				}
 				return result;
 			};
@@ -57,6 +69,7 @@ function patchFileInfo() {
 					if (info?.url && info?.trackId) {
 						_mp3UrlMap.set(String(info.trackId), info.url);
 						_mp3KeyMap.set(String(info.trackId), info.key ?? "");
+						_codecMap.set(String(info.trackId), info.codec ?? "mp3");
 					}
 				}
 				return result;

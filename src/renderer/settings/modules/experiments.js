@@ -53,7 +53,7 @@ export function syncExperimentRowMeta(row, addonLock, name) {
 			addonTag.textContent = ti(
 				"settings.experiments.blockedBy",
 				{ addonName: addonLock.addonName },
-				`Blocked — experiments.override is active in ${addonLock.addonName}`,
+				`Blocked - experiments.override is active in ${addonLock.addonName}`,
 			);
 		} else {
 			addonTag.className = "experiments-addon-tag";
@@ -162,7 +162,7 @@ export function renderExperimentsPanel(panel) {
 	const userOverrides = state.CONFIG.experiments || {};
 	const builtinEntries = Object.entries(state.BUILTIN_EXPERIMENTS || {});
 
-	// User experiments — locked if addon overrides them
+	// User experiments - locked if addon overrides them
 	for (const [name, val] of Object.entries(userOverrides)) {
 		const addonLock = addonOverrideMap.get(name);
 		if (addonLock) {

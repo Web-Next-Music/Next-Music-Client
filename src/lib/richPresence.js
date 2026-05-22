@@ -162,7 +162,7 @@ function updateActivity(data) {
 	const rpcTitle = userHasStarred ? rpcTitleRaw : null;
 
 	if (rpcTitleRaw && !userHasStarred) {
-		console.log("[RPC] rpcTitle ignored — user has not starred the repo");
+		console.log("[RPC] rpcTitle ignored - user has not starred the repo");
 	}
 
 	const configLargeImageUrl =
@@ -190,7 +190,7 @@ function updateActivity(data) {
 	}
 
 	if (githubButton && !userHasStarred) {
-		console.log("[RPC] GitHub button ignored — user has not starred the repo");
+		console.log("[RPC] GitHub button ignored - user has not starred the repo");
 	}
 
 	const activityObject = {
@@ -235,13 +235,13 @@ function updateActivity(data) {
 			: Infinity;
 
 	if (hasChanged) {
-		const msg = `[RPC] Setting new activity: ${title} — ${artist}`;
+		const msg = `[RPC] Setting new activity: ${title} - ${artist}`;
 		console.log(msg, { isUGCTrack, buttons: activityObject.buttons });
 		rpc.user?.setActivity(activityObject).catch(console.error);
 		lastActivity = { ...activityObject };
 		lastPlayerState = "play";
 	} else if (hasTimestamps && timestampDiff > 1) {
-		console.log(`[RPC] Updating timestamps for: ${title} — ${artist}`);
+		console.log(`[RPC] Updating timestamps for: ${title} - ${artist}`);
 
 		rpc.user
 			?.setActivity({ ...lastActivity, startTimestamp, endTimestamp })

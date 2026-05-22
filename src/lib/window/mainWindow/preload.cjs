@@ -22,7 +22,7 @@ if (process.argv.includes("--nmc-titlebar")) {
 	});
 }
 
-// Experiment patcher — built from config passed via argv
+// Experiment patcher - built from config passed via argv
 const _experimentsArg = process.argv.find((a) =>
 	a.startsWith("--nmc-experiments="),
 );

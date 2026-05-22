@@ -138,7 +138,7 @@ export default defineConfig({
 				if (id === "electron") return true;
 				if (builtinModules.includes(id)) return true;
 				if (id.startsWith("node:")) return true;
-				// всё что не относительный путь — внешнее (node_modules)
+				// всё что не относительный путь - внешнее (node_modules)
 				if (!id.startsWith(".") && !id.startsWith("/")) return true;
 				return false;
 			},

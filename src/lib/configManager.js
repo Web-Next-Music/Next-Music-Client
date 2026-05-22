@@ -14,7 +14,7 @@ function reorderConfig(obj, defaultObj, isRoot = true) {
 		return obj ?? defaultObj;
 	}
 
-	// Empty plain-object default = dynamic dict (e.g. experiments) — pass through as-is
+	// Empty plain-object default = dynamic dict (e.g. experiments) - pass through as-is
 	if (!isRoot && Object.keys(defaultObj).length === 0) {
 		if (typeof obj === "object" && obj !== null && !Array.isArray(obj))
 			return obj;

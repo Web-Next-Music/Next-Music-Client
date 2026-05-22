@@ -45,12 +45,12 @@
 		"tooltipEnable": "Enable",
 		"tooltipDisable": "Disable",
 		"tooltipDelete": "Delete",
-		"cardFolderLocal": "Folder — local",
-		"cardFileLocal": "File — local",
+		"cardFolderLocal": "Folder - local",
+		"cardFileLocal": "File - local",
 		"sectionAddons": "Addons",
 		"sectionThemes": "Themes",
 		"sectionInstalled": "Installed",
-		"sectionLocal": "Local — installed extensions",
+		"sectionLocal": "Local - installed extensions",
 		"statusLoading": "Loading…",
 		"statusEmptyInstalled": "No installed extensions found.",
 		"statusEmptyCustom": "No custom files found.",
@@ -63,9 +63,9 @@
 		"statusSaveFailed": "Save failed",
 		"statusInvalidJson": "⚠ Invalid JSON: {message}",
 		"statusFailedReadme": "Failed to load README.",
-		"modalReadmeTitle": "{name} — README",
+		"modalReadmeTitle": "{name} - README",
 		"modalEditorBadge": "JSON",
-		"modalEditorTitle": "{name} — handleEvents.json",
+		"modalEditorTitle": "{name} - handleEvents.json",
 		"modalLoading": "Loading…"
 	},
 	"info": {
@@ -152,7 +152,7 @@
 			"search": "Search experiments…",
 			"name": "Experiment name",
 			"requiredBy": "Required by {addonName}",
-			"blockedBy": "Blocked — experiments.override is active in {addonName}",
+			"blockedBy": "Blocked - experiments.override is active in {addonName}",
 			"builtin": "Built-in Next Music experiment"
 		},
 		"github": {

@@ -73,18 +73,18 @@ function updateCustomTrackDuration(trackId, durationMs) {
  * Play a custom track with arbitrary audio URL.
  *
  * @param {object} trackData
- * @param {string}   trackData.id          — unique ID (e.g., "custom_1")
- * @param {string}   trackData.url         — direct link to audio file (mp3/aac/flac)
- * @param {string}   [trackData.title]     — track title
- * @param {{id, name}[]} [trackData.artists] — list of artists
- * @param {string|number} [trackData.albumId] — album ID
- * @param {string}   [trackData.coverUri]  — cover: "avatars.yandex.net/.../%%" or full https://
- * @param {string}   [trackData.cover]     — alternatively: direct link to cover image
- * @param {number}   [trackData.durationMs] — duration in milliseconds
- * @param {string}   [trackData.key]       — AES decryption key, usually ""
- * @param {string}   [trackData.codec]     — "mp3" by default
- * @param {number}   [trackData.bitrate]   — 320 by default
- * @param {string}   [trackData.quality]   — "high" by default
+ * @param {string}   trackData.id          - unique ID (e.g., "custom_1")
+ * @param {string}   trackData.url         - direct link to audio file (mp3/aac/flac)
+ * @param {string}   [trackData.title]     - track title
+ * @param {{id, name}[]} [trackData.artists] - list of artists
+ * @param {string|number} [trackData.albumId] - album ID
+ * @param {string}   [trackData.coverUri]  - cover: "avatars.yandex.net/.../%%" or full https://
+ * @param {string}   [trackData.cover]     - alternatively: direct link to cover image
+ * @param {number}   [trackData.durationMs] - duration in milliseconds
+ * @param {string}   [trackData.key]       - AES decryption key, usually ""
+ * @param {string}   [trackData.codec]     - "mp3" by default
+ * @param {number}   [trackData.bitrate]   - 320 by default
+ * @param {string}   [trackData.quality]   - "high" by default
  */
 function playCustomTrack(trackData) {
 	const id = String(trackData.id);
