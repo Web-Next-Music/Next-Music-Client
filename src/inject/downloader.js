@@ -470,6 +470,91 @@
 		return tag;
 	}
 
+	// MP3 encoding: ffmpeg via IPC (fast), fallback to lamejs (pure JS)
+	async function encodeToMp3(audioBuf, onProgress) {
+		onProgress?.(0);
+
+		if (window.nmcConvert?.mp3) {
+			const slice = audioBuf.buffer.slice(
+				audioBuf.byteOffset,
+				audioBuf.byteOffset + audioBuf.byteLength,
+			);
+			const unsubProgress = window.nmcConvert.onProgress?.((p) =>
+				onProgress?.(p),
+			);
+			try {
+				const result = await window.nmcConvert.mp3(slice);
+				if (result) {
+					onProgress?.(1);
+					return new Uint8Array(result);
+				}
+			} finally {
+				unsubProgress?.();
+			}
+		}
+
+		// lamejs fallback
+		const ctx = new AudioContext();
+		let audioBuffer;
+		try {
+			const ab = audioBuf.buffer.slice(
+				audioBuf.byteOffset,
+				audioBuf.byteOffset + audioBuf.byteLength,
+			);
+			audioBuffer = await ctx.decodeAudioData(ab);
+		} finally {
+			ctx.close();
+		}
+
+		const channels = Math.min(audioBuffer.numberOfChannels, 2);
+		const encoder = new lamejs.Mp3Encoder(channels, audioBuffer.sampleRate, 128);
+
+		const leftFloat = audioBuffer.getChannelData(0);
+		const rightFloat = channels > 1 ? audioBuffer.getChannelData(1) : leftFloat;
+
+		function toInt16(f32) {
+			const out = new Int16Array(f32.length);
+			for (let i = 0; i < f32.length; i++) {
+				const s = Math.max(-1, Math.min(1, f32[i]));
+				out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+			}
+			return out;
+		}
+
+		const left = toInt16(leftFloat);
+		const right = toInt16(rightFloat);
+
+		const BLOCK = 1152;
+		const total = left.length;
+		const parts = [];
+
+		onProgress?.(0);
+		for (let i = 0; i < total; i += BLOCK) {
+			const buf = encoder.encodeBuffer(
+				left.subarray(i, i + BLOCK),
+				right.subarray(i, i + BLOCK),
+			);
+			if (buf.length > 0) parts.push(new Uint8Array(buf));
+			if (i % (BLOCK * 64) === 0) {
+				onProgress?.(i / total);
+				await new Promise((r) => setTimeout(r, 0));
+			}
+		}
+
+		const end = encoder.flush();
+		if (end.length > 0) parts.push(new Uint8Array(end));
+		onProgress?.(1);
+
+		const size = parts.reduce((a, p) => a + p.length, 0);
+		const out = new Uint8Array(size);
+		let pos = 0;
+		for (const p of parts) {
+			out.set(p, pos);
+			pos += p.length;
+		}
+		return out;
+	}
+
 	// Downloading
 	async function fetchWithProgress(url, onProgress) {
 		const res = await fetch(url);
@@ -505,14 +590,16 @@
 		const { url: audioUrl, keyHex } = await getTrackFileInfo();
 
 		const coverPromise = fetchAndResizeCover(track.coverUrl);
-		let audioBuf = await fetchWithProgress(audioUrl, onProgress);
-		const cover = await coverPromise;
+		let audioBuf = await fetchWithProgress(audioUrl, (r) =>
+			onProgress?.("download", r),
+		);
 
 		if (keyHex) audioBuf = await decryptAesCtr(audioBuf, keyHex);
 
 		const isMp3 = detectIsMp3(audioBuf);
 		let output;
 		if (isMp3) {
+			const cover = await coverPromise;
 			const id3Tag = await buildId3Tag(track, cover);
 			let audioStart = 0;
 			if (
@@ -531,17 +618,21 @@
 			output.set(id3Tag, 0);
 			output.set(audioBuf.subarray(audioStart), id3Tag.length);
 		} else {
-			const udtaBox = await buildM4aMeta(track, cover);
-			output = udtaBox ? injectM4aMeta(audioBuf, udtaBox) : audioBuf;
+			const [mp3Raw, cover] = await Promise.all([
+				encodeToMp3(audioBuf, (r) => onProgress?.("convert", r)),
+				coverPromise,
+			]);
+			const id3Tag = await buildId3Tag(track, cover);
+			output = new Uint8Array(id3Tag.length + mp3Raw.length);
+			output.set(id3Tag, 0);
+			output.set(mp3Raw, id3Tag.length);
 		}
 
-		const ext = isMp3 ? "mp3" : "m4a";
-		const mimeType = isMp3 ? "audio/mpeg" : "audio/mp4";
 		const artist = sanitize(track.artistNames?.[0] ?? "Unknown");
 		const title = sanitize(track.title ?? "track");
-		const filename = `${artist} - ${title}.${ext}`;
+		const filename = `${artist} - ${title}.mp3`;
 
-		const blob = new Blob([output], { type: mimeType });
+		const blob = new Blob([output], { type: "audio/mpeg" });
 		const a = document.createElement("a");
 		a.href = URL.createObjectURL(blob);
 		a.download = filename;
@@ -597,7 +688,13 @@
 			const fill = btn.querySelector("#nm-dl-progress-fill");
 
 			try {
-				await downloadTrack(currentTrack, (ratio) => {
+				await downloadTrack(currentTrack, (phase, ratio) => {
+					if (phase === "convert" && ratio === 0) {
+						fill.style.transition = "none";
+						fill.style.width = "0%";
+						fill.getBoundingClientRect();
+						fill.style.transition = "width 0.12s ease";
+					}
 					fill.style.width = `${Math.min(ratio * 100, 100)}%`;
 				});
 				fill.style.width = "100%";

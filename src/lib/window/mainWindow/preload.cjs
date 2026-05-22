@@ -231,3 +231,12 @@ function injectIntoMainWorld(code) {
 }
 
 injectIntoMainWorld(patcherCode);
+
+contextBridge.exposeInMainWorld("nmcConvert", {
+	mp3: (buf) => ipcRenderer.invoke("nmc:convert-mp3", buf),
+	onProgress: (cb) => {
+		const handler = (_e, v) => cb(v);
+		ipcRenderer.on("nmc:convert-progress", handler);
+		return () => ipcRenderer.removeListener("nmc:convert-progress", handler);
+	},
+});

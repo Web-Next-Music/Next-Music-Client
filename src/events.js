@@ -5,6 +5,46 @@ import {
 	checkGitHubStar,
 } from "./lib/githubStarAuth.js";
 import { getConfig } from "./lib/configManager.js";
+import { spawn } from "child_process";
+
+if (!ipcMain.listenerCount("nmc:convert-mp3")) {
+	ipcMain.handle("nmc:convert-mp3", (_event, audioData) => {
+		const sender = _event.sender;
+		return new Promise((resolve) => {
+			const ff = spawn("ffmpeg", [
+				"-i", "pipe:0",
+				"-vn", "-acodec", "libmp3lame",
+				"-q:a", "2", "-compression_level", "0",
+				"-map_metadata", "-1",
+				"-f", "mp3", "pipe:1",
+			]);
+
+			const chunks = [];
+			let duration = 0;
+
+			ff.stdout.on("data", (c) => chunks.push(c));
+
+			ff.stderr.on("data", (data) => {
+				const s = data.toString();
+				const dm = s.match(/Duration:\s*(\d{2}):(\d{2}):(\d{2}\.\d*)/);
+				if (dm) duration = +dm[1] * 3600 + +dm[2] * 60 + +dm[3];
+				const tm = s.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d*)/);
+				if (tm && duration > 0 && !sender.isDestroyed()) {
+					const cur = +tm[1] * 3600 + +tm[2] * 60 + +tm[3];
+					sender.send("nmc:convert-progress", Math.min(cur / duration, 0.99));
+				}
+			});
+
+			ff.on("error", () => resolve(null));
+			ff.on("close", (code) =>
+				resolve(code === 0 && chunks.length ? Buffer.concat(chunks) : null),
+			);
+
+			ff.stdin.write(Buffer.from(audioData));
+			ff.stdin.end();
+		});
+	});
+}
 
 export default function registerEvents(mainWindow) {
 	// Titlebar

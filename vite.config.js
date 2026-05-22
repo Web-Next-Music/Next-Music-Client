@@ -170,14 +170,13 @@ function processDir(srcDir, distDir, allowHtml = false) {
 				code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
 			}
 
+			let output;
 			const result = esbuild.transformSync(code, {
 				minify: true,
 				format: "esm",
 				target: "es2022",
 			});
-
-			// Post-process: make file single-line
-			let output = result.code.replace(/\n/g, " ").trimEnd() + "\n";
+			output = result.code.replace(/\n/g, " ").trimEnd() + "\n";
 			writeFileSync(outFile, output);
 		} else if (ext === ".html" && allowHtml) {
 			minifyHTML(file, outFile);
@@ -229,6 +228,21 @@ function processElectronFiles() {
 			}
 
 			processDir(join(SRC, "inject"), join(DIST, "inject"));
+
+			// Build lamejs.js for dist/inject
+			const lameAllSrc = readFileSync(
+				join("node_modules", "lamejs", "lame.all.js"),
+				"utf8",
+			);
+			const lameResult = esbuild.transformSync(lameAllSrc, {
+				minify: true,
+				format: "esm",
+				target: "es2022",
+			});
+			writeFileSync(
+				join(DIST, "inject", "lamejs.js"),
+				lameResult.code.replace(/\n/g, " ").trimEnd() + "\n",
+			);
 			processDir(join(SRC, "lib"), join(DIST, "lib"));
 			bundleApiFiles();
 			processDir(join(SRC, "assets"), join(DIST, "assets"));

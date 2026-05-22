@@ -67,7 +67,17 @@ export default function injector(mainWindow, config) {
 				continue;
 			}
 
-			const fullPath = path.join(injectDir, file).replace(/\\/g, "/");
+			const lamejsDevPath = path.resolve(
+				__dirname,
+				"../../node_modules/lamejs/lame.all.js",
+			);
+			const fullPath = (
+				isDev &&
+				file === "lamejs.js" &&
+				fs.existsSync(lamejsDevPath)
+			)
+				? lamejsDevPath.replace(/\\/g, "/")
+				: path.join(injectDir, file).replace(/\\/g, "/");
 
 			if (!fs.existsSync(fullPath)) {
 				console.warn("[Injector] ⚠️ File not found:", file);

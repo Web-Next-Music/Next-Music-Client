@@ -103,6 +103,10 @@ export const injectList = [
 		condition: (config) => config?.programSettings?.fastPlay,
 	},
 	{
+		file: "lamejs.js",
+		condition: (config) => config?.programSettings?.downloader,
+	},
+	{
 		file: "downloader.js",
 		condition: (config) => config?.programSettings?.downloader,
 	},

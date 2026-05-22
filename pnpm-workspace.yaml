@@ -4,5 +4,5 @@ allowBuilds:
   esbuild: true
 nodeLinker: hoisted
 enableGlobalVirtualStore: false
-storeDir: .pnpm-store
+storeDir: /home/admin/.local/share/pnpm/store/v11
 verifyDepsBeforeRun: false
