@@ -5,3 +5,5 @@ allowBuilds:
 nodeLinker: hoisted
 enableGlobalVirtualStore: false
 verifyDepsBeforeRun: false
+minimumReleaseAgeExclude:
+  - ws@8.21.0

@@ -7,7 +7,7 @@
 		"node": ">=24.0.0",
 		"pnpm": ">=9.0.0"
 	},
-	"packageManager": "pnpm@11.1.2",
+	"packageManager": "pnpm@11.2.2",
 	"scripts": {
 		"dev:vite": "vite",
 		"dev:electron": "electron src/index.js",
@@ -90,20 +90,20 @@
 	},
 	"homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
 	"devDependencies": {
-		"codemirror": "^5.65.21",
+		"codemirror": "^6.0.2",
 		"concurrently": "^9.2.1",
 		"cross-env": "^10.1.0",
 		"dotenv": "^17.4.2",
-		"electron": "^42.0.1",
+		"electron": "^42.2.0",
 		"electron-builder": "^26.8.1",
 		"esbuild": "^0.28.0",
 		"html-minifier-terser": "^7.2.0",
 		"lightningcss": "^1.32.0",
 		"prettier": "^3.8.3",
-		"sass": "^1.99.0",
+		"sass": "^1.100.0",
 		"scss": "^0.2.4",
-		"terser": "^5.47.1",
-		"vite": "^8.0.13",
+		"terser": "^5.48.0",
+		"vite": "^8.0.14",
 		"vite-plugin-electron": "^0.29.1"
 	},
 	"dependencies": {
@@ -114,6 +114,6 @@
 		"@fontsource/syne": "^5.2.7",
 		"@xhayper/discord-rpc": "^1.3.4",
 		"lamejs": "^1.2.1",
-		"ws": "^8.20.1"
+		"ws": "^8.21.0"
 	}
 }
