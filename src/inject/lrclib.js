@@ -223,19 +223,25 @@
 		});
 	}
 
-	const stores = findStores();
-	if (!stores) {
-		console.error("[LRCLib] stores not found");
-		return;
+	async function init() {
+		const stores = findStores();
+		if (!stores) return false;
+
+		const { em, rootSV } = stores;
+		watchTrackChanges(rootSV);
+		watchHasLyrics(rootSV);
+
+		const trackId = String(em?.id ?? "");
+		if (trackId && trackId !== G.lastTrackId) {
+			G.lastTrackId = trackId;
+			await loadForTrack(stores);
+		}
+		return true;
 	}
 
-	const { em, rootSV } = stores;
-	watchTrackChanges(rootSV);
-	watchHasLyrics(rootSV);
-
-	const trackId = String(em?.id ?? "");
-	if (trackId && trackId !== G.lastTrackId) {
-		G.lastTrackId = trackId;
-		await loadForTrack(stores);
+	if (!(await init())) {
+		const t = setInterval(async () => {
+			if (await init()) clearInterval(t);
+		}, 1000);
 	}
 })();
