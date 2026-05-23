@@ -25,7 +25,10 @@ async function refreshAccessToken(refreshToken) {
 
 	const data = await res.json();
 	if (data.error) {
-		throw new Error(`Token refresh failed: ${data.error}`);
+		const fatal = ["bad_refresh_token", "token_expired", "incorrect_client_credentials", "access_denied"];
+		const err = new Error(`Token refresh failed: ${data.error}`);
+		err.fatalToken = fatal.includes(data.error);
+		throw err;
 	}
 
 	return {
@@ -135,7 +138,9 @@ async function pollForToken(deviceCode, intervalSec, expiresIn, onProgress) {
 
 // Default export
 
-export async function checkGitHubStar() {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function tryCheckGitHubStar() {
 	const config = loadConfig();
 	const github = config.github ?? {};
 	const accessToken = github.accessToken ?? null;
@@ -143,7 +148,7 @@ export async function checkGitHubStar() {
 
 	if (!accessToken) {
 		console.log("[GitHub Auth] No token found");
-		return { hasStarred: false };
+		return { hasStarred: false, fatal: true };
 	}
 
 	try {
@@ -168,20 +173,33 @@ export async function checkGitHubStar() {
 				return { hasStarred };
 			} catch (refreshErr) {
 				console.error("[GitHub Auth] Token refresh failed:", refreshErr.message);
-				config.github.accessToken = null;
-				config.github.refreshToken = null;
-				saveConfig(config);
-				return { hasStarred: false, tokenExpired: true };
+				if (refreshErr.fatalToken) {
+					config.github.accessToken = null;
+					config.github.refreshToken = null;
+					saveConfig(config);
+					return { hasStarred: false, tokenExpired: true, fatal: true };
+				}
+				return { hasStarred: false };
 			}
 		}
 
 		if (err.message === "401") {
 			console.warn("[GitHub Auth] Token expired or revoked.");
-			return { hasStarred: false, tokenExpired: true };
+			return { hasStarred: false, tokenExpired: true, fatal: true };
 		}
 		console.error("[GitHub Auth] Check error:", err.message);
 		return { hasStarred: false };
 	}
+}
+
+export async function checkGitHubStar() {
+	const result = await tryCheckGitHubStar();
+	if (!result.fatal && !result.hasStarred) {
+		console.warn("[GitHub Auth] Retrying in 10s...");
+		await sleep(10000);
+		return tryCheckGitHubStar();
+	}
+	return result;
 }
 
 export async function connectGitHubDeviceFlow(onUserCode, onProgress) {
