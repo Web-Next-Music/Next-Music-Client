@@ -9,6 +9,17 @@ const config = loadConfig();
 const ADDON_DIRS = new Map();
 let serverStarted = false;
 let assetServerPort = 2007;
+let activeAddonsWindow = null;
+let cssWatcherStarted = false;
+let cssRescanTimer = null;
+let cssPollingTimer = null;
+let cssRescanInProgress = false;
+const cssWatchers = new Map();
+const addonCssCache = new Map();
+const pendingCssRemovals = new Map();
+const CSS_RESCAN_DELAY_MS = 100;
+const CSS_POLL_INTERVAL_MS = 1000;
+const CSS_REMOVAL_GRACE_MS = 2500;
 
 function safeDecodeURI(str) {
 	if (!str) return null;
@@ -399,6 +410,229 @@ function loadFilesFromDirectory(directory, extension, callback) {
 	});
 }
 
+function relativeAddonPath(filePath) {
+	return path.relative(addonsDirectory, filePath).replace(/\\/g, "/");
+}
+
+function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
+	let entries;
+
+	try {
+		entries = fs.readdirSync(directory, { withFileTypes: true });
+	} catch (err) {
+		if (err.code !== "ENOENT") {
+			console.warn(
+				`[Addons] Cannot scan CSS directory '${directory}':`,
+				err.message,
+			);
+		}
+		return result;
+	}
+
+	for (const entry of entries) {
+		const fullPath = path.join(directory, entry.name);
+
+		let stat;
+		try {
+			stat = fs.statSync(fullPath);
+		} catch {
+			console.warn(`[Addons] Broken symlink or inaccessible: ${fullPath}`);
+			continue;
+		}
+
+		if (stat.isDirectory()) {
+			if (entry.name.startsWith("!")) continue;
+			if (entry.name === "assets") continue;
+
+			scanAddonCssFiles(fullPath, result);
+			continue;
+		}
+
+		if (stat.isFile() && path.extname(entry.name) === ".css") {
+			try {
+				result.set(fullPath, {
+					content: fs.readFileSync(fullPath, "utf8"),
+					label: relativeAddonPath(fullPath),
+				});
+			} catch (err) {
+				console.warn(
+					`[Addons] Cannot read CSS file '${fullPath}':`,
+					err.message,
+				);
+			}
+		}
+	}
+
+	return result;
+}
+
+function scanAddonCssDirectories(directory = addonsDirectory, result = new Set()) {
+	let entries;
+
+	try {
+		entries = fs.readdirSync(directory, { withFileTypes: true });
+	} catch {
+		return result;
+	}
+
+	result.add(directory);
+
+	for (const entry of entries) {
+		if (!entry.isDirectory()) continue;
+		if (entry.name.startsWith("!")) continue;
+		if (entry.name === "assets") continue;
+
+		scanAddonCssDirectories(path.join(directory, entry.name), result);
+	}
+
+	return result;
+}
+
+function cssInjectionScript(filePath, cssContent) {
+	return `(() => {
+		const key = ${JSON.stringify(relativeAddonPath(filePath))};
+		const css = ${JSON.stringify(cssContent)};
+		const selector = \`style[data-nmc-addon-css="\${CSS.escape(key)}"]\`;
+		let style = document.querySelector(selector);
+
+		if (!style) {
+			style = document.createElement("style");
+			style.dataset.nmcAddonCss = key;
+			document.head.appendChild(style);
+		}
+
+		if (style.textContent !== css) {
+			style.textContent = css;
+		}
+	})();`;
+}
+
+function cssRemovalScript(filePath) {
+	return `(() => {
+		const key = ${JSON.stringify(relativeAddonPath(filePath))};
+		document
+			.querySelectorAll(\`style[data-nmc-addon-css="\${CSS.escape(key)}"]\`)
+			.forEach((style) => style.remove());
+	})();`;
+}
+
+async function execAddonScript(script, label) {
+	if (!activeAddonsWindow || activeAddonsWindow.isDestroyed()) return;
+
+	try {
+		await activeAddonsWindow.webContents.executeJavaScript(script);
+	} catch (err) {
+		console.error(`[Addons] executeJavaScript failed for '${label}':`, err);
+	}
+}
+
+async function applyCssSnapshot(cssSnapshot) {
+	for (const [filePath, { content, label }] of cssSnapshot) {
+		await execAddonScript(cssInjectionScript(filePath, content), label);
+	}
+}
+
+async function rescanAddonCss() {
+	if (!config.programSettings.addons.enable) return;
+	if (cssRescanInProgress) return;
+
+	cssRescanInProgress = true;
+
+	try {
+		let nextSnapshot;
+		try {
+			nextSnapshot = scanAddonCssFiles();
+		} catch (err) {
+			console.error("[Addons] CSS rescan failed:", err);
+			return;
+		}
+
+		for (const [filePath, { content, label }] of nextSnapshot) {
+			const pendingRemoval = pendingCssRemovals.get(filePath);
+			if (pendingRemoval) {
+				clearTimeout(pendingRemoval);
+				pendingCssRemovals.delete(filePath);
+			}
+
+			if (addonCssCache.get(filePath) === content) continue;
+
+			addonCssCache.set(filePath, content);
+			console.log(`Update CSS: ${label}`);
+			await execAddonScript(cssInjectionScript(filePath, content), label);
+		}
+
+		for (const filePath of [...addonCssCache.keys()]) {
+			if (nextSnapshot.has(filePath)) continue;
+			if (pendingCssRemovals.has(filePath)) continue;
+
+			const label = relativeAddonPath(filePath);
+			const timer = setTimeout(() => {
+				pendingCssRemovals.delete(filePath);
+
+				if (fs.existsSync(filePath)) {
+					scheduleAddonCssRescan();
+					return;
+				}
+
+				addonCssCache.delete(filePath);
+				console.log(`Remove CSS: ${label}`);
+				execAddonScript(cssRemovalScript(filePath), label);
+			}, CSS_REMOVAL_GRACE_MS);
+
+			timer.unref?.();
+			pendingCssRemovals.set(filePath, timer);
+		}
+
+		refreshAddonCssWatchers();
+	} finally {
+		cssRescanInProgress = false;
+	}
+}
+
+function scheduleAddonCssRescan() {
+	clearTimeout(cssRescanTimer);
+	cssRescanTimer = setTimeout(() => {
+		rescanAddonCss().catch((err) =>
+			console.error("[Addons] CSS live update failed:", err),
+		);
+	}, CSS_RESCAN_DELAY_MS);
+}
+
+function refreshAddonCssWatchers() {
+	const directories = scanAddonCssDirectories();
+
+	for (const [directory, watcher] of cssWatchers) {
+		if (directories.has(directory)) continue;
+
+		watcher.close();
+		cssWatchers.delete(directory);
+	}
+
+	for (const directory of directories) {
+		if (cssWatchers.has(directory)) continue;
+
+		try {
+			const watcher = fs.watch(directory, scheduleAddonCssRescan);
+			cssWatchers.set(directory, watcher);
+		} catch (err) {
+			console.warn(
+				`[Addons] Cannot watch CSS directory '${directory}':`,
+				err.message,
+			);
+		}
+	}
+}
+
+function startAddonCssLiveUpdates() {
+	if (cssWatcherStarted) return;
+
+	cssWatcherStarted = true;
+	refreshAddonCssWatchers();
+	cssPollingTimer = setInterval(scheduleAddonCssRescan, CSS_POLL_INTERVAL_MS);
+	cssPollingTimer.unref?.();
+	console.log("[Addons] CSS live updates enabled.");
+}
+
 // Online addon loader
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -427,42 +661,29 @@ async function applyAddons(mainWindow) {
 	}
 
 	console.log("Loading addons…");
+	activeAddonsWindow = mainWindow;
 
 	startAssetServer();
+	startAddonCssLiveUpdates();
 
 	async function execJS(script, label) {
-		try {
-			await mainWindow.webContents.executeJavaScript(script);
-		} catch (err) {
-			console.error(`[Addons] executeJavaScript failed for '${label}':`, err);
-		}
+		await execAddonScript(script, label);
 	}
 
-	function cssInjectionScript(cssContent) {
-		const escaped = cssContent.replace(/\\/g, "\\\\").replace(/`/g, "\\`");
+	const cssSnapshot = scanAddonCssFiles();
+	addonCssCache.clear();
 
-		return `(() => {
-            const style = document.createElement('style');
-            style.textContent = \`${escaped}\`;
-            document.head.appendChild(style);
-        })();`;
+	for (const [filePath, { content }] of cssSnapshot) {
+		addonCssCache.set(filePath, content);
 	}
 
-	await loadFilesFromDirectory(
-		addonsDirectory,
-		".css",
-		(cssContent, filePath) => {
-			const label = path.relative(addonsDirectory, filePath);
-			console.log(`Load CSS: ${label}`);
-			execJS(cssInjectionScript(cssContent), label);
-		},
-	);
+	await applyCssSnapshot(cssSnapshot);
 
 	await loadFilesFromDirectory(
 		addonsDirectory,
 		".js",
 		(jsContent, filePath) => {
-			const label = path.relative(addonsDirectory, filePath);
+			const label = relativeAddonPath(filePath);
 			console.log(`Load JS: ${label}`);
 			execJS(jsContent, label);
 		},
@@ -485,7 +706,23 @@ async function applyAddons(mainWindow) {
 			if (url.endsWith(".js")) {
 				await execJS(content, url);
 			} else if (url.endsWith(".css")) {
-				await execJS(cssInjectionScript(content), url);
+				await execJS(
+					`(() => {
+						const key = ${JSON.stringify(url)};
+						const css = ${JSON.stringify(content)};
+						const selector = \`style[data-nmc-online-addon-css="\${CSS.escape(key)}"]\`;
+						let style = document.querySelector(selector);
+
+						if (!style) {
+							style = document.createElement("style");
+							style.dataset.nmcOnlineAddonCss = key;
+							document.head.appendChild(style);
+						}
+
+						style.textContent = css;
+					})();`,
+					url,
+				);
 			} else {
 				console.warn(`[Addons] Unknown file type for online addon: ${url}`);
 			}
