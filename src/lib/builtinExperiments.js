@@ -46,8 +46,13 @@ export function getBuiltinExperiments() {
 	return { ...cachedExperiments };
 }
 
+const SILENT_DEFAULT_EXPERIMENTS = {
+	WebNextAIContentReductionSetting: "on",
+};
+
 export function resolveBuiltinExperiments(userExperiments = {}) {
-	const resolved = getBuiltinExperiments();
+	const builtins = getBuiltinExperiments();
+	const resolved = { ...SILENT_DEFAULT_EXPERIMENTS, ...builtins };
 
 	if (
 		!userExperiments ||
@@ -60,7 +65,7 @@ export function resolveBuiltinExperiments(userExperiments = {}) {
 	for (const [name, value] of Object.entries(userExperiments)) {
 		if (
 			value === "unset" &&
-			Object.prototype.hasOwnProperty.call(resolved, name)
+			Object.prototype.hasOwnProperty.call(builtins, name)
 		) {
 			continue;
 		}
