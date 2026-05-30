@@ -28,6 +28,8 @@ const apiFunctionsOrder = [
 
 let mainWindow;
 let cachedApiJs = null;
+let cachedTitleBarCss = null;
+let cachedTitleBarJs = null;
 
 export function createWindow(config) {
 	const startMinimized = config?.launchSettings?.startMinimized;
@@ -147,15 +149,22 @@ export function createWindow(config) {
 	}
 
 	function injectTitleBar() {
-		const css = fs.readFileSync(
-			path.join(titlebarFolder, "titlebar.css"),
-			"utf-8",
-		);
+		if (cachedTitleBarCss === null) {
+			cachedTitleBarCss = fs.readFileSync(
+				path.join(titlebarFolder, "titlebar.css"),
+				"utf-8",
+			);
+		}
 
-		const js = fs.readFileSync(
-			path.join(titlebarFolder, "titlebar.js"),
-			"utf-8",
-		);
+		if (cachedTitleBarJs === null) {
+			cachedTitleBarJs = fs.readFileSync(
+				path.join(titlebarFolder, "titlebar.js"),
+				"utf-8",
+			);
+		}
+
+		const css = cachedTitleBarCss;
+		const js = cachedTitleBarJs;
 
 		const showNextText =
 			config.windowSettings?.titleBar?.nextText?.enable === true;

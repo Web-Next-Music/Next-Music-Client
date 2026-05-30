@@ -1,10 +1,10 @@
-import { loadConfig, getPaths } from "../config.js";
+import { getPaths } from "../config.js";
+import { getConfig } from "./configManager.js";
 import fs from "fs";
 import path from "path";
 import http from "http";
 
 const { addonsDirectory } = getPaths();
-const config = loadConfig();
 
 const ADDON_DIRS = new Map();
 let serverStarted = false;
@@ -16,6 +16,7 @@ let cssPollingTimer = null;
 let cssRescanInProgress = false;
 const cssWatchers = new Map();
 const addonCssCache = new Map();
+const addonCssMeta = new Map();
 const pendingCssRemovals = new Map();
 const CSS_RESCAN_DELAY_MS = 100;
 const CSS_POLL_INTERVAL_MS = 1000;
@@ -40,6 +41,35 @@ function safeResolve(root, ...segments) {
 	return resolved;
 }
 
+// Resolve a dirent's type. `withFileTypes` already tells us whether a real
+// entry is a file or directory for free, so we only pay a stat() syscall when
+// the entry is an actual symlink (which we still want to follow). Returns null
+// for broken/inaccessible symlinks.
+function statDirent(dir, entry) {
+	const fullPath = path.join(dir, entry.name);
+
+	if (!entry.isSymbolicLink()) {
+		return {
+			fullPath,
+			isDirectory: entry.isDirectory(),
+			isFile: entry.isFile(),
+		};
+	}
+
+	try {
+		const stat = fs.statSync(fullPath);
+		return { fullPath, isDirectory: stat.isDirectory(), isFile: stat.isFile() };
+	} catch {
+		return null;
+	}
+}
+
+// Cheap change-detection signature for a file (mtime + size), so the CSS poll
+// can skip re-reading unchanged files from disk.
+function fileSignature(stat) {
+	return `${stat.mtimeMs}:${stat.size}`;
+}
+
 function findAssetsDir(dir) {
 	if (!fs.existsSync(dir)) return null;
 	const queue = [dir];
@@ -55,16 +85,11 @@ function findAssetsDir(dir) {
 		}
 
 		for (const entry of entries) {
-			const fullPath = path.join(current, entry.name);
+			const info = statDirent(current, entry);
+			if (!info || !info.isDirectory) continue;
 
-			try {
-				// Follow symlinks
-				const stat = fs.statSync(fullPath);
-				if (stat.isDirectory()) {
-					if (entry.name === "assets") return fullPath;
-					queue.push(fullPath);
-				}
-			} catch {}
+			if (entry.name === "assets") return info.fullPath;
+			queue.push(info.fullPath);
 		}
 	}
 	return null;
@@ -80,16 +105,14 @@ function findFileRecursive(dir, fileName) {
 	}
 
 	for (const entry of entries) {
-		const fullPath = path.join(dir, entry.name);
+		const info = statDirent(dir, entry);
+		if (!info) continue;
 
-		try {
-			const stat = fs.statSync(fullPath);
-			if (stat.isFile() && entry.name === fileName) return fullPath;
-			if (stat.isDirectory()) {
-				const found = findFileRecursive(fullPath, fileName);
-				if (found) return found;
-			}
-		} catch {}
+		if (info.isFile && entry.name === fileName) return info.fullPath;
+		if (info.isDirectory) {
+			const found = findFileRecursive(info.fullPath, fileName);
+			if (found) return found;
+		}
 	}
 	return null;
 }
@@ -110,18 +133,14 @@ function findHandleFile(addonDir) {
 		}
 
 		for (const entry of entries) {
-			const fullPath = path.join(current, entry.name);
+			const info = statDirent(current, entry);
+			if (!info || !info.isDirectory) continue;
 
-			try {
-				const stat = fs.statSync(fullPath);
-				if (stat.isDirectory()) {
-					if (entry.name === "assets") {
-						const candidate = path.join(current, "handleEvents.json");
-						if (fs.existsSync(candidate)) return candidate;
-					}
-					queue.push(fullPath);
-				}
-			} catch {}
+			if (entry.name === "assets") {
+				const candidate = path.join(current, "handleEvents.json");
+				if (fs.existsSync(candidate)) return candidate;
+			}
+			queue.push(info.fullPath);
 		}
 	}
 
@@ -347,17 +366,18 @@ function loadFilesFromDirectory(directory, extension, callback) {
 			const pending = [];
 
 			for (const entry of entries) {
-				const fullPath = path.join(directory, entry.name);
+				const info = statDirent(directory, entry);
 
-				let stat;
-				try {
-					stat = fs.statSync(fullPath);
-				} catch {
-					console.warn(`[Addons] Broken symlink or inaccessible: ${fullPath}`);
+				if (!info) {
+					console.warn(
+						`[Addons] Broken symlink or inaccessible: ${path.join(directory, entry.name)}`,
+					);
 					continue;
 				}
 
-				if (stat.isDirectory()) {
+				const fullPath = info.fullPath;
+
+				if (info.isDirectory) {
 					if (entry.name.startsWith("!")) continue;
 
 					if (directory === addonsDirectory && !ADDON_DIRS.has(entry.name)) {
@@ -383,7 +403,7 @@ function loadFilesFromDirectory(directory, extension, callback) {
 					continue;
 				}
 
-				if (stat.isFile() && path.extname(entry.name) === extension) {
+				if (info.isFile && path.extname(entry.name) === extension) {
 					const p = new Promise((res2) => {
 						fs.readFile(fullPath, "utf8", (readErr, content) => {
 							if (readErr) {
@@ -433,35 +453,84 @@ function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
 	}
 
 	for (const entry of entries) {
-		const fullPath = path.join(directory, entry.name);
+		const info = statDirent(directory, entry);
 
-		let stat;
-		try {
-			stat = fs.statSync(fullPath);
-		} catch {
-			console.warn(`[Addons] Broken symlink or inaccessible: ${fullPath}`);
+		if (!info) {
+			console.warn(
+				`[Addons] Broken symlink or inaccessible: ${path.join(directory, entry.name)}`,
+			);
 			continue;
 		}
 
-		if (stat.isDirectory()) {
+		if (info.isDirectory) {
 			if (entry.name.startsWith("!")) continue;
 			if (entry.name === "assets") continue;
 
-			scanAddonCssFiles(fullPath, result);
+			scanAddonCssFiles(info.fullPath, result);
 			continue;
 		}
 
-		if (stat.isFile() && path.extname(entry.name) === ".css") {
+		if (info.isFile && path.extname(entry.name) === ".css") {
 			try {
-				result.set(fullPath, {
-					content: fs.readFileSync(fullPath, "utf8"),
-					label: relativeAddonPath(fullPath),
+				const content = fs.readFileSync(info.fullPath, "utf8");
+				const stat = fs.statSync(info.fullPath);
+				result.set(info.fullPath, {
+					content,
+					label: relativeAddonPath(info.fullPath),
+					signature: fileSignature(stat),
 				});
 			} catch (err) {
 				console.warn(
-					`[Addons] Cannot read CSS file '${fullPath}':`,
+					`[Addons] Cannot read CSS file '${info.fullPath}':`,
 					err.message,
 				);
+			}
+		}
+	}
+
+	return result;
+}
+
+// Lightweight CSS scan used by the live-update poll: collects only
+// mtime/size signatures (no file reads), so an idle poll never touches
+// CSS file contents. Contents are read lazily in rescanAddonCss() only for
+// files whose signature changed.
+function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
+	let entries;
+
+	try {
+		entries = fs.readdirSync(directory, { withFileTypes: true });
+	} catch (err) {
+		if (err.code !== "ENOENT") {
+			console.warn(
+				`[Addons] Cannot scan CSS directory '${directory}':`,
+				err.message,
+			);
+		}
+		return result;
+	}
+
+	for (const entry of entries) {
+		const info = statDirent(directory, entry);
+		if (!info) continue;
+
+		if (info.isDirectory) {
+			if (entry.name.startsWith("!")) continue;
+			if (entry.name === "assets") continue;
+
+			scanAddonCssMeta(info.fullPath, result);
+			continue;
+		}
+
+		if (info.isFile && path.extname(entry.name) === ".css") {
+			try {
+				const stat = fs.statSync(info.fullPath);
+				result.set(info.fullPath, {
+					signature: fileSignature(stat),
+					label: relativeAddonPath(info.fullPath),
+				});
+			} catch {
+				// Unreadable now -> treat as absent; removal grace logic handles it.
 			}
 		}
 	}
@@ -536,7 +605,7 @@ async function applyCssSnapshot(cssSnapshot) {
 }
 
 async function rescanAddonCss() {
-	if (!config.programSettings.addons.enable) return;
+	if (!getConfig().programSettings.addons.enable) return;
 	if (cssRescanInProgress) return;
 
 	cssRescanInProgress = true;
@@ -544,18 +613,35 @@ async function rescanAddonCss() {
 	try {
 		let nextSnapshot;
 		try {
-			nextSnapshot = scanAddonCssFiles();
+			nextSnapshot = scanAddonCssMeta();
 		} catch (err) {
 			console.error("[Addons] CSS rescan failed:", err);
 			return;
 		}
 
-		for (const [filePath, { content, label }] of nextSnapshot) {
+		for (const [filePath, { signature, label }] of nextSnapshot) {
 			const pendingRemoval = pendingCssRemovals.get(filePath);
 			if (pendingRemoval) {
 				clearTimeout(pendingRemoval);
 				pendingCssRemovals.delete(filePath);
 			}
+
+			// Unchanged on disk and already injected -> skip without reading.
+			if (addonCssMeta.get(filePath) === signature && addonCssCache.has(filePath))
+				continue;
+
+			let content;
+			try {
+				content = fs.readFileSync(filePath, "utf8");
+			} catch (err) {
+				console.warn(
+					`[Addons] Cannot read CSS file '${filePath}':`,
+					err.message,
+				);
+				continue;
+			}
+
+			addonCssMeta.set(filePath, signature);
 
 			if (addonCssCache.get(filePath) === content) continue;
 
@@ -578,6 +664,7 @@ async function rescanAddonCss() {
 				}
 
 				addonCssCache.delete(filePath);
+				addonCssMeta.delete(filePath);
 				console.log(`Remove CSS: ${label}`);
 				execAddonScript(cssRemovalScript(filePath), label);
 			}, CSS_REMOVAL_GRACE_MS);
@@ -653,6 +740,8 @@ async function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
 }
 
 async function applyAddons(mainWindow) {
+	const config = getConfig();
+
 	if (!config.programSettings.addons.enable) {
 		console.log("Addons are disabled");
 		return;
@@ -675,9 +764,11 @@ async function applyAddons(mainWindow) {
 
 	const cssSnapshot = scanAddonCssFiles();
 	addonCssCache.clear();
+	addonCssMeta.clear();
 
-	for (const [filePath, { content }] of cssSnapshot) {
+	for (const [filePath, { content, signature }] of cssSnapshot) {
 		addonCssCache.set(filePath, content);
+		addonCssMeta.set(filePath, signature);
 	}
 
 	await applyCssSnapshot(cssSnapshot);

@@ -7,6 +7,37 @@ import {
 import { getConfig } from "./lib/configManager.js";
 import { spawn } from "child_process";
 
+// Feed a Buffer into a writable stream in chunks, honoring backpressure so a
+// large input doesn't get buffered/flushed in one blocking write. Resolves once
+// fully written; rejects on stream error (e.g. EPIPE if ffmpeg exits early).
+function writeBufferToStream(stream, buffer, chunkSize = 64 * 1024) {
+	return new Promise((resolve, reject) => {
+		let offset = 0;
+
+		stream.on("error", reject);
+
+		function writeNext() {
+			while (offset < buffer.length) {
+				const end = Math.min(offset + chunkSize, buffer.length);
+				const chunk = buffer.subarray(offset, end);
+				offset = end;
+
+				if (offset >= buffer.length) {
+					stream.end(chunk, resolve);
+					return;
+				}
+
+				if (!stream.write(chunk)) {
+					stream.once("drain", writeNext);
+					return;
+				}
+			}
+		}
+
+		writeNext();
+	});
+}
+
 if (!ipcMain.listenerCount("nmc:convert-mp3")) {
 	ipcMain.handle("nmc:convert-mp3", (_event, audioData) => {
 		const sender = _event.sender;
@@ -40,8 +71,9 @@ if (!ipcMain.listenerCount("nmc:convert-mp3")) {
 				resolve(code === 0 && chunks.length ? Buffer.concat(chunks) : null),
 			);
 
-			ff.stdin.write(Buffer.from(audioData));
-			ff.stdin.end();
+			// Errors here (e.g. EPIPE when ffmpeg exits early) are surfaced via
+			// the 'error'/'close' handlers above, which settle the promise.
+			writeBufferToStream(ff.stdin, Buffer.from(audioData)).catch(() => {});
 		});
 	});
 }

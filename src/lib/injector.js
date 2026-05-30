@@ -55,9 +55,18 @@ export default function injector(mainWindow, config) {
 			? path.resolve(__dirname, "../../src/inject")
 			: path.join(__dirname, "../inject");
 
-		mainWindow.webContents.executeJavaScript(
-			`window.__APP_VERSION__ = ${JSON.stringify(`Next Music/${app.getVersion()}`)};`,
+		const lamejsDevPath = path.resolve(
+			__dirname,
+			"../../node_modules/lamejs/lame.all.js",
 		);
+
+		// Build a single batch script (one executeJavaScript round-trip instead
+		// of one per file). Each fragment is wrapped in try/catch so a failure
+		// in one injected file can't abort the rest of the batch.
+		const fragments = [
+			`window.__APP_VERSION__ = ${JSON.stringify(`Next Music/${app.getVersion()}`)};`,
+		];
+		const injected = [];
 
 		for (const item of injectList) {
 			const { file, condition } = item;
@@ -67,10 +76,6 @@ export default function injector(mainWindow, config) {
 				continue;
 			}
 
-			const lamejsDevPath = path.resolve(
-				__dirname,
-				"../../node_modules/lamejs/lame.all.js",
-			);
 			const fullPath = (
 				isDev &&
 				file === "lamejs.js" &&
@@ -92,15 +97,22 @@ export default function injector(mainWindow, config) {
 					? serializeInvocation(injectJsFile, fullPath, ENCRYPTION_KEY)
 					: "";
 
-			mainWindow.webContents
-				.executeJavaScript(injectScript)
-				.then(() => {
-					console.log("[Injector] Injected:", file);
-				})
-				.catch((err) => {
-					console.error("[Injector] ❌ Failed to inject:", file, err);
-				});
+			if (!injectScript) continue;
+
+			fragments.push(
+				`try{${injectScript}}catch(e){console.error(${JSON.stringify(`[Injector] inject error: ${file}`)},e);}`,
+			);
+			injected.push(file);
 		}
+
+		mainWindow.webContents
+			.executeJavaScript(fragments.join("\n"))
+			.then(() => {
+				console.log("[Injector] Injected:", injected.join(", "));
+			})
+			.catch((err) => {
+				console.error("[Injector] ❌ Batch inject failed:", err);
+			});
 	} catch (err) {
 		console.error("[Injector] ❌ Injector error:", err);
 	}

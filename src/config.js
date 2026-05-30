@@ -2,7 +2,6 @@
 
 import { app } from "electron";
 import path from "path";
-import fs from "fs";
 
 export const isDev = !app.isPackaged;
 export const devUrl = "http://localhost:6788";
@@ -164,59 +163,5 @@ export function getPaths() {
 	};
 }
 
-// Deep merge helper
-export function deepMerge(target, source) {
-	for (const key in source) {
-		if (
-			source[key] &&
-			typeof source[key] === "object" &&
-			!Array.isArray(source[key])
-		) {
-			if (!target[key]) target[key] = {};
-			deepMerge(target[key], source[key]);
-		} else {
-			if (target[key] === undefined) {
-				target[key] = source[key];
-			}
-		}
-	}
-	return target;
-}
-
-// Load config
-export function loadConfig() {
-	const { configFilePath, addonsDirectory, languagesDirectory } = getPaths();
-
-	if (!fs.existsSync(addonsDirectory)) {
-		fs.mkdirSync(addonsDirectory, { recursive: true });
-	}
-
-	if (!fs.existsSync(languagesDirectory)) {
-		fs.mkdirSync(languagesDirectory, { recursive: true });
-	}
-
-	if (!fs.existsSync(configFilePath)) {
-		fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 4));
-		return defaultConfig;
-	}
-
-	try {
-		const raw = fs.readFileSync(configFilePath, "utf8");
-		const userConfig = JSON.parse(raw);
-		return deepMerge(userConfig, JSON.parse(JSON.stringify(defaultConfig)));
-	} catch (err) {
-		console.error("Failed to load config. Using default.", err);
-		return defaultConfig;
-	}
-}
-
-// Save config
-export function saveConfig(config) {
-	const { configFilePath } = getPaths();
-
-	try {
-		fs.writeFileSync(configFilePath, JSON.stringify(config, null, 4), "utf-8");
-	} catch (err) {
-		console.error("Failed to save config:", err);
-	}
-}
+// Config load/save/merge logic lives in lib/configManager.js (single source of
+// truth). This module only owns paths and the default config schema.
