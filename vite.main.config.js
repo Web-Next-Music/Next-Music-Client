@@ -38,10 +38,11 @@ function walk(dir, out = []) {
 }
 
 const STORE_PUBLIC = join("src", "lib", "storePage", "public");
+const RENDERER_DIR = join("src", "renderer");
 
 // All JS files from src/ except renderer/ and storePage/public/ (they are copied as-is)
 const entries = walk("src").filter(
-	(f) => !f.startsWith(join("src", "renderer")) && !f.startsWith(STORE_PUBLIC),
+	(f) => !f.startsWith(RENDERER_DIR) && !f.startsWith(STORE_PUBLIC),
 );
 
 function walkAll(dir, out = []) {
@@ -68,6 +69,25 @@ const CM_FILES = [
 	["addon/fold/foldgutter.js", "addon/fold/foldgutter.js"],
 	["addon/fold/brace-fold.js", "addon/fold/brace-fold.js"],
 ];
+
+function copyCjsFiles() {
+	return {
+		name: "copy-cjs-files",
+		closeBundle() {
+			const cjsFiles = walkAll("src").filter(
+				(f) =>
+					extname(f) === ".cjs" &&
+					!f.startsWith(RENDERER_DIR) &&
+					!f.startsWith(STORE_PUBLIC),
+			);
+			for (const src of cjsFiles) {
+				const dest = src.replace(/^src/, "dist");
+				mkdirSync(dirname(dest), { recursive: true });
+				copyFileSync(src, dest);
+			}
+		},
+	};
+}
 
 function copyStorePublic() {
 	return {
@@ -118,7 +138,7 @@ export default defineConfig({
 		"process.env.ENCRYPTION_KEY": JSON.stringify(ENCRYPTION_KEY_VALUE),
 	},
 
-	plugins: [copyStorePublic(), processOutputFiles()],
+	plugins: [copyCjsFiles(), copyStorePublic(), processOutputFiles()],
 
 	build: {
 		outDir: "dist",
