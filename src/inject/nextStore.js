@@ -1,13 +1,25 @@
 (() => {
-	const ICON_HREF = document
-		.querySelector(`[class*="NavbarDesktop_navigation"] * use`)
-		.getAttribute("xlink:href");
+	let ICON_HREF = null;
+	let sourceObserverAttached = false;
 
 	function getPlusLink() {
 		const links = document.querySelectorAll(
 			'[class*="NavbarDesktop_navigation"] > ol > li > a',
 		);
 		return Array.from(links).find((a) => a.href.includes("/plus")) || null;
+	}
+
+	function getSourceHref() {
+		const plusA = getPlusLink();
+		const uses = document.querySelectorAll(
+			`[class*="NavbarDesktop_navigation"] * use`,
+		);
+		for (const use of uses) {
+			if (plusA && plusA.contains(use)) continue;
+			const href = use.getAttribute("xlink:href") || use.getAttribute("href");
+			if (href) return href;
+		}
+		return null;
 	}
 
 	function patchLink(a) {
@@ -20,7 +32,7 @@
 		}
 
 		const use = a.querySelector("use");
-		if (use && use.getAttribute("href") !== ICON_HREF) {
+		if (use && ICON_HREF && use.getAttribute("href") !== ICON_HREF) {
 			use.setAttribute("xlink:href", ICON_HREF);
 			use.setAttribute("href", ICON_HREF);
 		}
@@ -130,9 +142,55 @@
 		});
 	}
 
-	const bodyObserver = new MutationObserver(() => {
-		const a = getPlusLink();
+	function attachSourceObserver() {
+		if (sourceObserverAttached) return;
 
+		const plusA = getPlusLink();
+		const uses = document.querySelectorAll(
+			`[class*="NavbarDesktop_navigation"] * use`,
+		);
+		let sourceUse = null;
+		for (const use of uses) {
+			if (plusA && plusA.contains(use)) continue;
+			if (use.getAttribute("xlink:href") || use.getAttribute("href")) {
+				sourceUse = use;
+				break;
+			}
+		}
+
+		if (!sourceUse) return;
+		sourceObserverAttached = true;
+
+		const obs = new MutationObserver(() => {
+			const newHref =
+				sourceUse.getAttribute("xlink:href") ||
+				sourceUse.getAttribute("href");
+			if (newHref && newHref !== ICON_HREF) {
+				ICON_HREF = newHref;
+				const a = getPlusLink();
+				if (a) patchLink(a);
+			}
+		});
+		obs.observe(sourceUse, {
+			attributes: true,
+			attributeFilter: ["href", "xlink:href"],
+		});
+	}
+
+	function syncAndPatch() {
+		const newHref = getSourceHref();
+		if (newHref && newHref !== ICON_HREF) {
+			ICON_HREF = newHref;
+			const a = getPlusLink();
+			if (a) patchLink(a);
+		}
+	}
+
+	const bodyObserver = new MutationObserver(() => {
+		attachSourceObserver();
+		syncAndPatch();
+
+		const a = getPlusLink();
 		if (a && !a.dataset.nextStore) {
 			watchLink(a);
 		}
@@ -140,6 +198,8 @@
 
 	bodyObserver.observe(document.body, { childList: true, subtree: true });
 
+	ICON_HREF = getSourceHref();
+	attachSourceObserver();
 	const a = getPlusLink();
 	if (a) watchLink(a);
 })();
