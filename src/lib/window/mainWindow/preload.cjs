@@ -2,7 +2,6 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-// Titlebar IPC
 if (process.argv.includes("--nmc-titlebar")) {
 	contextBridge.exposeInMainWorld("nmcWindow", {
 		minimize: () => ipcRenderer.send("nmc-minimize"),
@@ -22,192 +21,343 @@ if (process.argv.includes("--nmc-titlebar")) {
 	});
 }
 
-// Experiment patcher - built from config passed via argv
-const _experimentsArg = process.argv.find((a) =>
-	a.startsWith("--nmc-experiments="),
-);
-const _experimentsRaw = (() => {
+const EXPERIMENTS_ARG_PREFIX = "--nmc-experiments=";
+
+function parseExperimentsArg() {
+	const arg = process.argv.find((a) => a.startsWith(EXPERIMENTS_ARG_PREFIX));
+	if (!arg) return {};
 	try {
-		return _experimentsArg
-			? JSON.parse(_experimentsArg.slice("--nmc-experiments=".length))
-			: {};
+		return JSON.parse(arg.slice(EXPERIMENTS_ARG_PREFIX.length));
 	} catch {
 		return {};
 	}
-})();
+}
 
-const EXPERIMENT_OVERRIDES = {};
-for (const [name, state] of Object.entries(_experimentsRaw)) {
+const storeOverrides = {};
+const rscOverrides = {};
+for (const [name, state] of Object.entries(parseExperimentsArg())) {
 	if (state === "on" || state === "default") {
-		EXPERIMENT_OVERRIDES[name] = {
-			group: state,
-			value: { title: state },
-		};
+		storeOverrides[name] = state;
+		rscOverrides[name] = { group: state, value: { title: state } };
 	}
 }
 
-const patcherCode = `
-(function () {
-	var overrides = ${JSON.stringify(EXPERIMENT_OVERRIDES)};
+function experimentPatcher(rscOverrides, storeOverrides) {
+	const rscNames = Object.keys(rscOverrides);
 
-	function patchRSCString(raw) {
-		var result = raw;
-		for (var expKey in overrides) {
-			var expVal = overrides[expKey];
-			var marker = '"' + expKey + '":';
-			var searchFrom = 0;
-			while (true) {
-				var idx = result.indexOf(marker, searchFrom);
-				if (idx === -1) break;
-				var objStart = result.indexOf('{', idx + marker.length);
+	const mentionsOverride = (str) =>
+		rscNames.some((name) => str.indexOf('"' + name + '"') !== -1);
+
+	function patchRscString(raw) {
+		let result = raw;
+
+		for (const name of rscNames) {
+			const marker = '"' + name + '":';
+			let from = 0;
+
+			for (;;) {
+				const markerAt = result.indexOf(marker, from);
+				if (markerAt === -1) break;
+
+				const objStart = result.indexOf("{", markerAt + marker.length);
 				if (objStart === -1) break;
-				var depth = 0, objEnd = -1;
-				for (var i = objStart; i < result.length; i++) {
-					var c = result[i];
-					if (c === '{') depth++;
-					else if (c === '}') { depth--; if (depth === 0) { objEnd = i + 1; break; } }
+
+				let depth = 0;
+				let objEnd = -1;
+				for (let i = objStart; i < result.length; i++) {
+					if (result[i] === "{") depth++;
+					else if (result[i] === "}" && --depth === 0) {
+						objEnd = i + 1;
+						break;
+					}
 				}
 				if (objEnd === -1) break;
+
 				try {
-					var obj = JSON.parse(result.slice(objStart, objEnd));
-					Object.assign(obj, expVal);
-					var replacement = JSON.stringify(obj);
-					result = result.slice(0, objStart) + replacement + result.slice(objEnd);
-					searchFrom = objStart + replacement.length;
-				} catch (e) {
-					searchFrom = idx + marker.length;
+					const merged = Object.assign(
+						JSON.parse(result.slice(objStart, objEnd)),
+						rscOverrides[name],
+					);
+					const replacement = JSON.stringify(merged);
+					result =
+						result.slice(0, objStart) + replacement + result.slice(objEnd);
+					from = objStart + replacement.length;
+				} catch {
+					from = markerAt + marker.length;
 				}
 			}
 		}
+
 		return result;
 	}
 
-	function patchChunk(chunk) {
-		if (!Array.isArray(chunk) || chunk[0] !== 1) return;
-		if (typeof chunk[1] !== 'string') return;
-		var needsPatch = Object.keys(overrides).some(function (k) {
-			return chunk[1].indexOf('"' + k + '"') !== -1;
+	const patchChunk = (chunk) => {
+		if (
+			Array.isArray(chunk) &&
+			chunk[0] === 1 &&
+			typeof chunk[1] === "string" &&
+			mentionsOverride(chunk[1])
+		) {
+			chunk[1] = patchRscString(chunk[1]);
+		}
+	};
+
+	const patchSnapshot = (item) => {
+		const root = item && item.experiments && item.experiments.experiments;
+		if (!root || typeof root !== "object") return;
+		for (const name of rscNames) {
+			if (root[name]) Object.assign(root[name], rscOverrides[name]);
+		}
+	};
+
+	function interceptArray(prop, patchItem) {
+		const arr = Array.isArray(window[prop]) ? window[prop] : [];
+		arr.forEach(patchItem);
+
+		let nativePush = null;
+		Object.defineProperty(arr, "push", {
+			configurable: true,
+			enumerable: false,
+			get() {
+				return function (...items) {
+					items.forEach(patchItem);
+					return (nativePush || Array.prototype.push).apply(arr, items);
+				};
+			},
+			set(fn) {
+				nativePush = fn;
+			},
 		});
-		if (!needsPatch) return;
-		chunk[1] = patchRSCString(chunk[1]);
+
+		Object.defineProperty(window, prop, {
+			configurable: true,
+			enumerable: true,
+			get() {
+				return arr;
+			},
+			set(next) {
+				if (Array.isArray(next) && next !== arr) next.forEach(patchItem);
+			},
+		});
 	}
 
-	var _arr = window.__next_f || [];
-	_arr.forEach(patchChunk);
-	var _customPush = null;
-
-	function ourPush() {
-		var args = Array.prototype.slice.call(arguments);
-		args.forEach(patchChunk);
-		if (_customPush) return _customPush.apply(_arr, args);
-		return Array.prototype.push.apply(_arr, args);
-	}
-
-	Object.defineProperty(_arr, 'push', {
-		get: function () { return ourPush; },
-		set: function (fn) { _customPush = fn; },
-		configurable: true,
-		enumerable: false,
-	});
-
-	Object.defineProperty(window, '__next_f', {
-		get: function () { return _arr; },
-		set: function (newVal) {
-			if (Array.isArray(newVal) && newVal !== _arr) {
-				newVal.forEach(patchChunk);
+	function patchStorageReads() {
+		for (const storeName of ["sessionStorage", "localStorage"]) {
+			try {
+				const store = window[storeName];
+				const nativeGetItem = store.getItem.bind(store);
+				store.getItem = (key) => {
+					const value = nativeGetItem(key);
+					return typeof value === "string" && mentionsOverride(value)
+						? patchRscString(value)
+						: value;
+				};
+			} catch {
+				/* storage may be unavailable */
 			}
-		},
-		configurable: true,
-		enumerable: true,
-	});
-
-	['sessionStorage', 'localStorage'].forEach(function (storeName) {
-		try {
-			var store = window[storeName];
-			var origGetItem = store.getItem.bind(store);
-			store.getItem = function (key) {
-				var val = origGetItem(key);
-				if (typeof val !== 'string') return val;
-				if (Object.keys(overrides).some(function (k) { return val.indexOf('"' + k + '"') !== -1; })) {
-					return patchRSCString(val);
-				}
-				return val;
-			};
-		} catch (e) {}
-	});
-
-	function patchSnapshotItem(item) {
-		if (!item || typeof item !== 'object') return;
-		var root = item.experiments && item.experiments.experiments;
-		if (!root || typeof root !== 'object') return;
-		for (var expKey in overrides) {
-			if (!root[expKey]) continue;
-			Object.assign(root[expKey], overrides[expKey]);
 		}
 	}
 
-	var _snap = Array.isArray(window.__STATE_SNAPSHOT__) ? window.__STATE_SNAPSHOT__ : [];
-	_snap.forEach(patchSnapshotItem);
-	var _snapPush = null;
-
-	function snapPush() {
-		var args = Array.prototype.slice.call(arguments);
-		args.forEach(patchSnapshotItem);
-		if (_snapPush) return _snapPush.apply(_snap, args);
-		return Array.prototype.push.apply(_snap, args);
-	}
-
-	Object.defineProperty(_snap, 'push', {
-		get: function () { return snapPush; },
-		set: function (fn) { _snapPush = fn; },
-		configurable: true,
-		enumerable: false,
-	});
-
-	Object.defineProperty(window, '__STATE_SNAPSHOT__', {
-		get: function () { return _snap; },
-		set: function (newVal) {
-			if (Array.isArray(newVal) && newVal !== _snap) {
-				newVal.forEach(patchSnapshotItem);
-			}
-		},
-		configurable: true,
-		enumerable: true,
-	});
-
-	function patchScriptTags() {
-		try {
-			document.querySelectorAll('script').forEach(function (s) {
-				try {
-					var txt = s.textContent;
-					if (typeof txt !== 'string') return;
-					if (Object.keys(overrides).some(function (k) { return txt.indexOf('"' + k + '"') !== -1; })) {
-						s.textContent = patchRSCString(txt);
-					}
-				} catch (e) {}
-			});
-		} catch (e) {}
-	}
-	patchScriptTags();
-
-	var scriptObserver = new MutationObserver(function (muts) {
-		muts.forEach(function (m) {
-			m.addedNodes && m.addedNodes.forEach(function (n) {
-				if (n && n.tagName === 'SCRIPT') {
-					try {
-						var txt = n.textContent;
-						if (typeof txt === 'string' && Object.keys(overrides).some(function (k) { return txt.indexOf('"' + k + '"') !== -1; })) {
-							n.textContent = patchRSCString(txt);
-						}
-					} catch (e) {}
+	function patchInlineScripts() {
+		const patchNode = (node) => {
+			try {
+				if (
+					node.tagName === "SCRIPT" &&
+					typeof node.textContent === "string" &&
+					mentionsOverride(node.textContent)
+				) {
+					node.textContent = patchRscString(node.textContent);
 				}
-			});
-		});
-	});
-	scriptObserver.observe(document.documentElement || document, { childList: true, subtree: true });
+			} catch {
+				/* ignore non-patchable nodes */
+			}
+		};
 
-})();
-`;
+		try {
+			document.querySelectorAll("script").forEach(patchNode);
+		} catch {
+			/* document not ready */
+		}
+
+		new MutationObserver((mutations) => {
+			for (const m of mutations) {
+				if (m.addedNodes) m.addedNodes.forEach(patchNode);
+			}
+		}).observe(document.documentElement || document, {
+			childList: true,
+			subtree: true,
+		});
+	}
+
+	if (rscNames.length) {
+		interceptArray("__next_f", patchChunk);
+		interceptArray("__STATE_SNAPSHOT__", patchSnapshot);
+		patchStorageReads();
+		patchInlineScripts();
+	}
+
+	let webpackRequire = null;
+	let mstModuleId = null;
+	let keysModuleId = null;
+	let containerStorage = null;
+	let containerKey = null;
+	let appliedKeys = [];
+
+	// Grab the webpack require by pushing an inert chunk that hands it to us
+	function getWebpackRequire() {
+		if (webpackRequire) return webpackRequire;
+
+		const chunkKey = Object.keys(window).find(
+			(k) => k.indexOf("webpackChunk") === 0,
+		);
+		if (!chunkKey) return null;
+
+		try {
+			window[chunkKey].push([
+				[Math.random()],
+				{},
+				(require) => {
+					webpackRequire = require;
+				},
+			]);
+		} catch {
+			return null;
+		}
+		return webpackRequire;
+	}
+
+	function findExperimentsStore() {
+		for (const el of document.querySelectorAll("*")) {
+			const fiberKey = Object.keys(el).find(
+				(k) => k.indexOf("__reactFiber") === 0,
+			);
+			if (!fiberKey) continue;
+
+			let fiber = el[fiberKey];
+			for (let depth = 0; depth < 200 && fiber; depth++) {
+				const value = fiber.memoizedProps && fiber.memoizedProps.value;
+				if (
+					value &&
+					value.experiments &&
+					typeof value.experiments.checkExperiment === "function"
+				) {
+					return value;
+				}
+				fiber = fiber.return;
+			}
+		}
+		return null;
+	}
+
+	const findModuleId = (require, matches) =>
+		Object.keys(require.m).find((id) => {
+			try {
+				return matches(require(id));
+			} catch {
+				return false;
+			}
+		});
+
+	const isMstModule = (m) =>
+		m &&
+		typeof m._$ === "function" &&
+		typeof m.gK === "object" &&
+		typeof m.Zn === "function";
+
+	const isKeysModule = (m) =>
+		m &&
+		typeof m.c === "object" &&
+		m.c !== null &&
+		"OverwrittenExperiments" in m.c &&
+		typeof m.c.OverwrittenExperiments === "string";
+
+	function ensureContainer() {
+		if (containerStorage && containerKey) return true;
+
+		const require = getWebpackRequire();
+		if (!require) return false;
+
+		const store = findExperimentsStore();
+		if (!store) return false;
+
+		mstModuleId = mstModuleId || findModuleId(require, isMstModule);
+		keysModuleId = keysModuleId || findModuleId(require, isKeysModule);
+		if (!mstModuleId || !keysModuleId) return false;
+
+		try {
+			containerStorage = require(mstModuleId)._$(
+				store.experiments,
+			).containerStorage;
+			containerKey = require(keysModuleId).c.OverwrittenExperiments;
+		} catch {
+			return false;
+		}
+		return Boolean(containerStorage && containerKey);
+	}
+
+	const firstObjectValue = (data) => {
+		for (const key in data) {
+			if (data[key] && typeof data[key] === "object") return data[key];
+		}
+		return null;
+	};
+
+	function buildEntry(state, template) {
+		let entry = {};
+		if (template && typeof template === "object") {
+			try {
+				entry = JSON.parse(JSON.stringify(template));
+			} catch {
+				entry = {};
+			}
+		}
+		entry.group = state;
+		entry.value = Object.assign({}, entry.value, { title: state });
+		return entry;
+	}
+
+	function writeOverrides() {
+		if (!ensureContainer()) return false;
+
+		const data = containerStorage.get(containerKey) || {};
+		const template = firstObjectValue(data);
+		const patched = Object.assign({}, data);
+
+		for (const name of appliedKeys) {
+			if (!(name in storeOverrides)) delete patched[name];
+		}
+		for (const name in storeOverrides) {
+			patched[name] = buildEntry(storeOverrides[name], data[name] || template);
+		}
+		appliedKeys = Object.keys(storeOverrides);
+
+		containerStorage.set(containerKey, patched);
+		return true;
+	}
+
+	window.__nmcApplyExperiments = (next) => {
+		storeOverrides = next && typeof next === "object" ? next : {};
+		return writeOverrides();
+	};
+
+	let done = Object.keys(storeOverrides).length === 0;
+	const tryWrite = () => done || (done = writeOverrides());
+
+	if (!tryWrite()) {
+		let frames = 0;
+		(function pollFrame() {
+			if (tryWrite()) return;
+			if (frames++ < 600) requestAnimationFrame(pollFrame);
+		})();
+
+		new MutationObserver((_records, observer) => {
+			if (tryWrite()) observer.disconnect();
+		}).observe(document.documentElement || document, {
+			childList: true,
+			subtree: true,
+		});
+	}
+}
 
 function injectIntoMainWorld(code) {
 	const inject = () => {
@@ -219,18 +369,21 @@ function injectIntoMainWorld(code) {
 
 	if (document.documentElement) {
 		inject();
-	} else {
-		const observer = new MutationObserver(() => {
-			if (document.documentElement) {
-				observer.disconnect();
-				inject();
-			}
-		});
-		observer.observe(document, { childList: true });
+		return;
 	}
+
+	const observer = new MutationObserver(() => {
+		if (document.documentElement) {
+			observer.disconnect();
+			inject();
+		}
+	});
+	observer.observe(document, { childList: true });
 }
 
-injectIntoMainWorld(patcherCode);
+injectIntoMainWorld(
+	`(${experimentPatcher.toString()})(${JSON.stringify(rscOverrides)}, ${JSON.stringify(storeOverrides)});`,
+);
 
 contextBridge.exposeInMainWorld("nmcConvert", {
 	mp3: (buf) => ipcRenderer.invoke("nmc:convert-mp3", buf),

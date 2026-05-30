@@ -1,8 +1,14 @@
 import { BrowserWindow, ipcMain, shell, app } from "electron";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
-import { getAddonExperimentOverrides } from "../../addonExperiments.js";
-import { getBuiltinExperiments } from "../../builtinExperiments.js";
+import {
+	getAddonExperimentOverrides,
+	mergeAddonExperiments,
+} from "../../addonExperiments.js";
+import {
+	getBuiltinExperiments,
+	resolveBuiltinExperiments,
+} from "../../builtinExperiments.js";
 import { configChangeNeedsRestart } from "../../internalConfig.js";
 import { getPaths, isDev, devUrl } from "../../../config.js";
 import { fileURLToPath } from "url";
@@ -136,16 +142,46 @@ if (!ipcMain.listenerCount("settings:get-builtin-experiments")) {
 	);
 }
 
+function buildLiveExperimentOverrides(config) {
+	const resolved = mergeAddonExperiments(
+		resolveBuiltinExperiments(config?.experiments ?? {}),
+	);
+	const overrides = {};
+	for (const [name, state] of Object.entries(resolved)) {
+		if (state === "on" || state === "default") overrides[name] = state;
+	}
+	return overrides;
+}
+
+function applyExperimentsLive(config) {
+	const win = global.mainWindow;
+	if (!win || win.isDestroyed()) return;
+
+	const overrides = buildLiveExperimentOverrides(config);
+	win.webContents
+		.executeJavaScript(
+			`window.__nmcApplyExperiments && window.__nmcApplyExperiments(${JSON.stringify(
+				overrides,
+			)})`,
+		)
+		.catch(() => {});
+}
+
 if (!ipcMain.listenerCount("settings:save-config")) {
 	ipcMain.handle("settings:save-config", (_event, newConfig) => {
 		const currentConfig = getConfig();
 		const normalizedConfig = normalizeConfigFromRenderer(newConfig);
-		const { needRestart } = configChangeNeedsRestart(
+		const { needRestart, experimentsChanged } = configChangeNeedsRestart(
 			currentConfig,
 			normalizedConfig,
+			Object.keys(getBuiltinExperiments()),
 		);
 
 		updateConfig(normalizedConfig);
+
+		if (!needRestart && experimentsChanged) {
+			applyExperimentsLive(normalizedConfig);
+		}
 
 		return { needRestart };
 	});

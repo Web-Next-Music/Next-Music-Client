@@ -43,11 +43,20 @@ if (!ipcMain.listenerCount("nmc:convert-mp3")) {
 		const sender = _event.sender;
 		return new Promise((resolve) => {
 			const ff = spawn("ffmpeg", [
-				"-i", "pipe:0",
-				"-vn", "-acodec", "libmp3lame",
-				"-q:a", "2", "-compression_level", "0",
-				"-map_metadata", "-1",
-				"-f", "mp3", "pipe:1",
+				"-i",
+				"pipe:0",
+				"-vn",
+				"-acodec",
+				"libmp3lame",
+				"-q:a",
+				"2",
+				"-compression_level",
+				"0",
+				"-map_metadata",
+				"-1",
+				"-f",
+				"mp3",
+				"pipe:1",
 			]);
 
 			const chunks = [];

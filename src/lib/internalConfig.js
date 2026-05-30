@@ -64,11 +64,37 @@ function collectChangedPaths(prevValue, nextValue, basePath = "") {
 	return changedPaths;
 }
 
-export function configChangeNeedsRestart(prevConfig, nextConfig) {
-	const changedPaths = collectChangedPaths(prevConfig ?? {}, nextConfig ?? {});
+const EXPERIMENTS_PREFIX = "experiments.";
 
-	return {
-		needRestart: changedPaths.some((path) => pathNeedsRestart(path)),
-		changedPaths,
-	};
+function experimentNameFromPath(path) {
+	if (!path.startsWith(EXPERIMENTS_PREFIX)) return null;
+	return path.slice(EXPERIMENTS_PREFIX.length).split(".")[0];
+}
+
+export function configChangeNeedsRestart(
+	prevConfig,
+	nextConfig,
+	builtinExperimentNames = [],
+) {
+	const changedPaths = collectChangedPaths(prevConfig ?? {}, nextConfig ?? {});
+	const builtinSet = new Set(builtinExperimentNames);
+
+	let needRestart = false;
+	let experimentsChanged = false;
+
+	for (const path of changedPaths) {
+		const experimentName = experimentNameFromPath(path);
+
+		if (experimentName !== null) {
+			experimentsChanged = true;
+			// Regular experiments are applied live in the running window; only
+			// built-in Next Music experiments require a restart.
+			if (builtinSet.has(experimentName)) needRestart = true;
+			continue;
+		}
+
+		if (pathNeedsRestart(path)) needRestart = true;
+	}
+
+	return { needRestart, changedPaths, experimentsChanged };
 }

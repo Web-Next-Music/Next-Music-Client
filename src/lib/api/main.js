@@ -16,7 +16,11 @@ window.nextmusicApi = {
 					if (item.type === "button") {
 						def = item.defaultParameter ?? false;
 						value = item.bool ?? def;
-					} else if (item.type === "text" && Array.isArray(item.buttons) && item.buttons[0]) {
+					} else if (
+						item.type === "text" &&
+						Array.isArray(item.buttons) &&
+						item.buttons[0]
+					) {
 						def = item.buttons[0].defaultParameter ?? "";
 						value = item.buttons[0].text ?? def;
 					} else {
@@ -47,7 +51,9 @@ window.nextmusicApi = {
 
 		function notify(settings) {
 			for (const cb of listeners) {
-				try { cb(settings); } catch {}
+				try {
+					cb(settings);
+				} catch {}
 			}
 		}
 
@@ -81,7 +87,9 @@ window.nextmusicApi = {
 				fetchSettings().then((settings) => {
 					if (!settings) return;
 					lastJson = JSON.stringify(settings);
-					try { callback(settings); } catch {}
+					try {
+						callback(settings);
+					} catch {}
 				});
 			},
 		};

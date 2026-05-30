@@ -118,10 +118,12 @@ async function doDownload(argsJson, btn, event) {
 	if (btn.dataset.downloading) return;
 	const args = JSON.parse(argsJson);
 	const overlay = startDownloadProgress(btn);
-	const data = await api("/api/download", attachReleaseCache(args)).catch((e) => ({
-		ok: false,
-		error: e.message,
-	}));
+	const data = await api("/api/download", attachReleaseCache(args)).catch(
+		(e) => ({
+			ok: false,
+			error: e.message,
+		}),
+	);
 	syncReleaseCacheFromResponse(data);
 
 	finishDownloadProgress(btn, overlay);
@@ -238,10 +240,12 @@ async function doUpdate(argsJson, btn, event) {
 	btn.disabled = true;
 	btn.innerHTML = `${t("store.btnUpdating")}`;
 
-	const data = await api("/api/download", attachReleaseCache(args)).catch((e) => ({
-		ok: false,
-		error: e.message,
-	}));
+	const data = await api("/api/download", attachReleaseCache(args)).catch(
+		(e) => ({
+			ok: false,
+			error: e.message,
+		}),
+	);
 	syncReleaseCacheFromResponse(data);
 
 	delete btn.dataset.downloading;

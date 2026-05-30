@@ -507,7 +507,11 @@
 		}
 
 		const channels = Math.min(audioBuffer.numberOfChannels, 2);
-		const encoder = new lamejs.Mp3Encoder(channels, audioBuffer.sampleRate, 128);
+		const encoder = new lamejs.Mp3Encoder(
+			channels,
+			audioBuffer.sampleRate,
+			128,
+		);
 
 		const leftFloat = audioBuffer.getChannelData(0);
 		const rightFloat = channels > 1 ? audioBuffer.getChannelData(1) : leftFloat;

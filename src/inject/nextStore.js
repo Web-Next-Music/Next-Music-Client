@@ -163,8 +163,7 @@
 
 		const obs = new MutationObserver(() => {
 			const newHref =
-				sourceUse.getAttribute("xlink:href") ||
-				sourceUse.getAttribute("href");
+				sourceUse.getAttribute("xlink:href") || sourceUse.getAttribute("href");
 			if (newHref && newHref !== ICON_HREF) {
 				ICON_HREF = newHref;
 				const a = getPlusLink();

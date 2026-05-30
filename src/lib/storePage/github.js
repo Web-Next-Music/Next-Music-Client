@@ -161,7 +161,13 @@ async function findLogoRecursive(owner, repo, dirPath, depth = 0, token) {
 		if (logo) return logo;
 
 		for (const sub of items.filter((i) => i.type === "dir")) {
-			const found = await findLogoRecursive(owner, repo, sub.path, depth + 1, token);
+			const found = await findLogoRecursive(
+				owner,
+				repo,
+				sub.path,
+				depth + 1,
+				token,
+			);
 			if (found) return found;
 		}
 	} catch {}
@@ -179,7 +185,13 @@ async function findBrandingDir(owner, repo, items, depth = 0, token) {
 	for (const sub of items.filter((i) => i.type === "dir")) {
 		try {
 			const subItems = await ghContents(owner, repo, sub.path, token);
-			const found = await findBrandingDir(owner, repo, subItems, depth + 1, token);
+			const found = await findBrandingDir(
+				owner,
+				repo,
+				subItems,
+				depth + 1,
+				token,
+			);
 			if (found) return found;
 		} catch {}
 	}

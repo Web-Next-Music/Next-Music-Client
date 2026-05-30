@@ -25,7 +25,12 @@ async function refreshAccessToken(refreshToken) {
 
 	const data = await res.json();
 	if (data.error) {
-		const fatal = ["bad_refresh_token", "token_expired", "incorrect_client_credentials", "access_denied"];
+		const fatal = [
+			"bad_refresh_token",
+			"token_expired",
+			"incorrect_client_credentials",
+			"access_denied",
+		];
 		const err = new Error(`Token refresh failed: ${data.error}`);
 		err.fatalToken = fatal.includes(data.error);
 		throw err;
@@ -172,7 +177,10 @@ async function tryCheckGitHubStar() {
 				console.log(`[GitHub Auth] Star: ${hasStarred ? "✔" : "❌"}`);
 				return { hasStarred };
 			} catch (refreshErr) {
-				console.error("[GitHub Auth] Token refresh failed:", refreshErr.message);
+				console.error(
+					"[GitHub Auth] Token refresh failed:",
+					refreshErr.message,
+				);
 				if (refreshErr.fatalToken) {
 					config.github.accessToken = null;
 					config.github.refreshToken = null;
