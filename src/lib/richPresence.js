@@ -1,5 +1,5 @@
 import { Client } from "@xhayper/discord-rpc";
-import WebSocket from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import { getConfig } from "./configManager.js";
 import { checkGitHubStar } from "./githubStarAuth.js";
 
@@ -42,9 +42,15 @@ function initRPC() {
 }
 
 function initWS() {
-	wss = new WebSocket.Server({ port: WSPORT }, () =>
+	console.log(`[WS] Starting WebSocket server on port ${WSPORT}…`);
+
+	wss = new WebSocketServer({ port: WSPORT }, () =>
 		console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
 	);
+
+	wss.on("error", (err) => {
+		console.error(`[WS] ❌ Server error:`, err.message);
+	});
 
 	wss.on("connection", (ws) => {
 		console.log("[WS] New connection");
@@ -259,8 +265,7 @@ function presenceService(hasStarred = false) {
 		`[RPC] Repo star: ${userHasStarred ? "✔ premium features enabled" : "❌ premium features disabled"}`,
 	);
 
-	initWS();
 	initRPC();
 }
 
-export { initRPC, updateActivity, presenceService };
+export { initRPC, initWS, updateActivity, presenceService };
