@@ -1,6 +1,92 @@
 window.nextmusicApi = {
 	ContainerId,
 
+	getSettings(name) {
+		const port = window.__nextmusicApiAssetPort ?? 2007;
+		const listeners = [];
+		let lastJson = null;
+		let pollingTimer = null;
+
+		function parseHandle(data) {
+			const result = {};
+			for (const section of data.sections ?? []) {
+				for (const item of section.items ?? []) {
+					if (!item.id) continue;
+					let value, def;
+					if (item.type === "button") {
+						def = item.defaultParameter ?? false;
+						value = item.bool ?? def;
+					} else if (item.type === "text" && Array.isArray(item.buttons) && item.buttons[0]) {
+						def = item.buttons[0].defaultParameter ?? "";
+						value = item.buttons[0].text ?? def;
+					} else {
+						def = item.defaultParameter ?? null;
+						value = def;
+					}
+					result[item.id] = { value, default: def };
+				}
+			}
+			return result;
+		}
+
+		async function fetchSettings() {
+			try {
+				const res = await fetch(
+					`http://127.0.0.1:${port}/get_handle?name=${encodeURIComponent(name)}`,
+				);
+				if (!res.ok) return null;
+				const json = await res.json();
+				return json.data ? parseHandle(json.data) : null;
+			} catch {
+				return null;
+			}
+		}
+
+		let pollDelay = 1000;
+		const MAX_POLL_DELAY = 30_000;
+
+		function notify(settings) {
+			for (const cb of listeners) {
+				try { cb(settings); } catch {}
+			}
+		}
+
+		function scheduleNextPoll() {
+			pollingTimer = setTimeout(async () => {
+				pollingTimer = null;
+				const settings = await fetchSettings();
+				if (settings) {
+					pollDelay = 1000;
+					const cur = JSON.stringify(settings);
+					if (cur !== lastJson) {
+						lastJson = cur;
+						notify(settings);
+					}
+				} else {
+					pollDelay = Math.min(pollDelay * 2, MAX_POLL_DELAY);
+				}
+				scheduleNextPoll();
+			}, pollDelay);
+		}
+
+		function startPolling() {
+			if (pollingTimer) return;
+			scheduleNextPoll();
+		}
+
+		return {
+			onChange(callback) {
+				listeners.push(callback);
+				startPolling();
+				fetchSettings().then((settings) => {
+					if (!settings) return;
+					lastJson = JSON.stringify(settings);
+					try { callback(settings); } catch {}
+				});
+			},
+		};
+	},
+
 	showToast: notify,
 	showCopyToast: notifyCopy,
 	showErrorToast: notifyError,

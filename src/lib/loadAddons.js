@@ -128,20 +128,10 @@ function findHandleFile(addonDir) {
 	return findFileRecursive(addonDir, "handleEvents.json");
 }
 
-function startAssetServer(preferredPort = 2007, attempt = 0) {
-	if (serverStarted) return;
+function startAssetServer(port = 2007) {
+	if (serverStarted) return Promise.resolve(assetServerPort);
 
-	const port = preferredPort + attempt;
-
-	if (attempt >= 10) {
-		console.error(
-			"[Assets] Could not bind to any port in range",
-			preferredPort,
-			"–",
-			port - 1,
-		);
-		return;
-	}
+	return new Promise((resolve) => {
 
 	const server = http.createServer((req, res) => {
 		function send(status, body, headers = {}) {
@@ -282,8 +272,23 @@ function startAssetServer(preferredPort = 2007, attempt = 0) {
 		if (pathname === "/get_handle") {
 			if (!name) return send(400, "Missing name parameter");
 
-			const addonDir = ADDON_DIRS.get(name);
-			if (!addonDir) return send(404, `Addon '${name}' not found`);
+			let addonDir = ADDON_DIRS.get(name);
+			if (!addonDir) {
+				const candidate = path.join(addonsDirectory, name);
+				try {
+					if (fs.statSync(candidate).isDirectory()) {
+						ADDON_DIRS.set(name, candidate);
+						addonDir = candidate;
+						console.log(`[get_handle] Lazy-registered addon '${name}' → ${candidate}`);
+					}
+				} catch (e) {
+					console.error(`[get_handle] Lazy lookup failed for '${name}' at '${candidate}':`, e.message);
+				}
+			}
+			if (!addonDir) {
+				console.error(`[get_handle] Addon '${name}' not in ADDON_DIRS. addonsDirectory=${addonsDirectory} keys=[${[...ADDON_DIRS.keys()].join(", ")}]`);
+				return send(404, `Addon '${name}' not found`);
+			}
 
 			const handleFile = findHandleFile(addonDir);
 			if (!handleFile) {
@@ -313,19 +318,17 @@ function startAssetServer(preferredPort = 2007, attempt = 0) {
 	});
 
 	server.on("error", (err) => {
-		if (err.code === "EADDRINUSE") {
-			console.warn(`[Assets] Port ${port} is busy, trying ${port + 1}…`);
-			startAssetServer(preferredPort, attempt + 1);
-		} else {
-			console.error("[Assets] Server error:", err);
-		}
+		console.error(`[Assets] Server error on port ${port}:`, err.message);
+		resolve(port);
 	});
 
 	server.listen(port, "127.0.0.1", () => {
 		serverStarted = true;
 		assetServerPort = port;
 		console.log(`[Assets] Server running on http://127.0.0.1:${port}`);
+		resolve(port);
 	});
+	}); // end new Promise
 }
 
 function loadFilesFromDirectory(directory, extension, callback) {
@@ -663,7 +666,7 @@ async function applyAddons(mainWindow) {
 	console.log("Loading addons…");
 	activeAddonsWindow = mainWindow;
 
-	startAssetServer();
+	await startAssetServer();
 	startAddonCssLiveUpdates();
 
 	async function execJS(script, label) {
