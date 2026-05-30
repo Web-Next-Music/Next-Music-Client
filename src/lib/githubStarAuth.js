@@ -187,7 +187,7 @@ async function tryCheckGitHubStar() {
 					saveConfig(config);
 					return { hasStarred: false, tokenExpired: true, fatal: true };
 				}
-				return { hasStarred: false };
+				return { hasStarred: false, transient: true };
 			}
 		}
 
@@ -196,14 +196,14 @@ async function tryCheckGitHubStar() {
 			return { hasStarred: false, tokenExpired: true, fatal: true };
 		}
 		console.error("[GitHub Auth] Check error:", err.message);
-		return { hasStarred: false };
+		return { hasStarred: false, transient: true };
 	}
 }
 
 export async function checkGitHubStar() {
 	const result = await tryCheckGitHubStar();
-	if (!result.fatal && !result.hasStarred) {
-		console.warn("[GitHub Auth] Retrying in 10s...");
+	if (result.transient) {
+		console.warn("[GitHub Auth] Transient error, retrying in 10s...");
 		await sleep(10000);
 		return tryCheckGitHubStar();
 	}

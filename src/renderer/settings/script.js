@@ -1,7 +1,6 @@
 import "./style.scss";
 
 import { state } from "./modules/state.js";
-import { applyI18n } from "./modules/i18n.js";
 import { refresh } from "./modules/ui.js";
 
 // Titlebar - maximize / restore
@@ -61,24 +60,27 @@ async function init() {
 		? "__has_token__"
 		: null;
 
-	const versions = await window.electronAPI?.getVersions?.().catch(() => null);
-	if (versions) {
-		const set = (id, val) => {
-			const el = document.getElementById(id);
-			if (el && val) el.textContent = val;
-		};
-		set("ver-app", versions.app);
-		set("ver-electron", versions.electron);
-		set("ver-chromium", versions.chromium);
-		set("ver-node", versions.node);
-	}
-
 	refresh();
 
 	window.electronAPI?.onLanguageChange?.((newStrings) => {
 		state.STRINGS = newStrings || {};
 		refresh();
 	});
+
+	window.electronAPI
+		?.getVersions?.()
+		.then((versions) => {
+			if (!versions) return;
+			const set = (id, val) => {
+				const el = document.getElementById(id);
+				if (el && val) el.textContent = val;
+			};
+			set("ver-app", versions.app);
+			set("ver-electron", versions.electron);
+			set("ver-chromium", versions.chromium);
+			set("ver-node", versions.node);
+		})
+		.catch(() => {});
 }
 
 // Expose to HTML onclick attributes
