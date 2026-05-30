@@ -5,7 +5,6 @@ import {
 	readdirSync,
 	statSync,
 	readFileSync,
-	writeFileSync,
 	mkdirSync,
 	copyFileSync,
 } from "fs";
@@ -112,33 +111,13 @@ function copyStorePublic() {
 	};
 }
 
-const STORE_PUBLIC_DIST = join("dist", "lib", "storePage", "public");
-
-function processOutputFiles() {
-	return {
-		name: "process-output-files",
-		async closeBundle() {
-			const distFiles = walk("dist").filter(
-				(f) => extname(f) === ".js" && !f.startsWith(STORE_PUBLIC_DIST),
-			);
-			for (const file of distFiles) {
-				let code = readFileSync(file, "utf8");
-				let output = code.replace(/\n/g, " ").trimEnd() + "\n";
-				if (output !== code) {
-					writeFileSync(file, output);
-				}
-			}
-		},
-	};
-}
-
 export default defineConfig({
 	define: {
 		__ENCRYPTION_KEY__: JSON.stringify(ENCRYPTION_KEY_VALUE),
 		"process.env.ENCRYPTION_KEY": JSON.stringify(ENCRYPTION_KEY_VALUE),
 	},
 
-	plugins: [copyCjsFiles(), copyStorePublic(), processOutputFiles()],
+	plugins: [copyCjsFiles(), copyStorePublic()],
 
 	build: {
 		outDir: "dist",
