@@ -1,12 +1,13 @@
 import { BrowserWindow, nativeImage } from "electron";
-import { trayIconPath } from "../../config.js";
+import { getTrayIconPath } from "../../config.js";
+import { getConfig } from "../../lib/configManager.js";
 import { fileURLToPath } from "url";
 import path from "path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const trayIcon = nativeImage
-	.createFromPath(trayIconPath)
+	.createFromPath(getTrayIconPath(getConfig()?.experiments))
 	.resize({ width: 24, height: 24 });
 
 let infoWindow = null;

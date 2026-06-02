@@ -9,7 +9,7 @@ import {
 } from "electron";
 import { checkForUpdates } from "./update/updateController.js";
 import { getCurrentVersionWV } from "./getAppVersion.js";
-import { trayIconPath, getPaths } from "../config.js";
+import { getTrayIconPath, getPaths } from "../config.js";
 import { getConfig } from "../lib/configManager.js";
 import { getBuiltinExperimentState } from "./builtinExperiments.js";
 import { initLanguages, t } from "../lib/langManager.js";
@@ -25,7 +25,7 @@ let trayInstance = null;
 let mainWindowRef = null;
 
 const trayIcon = nativeImage
-	.createFromPath(trayIconPath)
+	.createFromPath(getTrayIconPath(getConfig()?.experiments))
 	.resize({ width: 24, height: 24 });
 
 export function setupLanguage() {

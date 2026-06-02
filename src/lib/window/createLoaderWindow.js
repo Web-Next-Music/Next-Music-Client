@@ -1,5 +1,7 @@
 import { BrowserWindow } from "electron";
-import { appIcon, isDev, devUrl } from "../../config.js";
+import { getAppIcon, isDev, devUrl } from "../../config.js";
+import { getConfig } from "../configManager.js";
+import { getBuiltinExperimentState } from "../builtinExperiments.js";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -8,6 +10,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let loaderWindow;
 
 export function createLoaderWindow() {
+	const experiments = getConfig()?.experiments ?? {};
+	const condemned =
+		getBuiltinExperimentState("nm_condemned_mode", experiments) === "on";
+
 	loaderWindow = new BrowserWindow({
 		width: 240,
 		height: 280,
@@ -20,10 +26,11 @@ export function createLoaderWindow() {
 		frame: false,
 		transparent: false,
 		roundedCorners: true,
-		icon: appIcon,
+		icon: getAppIcon(experiments),
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
+			additionalArguments: condemned ? ["--nmc-condemned"] : [],
 			preload: path.join(__dirname, "loaderWindow/preload.cjs"),
 		},
 	});

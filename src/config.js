@@ -2,6 +2,7 @@
 
 import { app } from "electron";
 import path from "path";
+import { getBuiltinExperimentState } from "./lib/builtinExperiments.js";
 
 export const isDev = !app.isPackaged;
 export const devUrl = "http://localhost:6788";
@@ -15,8 +16,17 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const appIcon = path.join(__dirname, "assets/nm-icons/icon-256.png");
-export const trayIconPath = path.join(__dirname, "assets/nm-icons/nm-tray.png");
+export function getAppIcon(userExperiments = {}) {
+	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) === "on"
+		? path.join(__dirname, "assets/nm-icons/icon-256-condemned.png")
+		: path.join(__dirname, "assets/nm-icons/icon-256.png");
+}
+
+export function getTrayIconPath(userExperiments = {}) {
+	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) === "on"
+		? path.join(__dirname, "assets/nm-icons/nm-tray-condemned.png")
+		: path.join(__dirname, "assets/nm-icons/nm-tray.png");
+}
 
 // Default configuration
 export const defaultConfig = {

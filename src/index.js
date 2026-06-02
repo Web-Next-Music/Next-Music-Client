@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Config
-import { appIcon, getPaths, APPNAME } from "./config.js";
+import { getAppIcon, getPaths, APPNAME } from "./config.js";
 
 const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
 
@@ -162,7 +162,7 @@ app.whenReady().then(() => {
 
 	// Tray
 	createTray(
-		appIcon,
+		getAppIcon(config?.experiments),
 		mainWindow,
 		nextMusicDirectory,
 		addonsDirectory,

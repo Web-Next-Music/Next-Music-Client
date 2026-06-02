@@ -3,7 +3,7 @@ import { createLoaderWindow } from "../createLoaderWindow.js";
 import { applyAddons } from "../../loadAddons.js";
 import { mergeAddonExperiments } from "../../addonExperiments.js";
 import { resolveBuiltinExperiments } from "../../builtinExperiments.js";
-import { appIcon } from "../../../config.js";
+import { getAppIcon } from "../../../config.js";
 import { fileURLToPath } from "url";
 import path from "path";
 import injector from "../../injector.js";
@@ -48,7 +48,7 @@ export function createWindow(config) {
 		minHeight: config.windowSettings.freeWindowResize ? 1 : 650,
 		alwaysOnTop: config.windowSettings.alwaysOnTop,
 		backgroundColor: nativeTheme.shouldUseDarkColors ? "#0D0D0D" : "#E6E6E6",
-		icon: appIcon,
+		icon: getAppIcon(config?.experiments),
 		frame: !titleBarEnabled,
 		roundedCorners: true,
 		show: false,
