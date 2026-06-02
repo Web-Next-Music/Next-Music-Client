@@ -15,7 +15,7 @@ const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
 
 // Services
 import { createTray } from "./lib/tray.js";
-import { checkForUpdates } from "./lib/updater.js";
+import { initUpdater } from "./lib/update/updateController.js";
 import { presenceService, initWS } from "./lib/richPresence.js";
 import { createWindow } from "./lib/window/mainWindow/createWindow.js";
 import { setupSplashScreen } from "./lib/splashScreen.js";
@@ -33,10 +33,6 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
 
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=512");
 app.commandLine.appendSwitch("disk-cache-size", String(50 * 1024 * 1024));
-// NOTE: v8-pool-size=0 was removed - forcing V8's background work (concurrent
-// GC marking, JIT compilation) onto the main thread caused UI jank during heavy
-// JS. Letting V8 use its thread pool keeps the renderer responsive; the small
-// extra thread/memory cost is acceptable for a desktop app.
 
 if (process.platform === "linux") {
 	app.commandLine.appendSwitch("disable-dev-shm-usage");
@@ -174,10 +170,7 @@ app.whenReady().then(() => {
 		config,
 	);
 
-	// Updates
-	if (config.programSettings?.checkUpdates) {
-		checkForUpdates();
-	}
+	initUpdater(config);
 
 	// OBS widget
 	if (config?.programSettings?.obsWidget) {

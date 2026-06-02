@@ -16,12 +16,15 @@
 	},
 	"updater": {
 		"title": "Доступно обновление",
-		"message": "Доступна версия: {version}",
-		"detail": "Хотите обновить?",
-		"buttons": {
-			"0": "Да",
-			"1": "Отмена"
-		}
+		"available": "Доступно обновление",
+		"update": "Обновить",
+		"cancel": "Отмена",
+		"downloading": "Загрузка… {percent}% · {speed}",
+		"preparing": "Подготовка…",
+		"installing": "Установка…",
+		"restarting": "Перезапуск…",
+		"error": "Ошибка обновления",
+		"upToDate": "У вас последняя версия"
 	},
 	"store": {
 		"tabAddons": "Аддоны",

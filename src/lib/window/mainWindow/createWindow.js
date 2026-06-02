@@ -73,6 +73,7 @@ export function createWindow(config) {
 	setupInitialVisibility();
 
 	mainWindow.on("close", (event) => {
+		if (global.__nmcQuitting) return;
 		event.preventDefault();
 		mainWindow.hide();
 	});
@@ -123,9 +124,18 @@ export function createWindow(config) {
 		mainWindow.webContents.on("did-fail-load", onFailLoad);
 	}
 
-	function onFinishLoad() {
+	async function onFinishLoad() {
 		if (titleBarEnabled) injectTitleBar();
 		injectApi();
+
+		if (global.__nmcUpdateGate) {
+			try {
+				await global.__nmcUpdateGate;
+			} catch {
+				/* proceed regardless */
+			}
+		}
+
 		closeLoaderWindow();
 
 		if (!startMinimized) mainWindow.show();

@@ -21,6 +21,11 @@ export function createLoaderWindow() {
 		transparent: false,
 		roundedCorners: true,
 		icon: appIcon,
+		webPreferences: {
+			contextIsolation: true,
+			nodeIntegration: false,
+			preload: path.join(__dirname, "loaderWindow/preload.cjs"),
+		},
 	});
 
 	if (isDev) {
@@ -30,6 +35,9 @@ export function createLoaderWindow() {
 			path.join(__dirname, "../../renderer/loader/index.html"),
 		);
 	}
+
+	// Exposed so the update controller can drive the in-window update card.
+	global.loaderWindow = loaderWindow;
 
 	return loaderWindow;
 }

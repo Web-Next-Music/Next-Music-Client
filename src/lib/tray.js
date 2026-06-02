@@ -7,7 +7,7 @@ import {
 	app,
 	ipcMain,
 } from "electron";
-import { checkForUpdates } from "../lib/updater.js";
+import { checkForUpdates } from "./update/updateController.js";
 import { getCurrentVersionWV } from "./getAppVersion.js";
 import { trayIconPath, getPaths } from "../config.js";
 import { getConfig } from "../lib/configManager.js";

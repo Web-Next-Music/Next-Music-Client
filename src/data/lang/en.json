@@ -16,12 +16,15 @@
 	},
 	"updater": {
 		"title": "Update available",
-		"message": "A new version {version} is available",
-		"detail": "Do you want to update?",
-		"buttons": {
-			"0": "Yes",
-			"1": "Cancel"
-		}
+		"available": "Update available",
+		"update": "Update",
+		"cancel": "Cancel",
+		"downloading": "Downloading… {percent}% · {speed}",
+		"preparing": "Preparing…",
+		"installing": "Installing…",
+		"restarting": "Restarting…",
+		"error": "Update failed",
+		"upToDate": "You are on the latest version"
 	},
 	"store": {
 		"tabAddons": "Addons",
