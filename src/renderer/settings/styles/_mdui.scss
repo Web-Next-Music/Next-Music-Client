@@ -32,6 +32,97 @@
 	--mdui-color-error: #{mdui-rgb($danger)};
 	--mdui-color-on-error: 255 255 255;
 
+	// App-chrome tokens (consumed via var(--c-*) across the settings styles).
+	--c-bg: #{$bg};
+	--c-bg2: #{$bg2};
+	--c-bg-soft: #{$bg-soft};
+	--c-panel: #{$panel};
+	--c-tile-hover: #{$tile-hover};
+	--c-input-bg: #{$input-bg};
+	--c-text: #{$text};
+	--c-muted: #{$muted};
+	--c-line: #{$line};
+	--c-tb-btn-hover: #{$tb-btn-hover};
+	--c-save-primary: 255 255 255;
+	--c-save-on-primary: 0 0 0;
+
+	// Accent / semantic text colors (dark theme keeps the bright originals).
+	--c-accent: #{$accent};
+	--c-success: #{$success};
+	--c-warning: #{$warning};
+	--c-danger: #{$danger};
+	--c-tag-addon: #{$tag-addon};
+	--c-tag-builtin: #{$tag-builtin};
+
+	// Disabled (star-gated) switch track tint.
+	--c-switch-track: rgba(255, 255, 255, 0.16);
+
+	// "Star Project" tonal button (RGB channel triplets for mdui tokens).
+	--c-star-btn-bg: 45 35 0;
+	--c-star-btn-fg: 227 160 0;
+
+	font-family: $font-base;
+}
+
+.mdui-theme-light {
+	--mdui-color-primary: #{mdui-rgb($accent)};
+	--mdui-color-on-primary: 255 255 255;
+	--mdui-color-primary-container: 200 236 233;
+	--mdui-color-on-primary-container: 16 53 50;
+
+	--mdui-color-secondary: #{mdui-rgb($accent)};
+	--mdui-color-on-secondary: 255 255 255;
+	--mdui-color-secondary-container: 224 230 230;
+	--mdui-color-on-secondary-container: #{mdui-rgb($l-text)};
+
+	--mdui-color-surface: #{mdui-rgb($l-bg)};
+	--mdui-color-surface-dim: #{mdui-rgb($l-bg-soft)};
+	--mdui-color-surface-bright: #{mdui-rgb($l-panel)};
+	--mdui-color-surface-container-lowest: 255 255 255;
+	--mdui-color-surface-container-low: #{mdui-rgb($l-bg-soft)};
+	--mdui-color-surface-container: #{mdui-rgb($l-panel)};
+	--mdui-color-surface-container-high: #{mdui-rgb($l-tile-hover)};
+	--mdui-color-surface-container-highest: 224 230 230;
+	--mdui-color-surface-variant: #{mdui-rgb($l-bg-soft)};
+
+	--mdui-color-background: #{mdui-rgb($l-bg)};
+	--mdui-color-on-background: #{mdui-rgb($l-text)};
+	--mdui-color-on-surface: #{mdui-rgb($l-text)};
+	--mdui-color-on-surface-variant: #{mdui-rgb($l-muted)};
+
+	--mdui-color-outline: 173 180 179;
+	--mdui-color-outline-variant: 205 212 211;
+
+	--mdui-color-error: #{mdui-rgb($danger)};
+	--mdui-color-on-error: 255 255 255;
+
+	// App-chrome tokens for light mode.
+	--c-bg: #{$l-bg};
+	--c-bg2: #{$l-bg2};
+	--c-bg-soft: #{$l-bg-soft};
+	--c-panel: #{$l-panel};
+	--c-tile-hover: #{$l-tile-hover};
+	--c-input-bg: #{$l-input-bg};
+	--c-text: #{$l-text};
+	--c-muted: #{$l-muted};
+	--c-line: #{$l-line};
+	--c-tb-btn-hover: #{$l-tb-btn-hover};
+	--c-save-primary: 16 22 22;
+	--c-save-on-primary: 255 255 255;
+
+	// Darker accent / semantic text colors for legibility on light surfaces.
+	--c-accent: #0f8e85;
+	--c-success: #15a34a;
+	--c-warning: #b97e00;
+	--c-danger: #d22b2b;
+	--c-tag-addon: #b07d0a;
+	--c-tag-builtin: #0c8294;
+
+	--c-switch-track: rgba(0, 0, 0, 0.18);
+
+	--c-star-btn-bg: 253 240 199;
+	--c-star-btn-fg: 161 110 0;
+
 	font-family: $font-base;
 }
 

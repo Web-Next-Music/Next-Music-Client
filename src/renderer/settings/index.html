@@ -1,9 +1,24 @@
 <!doctype html>
-<html lang="en" class="mdui-theme-dark">
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Next Music: Settings</title>
+		<script>
+			(function () {
+				var root = document.documentElement;
+				var m =
+					window.matchMedia &&
+					window.matchMedia("(prefers-color-scheme: light)");
+				function apply() {
+					var light = !!(m && m.matches);
+					root.classList.toggle("mdui-theme-light", light);
+					root.classList.toggle("mdui-theme-dark", !light);
+				}
+				apply();
+				if (m && m.addEventListener) m.addEventListener("change", apply);
+			})();
+		</script>
 	</head>
 	<body>
 		<div class="titlebar">
