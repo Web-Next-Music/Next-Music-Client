@@ -133,8 +133,8 @@ mdui-select {
 	flex-shrink: 0;
 	--mdui-typescale-body-large-size: 12px;
 	--mdui-typescale-body-large-line-height: 17px;
-	// Rounds the outlined box (and the select's popup, which inherits it).
 	--mdui-shape-corner-extra-small: 10px;
+	--mdui-typescale-body-large-weight: 700;
 	font-family: $font-base;
 
 	&.num {
