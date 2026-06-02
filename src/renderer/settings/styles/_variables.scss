@@ -1,13 +1,54 @@
-$bg: #010409;
-$bg2: #0d1117;
-$line: #3d444db3;
-$accent: #2bfef5;
-$accent-gradient: #2bfef530;
-$dim-accent: #2bfef510;
-$text: #f0f6fc;
-$muted: #9198a1;
+// Accent
+$accent: #80d5cf;
+$accent-gradient: rgba(43, 254, 245, 0.18);
+$dim-accent: rgba(43, 254, 245, 0.08);
+
+// Lines / dividers
+$line: rgba(255, 255, 255, 0.07);
+
+// Background and surfaces
+$bg: #090f0f;
+$bg2: #090f0f;
+$bg-soft: #0e1514;
+$panel: #161d1c;
+$tile-hover: #252b2b;
+
+// Input fields
+$input-bg: $bg-soft;
+$input-border: $line;
+
+// Text
+$text: #e2ddea;
+$muted: #8d8d92;
+
+// Semantic colors
 $danger: #ef4444;
-$r: 8px;
+$success: #2bfe8f;
+$warning: #e3a000;
+
+// Experiment tags
+$tag-addon: #e3b341;
+$tag-builtin: #2bfef5;
+$tag-blocked: $danger;
+
+// Navigation (active pill)
+$nav-active-bg: #1e242a;
+$nav-active-text: $text;
+
+// Toggle
+$toggle-thumb-on: #111111;
+
+// Save button
+$save-btn-bg: #fff;
+$save-btn-text: #000;
+
+// Titlebar
+$tb-btn-hover: rgba(255, 255, 255, 0.07);
+$close-hover: #f23f42;
+
+//  FONTS
+$r: 12px;
+$row-r: 10px;
 $tb-h: 32px;
-$font-heading-large: "Syne", "Science Gothic", sans-serif;
-$font-base: "Space Mono", monospace;
+$font-heading-large: "Nunito", "Noto Sans", sans-serif;
+$font-base: "Nunito", "Noto Sans", sans-serif;

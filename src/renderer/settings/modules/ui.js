@@ -88,17 +88,28 @@ export function renderNodes(nodes, container, depth) {
 	depth = depth || 0;
 	let lastKind = null;
 
+	let rowGroup = null;
+	const rowTarget = () => {
+		if (!rowGroup) {
+			rowGroup = document.createElement("div");
+			rowGroup.className = "row-group";
+			container.append(rowGroup);
+		}
+		return rowGroup;
+	};
+
 	nodes.forEach((node) => {
 		if (lastKind === "group" && node.kind === "field") {
 			const hr = document.createElement("div");
 			hr.className = "divider";
 			container.append(hr);
 		}
+		if (node.kind !== "field") rowGroup = null;
 		lastKind = node.kind;
 
 		if (node.kind === "field") {
 			const { row, control } = mkRow(node);
-			container.append(maybeGate(row, node.path));
+			rowTarget().append(maybeGate(row, node.path));
 			if (node.type === "select" && node.path.endsWith("language")) {
 				langSelects.push(control);
 			}

@@ -16,23 +16,35 @@
 	}
 }
 
+.row-group {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+
+	.row:first-child {
+		border-top-left-radius: $row-r;
+		border-top-right-radius: $row-r;
+	}
+
+	.row:last-child {
+		border-bottom-left-radius: $row-r;
+		border-bottom-right-radius: $row-r;
+	}
+}
+
 .row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 9px 13px;
-	background: $bg2;
-	border: 1px solid $line;
-	border-radius: $r;
-	margin-bottom: 5px;
+	padding: 11px 15px;
+	background: $panel;
+	border-radius: 4px;
+	border: none;
 	gap: 12px;
-	transition:
-		border-color 0.15s,
-		background 0.15s;
+	transition: background 0.15s;
 
 	&:hover {
-		background: $bg2;
-		border-color: $dim-accent;
+		background: $tile-hover;
 	}
 
 	&.col {
@@ -48,23 +60,24 @@
 
 .lbl-name {
 	font-family: $font-heading-large;
-	font-weight: 600;
-	font-size: 12px;
+	font-weight: 800;
+	font-size: 13px;
 	color: $text;
-	margin-bottom: 2px;
 }
 
 .lbl-desc {
-	font-size: 11px;
+	font-size: 12px;
 	color: $muted;
 	line-height: 1.4;
-	margin-top: 2px;
+	font-weight: 700;
 }
 
+// Material 3 style switch: outlined track + small icon thumb when off,
+// filled accent track + large checkmark thumb when on. Accent color unchanged.
 .toggle {
 	position: relative;
-	width: 36px;
-	height: 20px;
+	width: 38px;
+	height: 21px;
 	flex-shrink: 0;
 
 	input {
@@ -73,12 +86,16 @@
 		height: 0;
 
 		&:checked + .t-track {
-			background: $dim-accent;
+			background: $accent;
 			border-color: $accent;
 
 			&::after {
-				left: 19px;
-				background: $accent;
+				left: 17px;
+				width: 15px;
+				height: 15px;
+				background-color: $bg;
+				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232bfef5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+				background-size: 10px;
 			}
 		}
 	}
@@ -87,9 +104,9 @@
 .t-track {
 	position: absolute;
 	inset: 0;
-	background: $bg2;
-	border: 1px solid $line;
-	border-radius: 10px;
+	background: $bg;
+	border-radius: 500px;
+	border: 2px solid $muted;
 	cursor: pointer;
 	transition:
 		background 0.2s,
@@ -98,25 +115,32 @@
 	&::after {
 		content: "";
 		position: absolute;
-		left: 3px;
+		left: 2px;
 		top: 50%;
 		transform: translateY(-50%);
-		width: 12px;
-		height: 12px;
+		width: 14px;
+		height: 14px;
 		border-radius: 50%;
-		background: $muted;
+		background-color: $muted;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230a1019' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
+		background-size: 10px;
+		background-repeat: no-repeat;
+		background-position: center;
 		transition:
 			left 0.2s,
-			background 0.2s;
+			width 0.2s,
+			height 0.2s,
+			background-color 0.2s;
 	}
 }
 
 .inp {
-	background: $bg;
-	border: 1px solid $line;
-	border-radius: $r;
+	background: $input-bg;
+	border: 1px solid $input-border;
+	border-radius: 10px;
 	color: $text;
 	font-size: 12px;
+	font-weight: 700;
 	padding: 5px 9px;
 	outline: none;
 	transition: border-color 0.15s;
@@ -143,8 +167,8 @@
 
 .sel {
 	font-family: $font-base;
-	background: $bg;
-	border: 1px solid $line;
+	background: $input-bg;
+	border: 1px solid $input-border;
 	border-radius: $r;
 	color: $text;
 	font-size: 12px;
@@ -164,17 +188,18 @@
 	}
 
 	option {
-		background: #1a1a20;
+		background: $input-bg;
 	}
 }
 
 .ta {
 	font-family: $font-base;
-	background: $bg;
-	border: 1px solid $line;
+	background: $input-bg;
+	border: 1px solid $input-border;
 	border-radius: $r;
 	color: $text;
-	font-size: 11px;
+	font-size: 12px;
+	font-weight: 700;
 	padding: 8px 10px;
 	resize: vertical;
 	outline: none;
@@ -190,47 +215,39 @@
 
 .btn {
 	padding: 5px 13px;
-	border-radius: $r;
+	border-radius: 8px;
 	font-family: $font-heading-large;
 	font-size: 11px;
-	font-weight: 700;
+	font-weight: 800;
 	letter-spacing: 0.05em;
 	text-transform: uppercase;
 	cursor: pointer;
-	border: 1px solid $line;
-	background: $bg2;
+	border: none;
+	background: #0e1514;
 	color: $text;
-	transition: all 0.15s;
+	transition: background 0.15s;
 
 	&:hover {
-		background: $bg2;
-		border-color: $muted;
+		background: $tile-hover;
 	}
 }
 
 .group-card {
-	border: 1px solid $line;
 	border-radius: $r;
-	margin-bottom: 5px;
-	overflow: hidden;
-
-	&.deep {
-		border-color: $bg2;
-
-		.group-card-head {
-			background: $bg2;
-			border-bottom-color: $bg2;
-		}
-	}
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
 }
 
+// Head and its rows form one glued stack: tight 3px joints, slightly rounded
+// where they meet, more rounded on the outer ends.
 .group-card-head {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 7px 13px;
-	background: $bg2;
-	border-bottom: 1px solid $line;
+	padding: 9px 13px;
+	background: $panel;
+	border-radius: $row-r $row-r 4px 4px;
 }
 
 .group-head-toggle {
@@ -240,28 +257,29 @@
 
 .group-card-title {
 	font-family: $font-heading-large;
-	font-weight: 700;
-	font-size: 10px;
+	font-weight: 800;
+	font-size: 12px;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: $muted;
 }
 
 .group-card-body {
-	padding: 6px 8px;
-	background: $bg2;
 	display: flex;
 	flex-direction: column;
-	gap: 0;
+	gap: 3px;
+	padding: 6px;
+	background: $panel;
+	// Slight joint with the head above, larger rounding on the outer bottom.
+	border-radius: 4px 4px $row-r $row-r;
 
 	.row {
 		border-radius: 4px;
-		border-color: transparent;
-		background: transparent;
+		background-color: $bg-soft;
+		border: none;
 
 		&:hover {
-			background: $bg2;
-			border-color: $line;
+			background: $tile-hover;
 		}
 	}
 }
@@ -278,20 +296,19 @@
 	justify-content: center;
 	margin: 0 0 8px;
 	padding: 7px 13px;
-	border-radius: $r;
+	border-radius: 10px;
 	font-family: $font-heading-large;
-	font-size: 10px;
-	font-weight: 700;
+	font-size: 11px;
+	font-weight: 800;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	cursor: pointer;
-	border: 1px solid $accent;
-	background: $dim-accent;
-	color: $accent;
+	border: none;
+	background: $save-btn-bg;
+	color: $save-btn-text;
 	transition:
 		opacity 0.2s,
-		transform 0.2s,
-		background 0.15s;
+		transform 0.2s;
 	opacity: 0;
 	pointer-events: none;
 	transform: translateY(-4px);
@@ -304,7 +321,7 @@
 	}
 
 	&:hover {
-		background: $accent-gradient;
+		opacity: 0.85;
 	}
 }
 
@@ -324,11 +341,17 @@
 
 .sec-title-label {
 	font-family: $font-heading-large;
-	font-size: 10px;
-	font-weight: 700;
+	font-size: 12px;
+	font-weight: 800;
 	letter-spacing: 0.15em;
 	text-transform: uppercase;
 	color: $muted;
+}
+
+.sec-body-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
 .sec-body-wrap,
@@ -347,13 +370,13 @@
 	display: block;
 	width: 100%;
 	margin-bottom: 6px;
-	padding: 7px 10px;
-	border-radius: $r;
-	border: 1px solid rgba(#e3a000, 0.35);
+	padding: 7px 13px;
+	border-radius: 10px;
+	border: none;
 	background: rgba(#e3a000, 0.07);
 	color: #e3a000;
 	font-size: 12px;
-	font-weight: 500;
+	font-weight: 800;
 	cursor: pointer;
 	text-align: center;
 	transition:

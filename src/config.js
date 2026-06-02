@@ -17,13 +17,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export function getAppIcon(userExperiments = {}) {
-	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) === "on"
+	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) ===
+		"on"
 		? path.join(__dirname, "assets/nm-icons/icon-256-condemned.png")
 		: path.join(__dirname, "assets/nm-icons/icon-256.png");
 }
 
 export function getTrayIconPath(userExperiments = {}) {
-	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) === "on"
+	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) ===
+		"on"
 		? path.join(__dirname, "assets/nm-icons/nm-tray-condemned.png")
 		: path.join(__dirname, "assets/nm-icons/nm-tray.png");
 }
