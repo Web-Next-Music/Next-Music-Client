@@ -32,13 +32,13 @@
 	align-items: stretch;
 	gap: 6px;
 	padding: 7px;
-	background: $panel;
+	background: var(--c-panel);
 	border-radius: 6px;
 	border: none;
 	transition: background 0.15s;
 
 	&:hover {
-		background: $tile-hover;
+		background: var(--c-tile-hover);
 	}
 
 	&.hidden {
@@ -106,13 +106,13 @@
 	cursor: default;
 
 	&:hover {
-		background: $bg2;
+		background: var(--c-bg2);
 	}
 }
 
 .experiments-addon-tag {
 	font-size: 10px;
-	color: $tag-addon;
+	color: var(--c-tag-addon);
 	padding: 0 2px;
 	line-height: 1.3;
 }
@@ -120,14 +120,14 @@
 .experiments-builtin-tag {
 	font-size: 10px;
 	font-weight: 600;
-	color: $tag-builtin;
+	color: var(--c-tag-builtin);
 	padding: 0 2px;
 	line-height: 1.3;
 }
 
 .experiments-addon-blocked {
 	font-size: 10px;
-	color: $tag-blocked;
+	color: var(--c-danger);
 	padding: 0 2px;
 	line-height: 1.3;
 }

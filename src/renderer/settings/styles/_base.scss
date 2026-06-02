@@ -9,8 +9,8 @@
 html,
 body {
 	height: 100%;
-	background: $bg;
-	color: $text;
+	background: var(--c-bg);
+	color: var(--c-text);
 	font-family: $font-base;
 	font-size: 13px;
 	overflow: hidden;

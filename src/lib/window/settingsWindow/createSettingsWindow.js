@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, shell, app } from "electron";
+import { BrowserWindow, ipcMain, shell, app, nativeTheme } from "electron";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
 import {
@@ -80,7 +80,7 @@ export function createSettingsWindow() {
 		show: false,
 		center: true,
 		roundedCorners: true,
-		backgroundColor: "#0d1117",
+		backgroundColor: nativeTheme.shouldUseDarkColors ? "#0d1117" : "#f4f6f6",
 		webPreferences: {
 			preload: path.join(__dirname, "preload.cjs"),
 			contextIsolation: true,

@@ -6,10 +6,10 @@
 	font-weight: 700;
 	letter-spacing: 0.15em;
 	text-transform: uppercase;
-	color: $muted;
+	color: var(--c-muted);
 	margin: 18px 0 10px;
 	padding-bottom: 6px;
-	border-bottom: 1px solid $line;
+	border-bottom: 1px solid var(--c-line);
 
 	&:first-child {
 		margin-top: 0;
@@ -37,14 +37,14 @@
 	align-items: center;
 	justify-content: space-between;
 	padding: 11px 15px;
-	background: $panel;
+	background: var(--c-panel);
 	border-radius: 4px;
 	border: none;
 	gap: 12px;
 	transition: background 0.15s;
 
 	&:hover {
-		background: $tile-hover;
+		background: var(--c-tile-hover);
 	}
 
 	&.col {
@@ -62,12 +62,12 @@
 	font-family: $font-heading-large;
 	font-weight: 800;
 	font-size: 13px;
-	color: $text;
+	color: var(--c-text);
 }
 
 .lbl-desc {
 	font-size: 12px;
-	color: $muted;
+	color: var(--c-muted);
 	line-height: 1.4;
 	font-weight: 700;
 }
@@ -86,7 +86,7 @@
 	align-items: center;
 	justify-content: space-between;
 	padding: 9px 13px;
-	background: $panel;
+	background: var(--c-panel);
 	border-radius: $row-r $row-r 4px 4px;
 }
 
@@ -101,7 +101,7 @@
 	font-size: 12px;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
-	color: $muted;
+	color: var(--c-muted);
 }
 
 .group-card-body {
@@ -109,32 +109,31 @@
 	flex-direction: column;
 	gap: 3px;
 	padding: 6px;
-	background: $panel;
-	// Slight joint with the head above, larger rounding on the outer bottom.
+	background: var(--c-panel);
 	border-radius: 4px 4px $row-r $row-r;
 
 	.row {
 		border-radius: 4px;
-		background-color: $bg-soft;
+		background-color: var(--c-bg-soft);
 		border: none;
 
 		&:hover {
-			background: $tile-hover;
+			background: var(--c-tile-hover);
 		}
 	}
 }
 
 .divider {
 	height: 1px;
-	background: $line;
+	background: var(--c-line);
 	margin: 14px 0;
 }
 
 .save-restart-btn {
 	width: 100%;
 	margin: 0 0 8px;
-	--mdui-color-primary: 255 255 255;
-	--mdui-color-on-primary: 0 0 0;
+	--mdui-color-primary: var(--c-save-primary);
+	--mdui-color-on-primary: var(--c-save-on-primary);
 	transition:
 		opacity 0.2s,
 		transform 0.2s;
@@ -156,7 +155,7 @@
 	justify-content: space-between;
 	margin: 18px 0 10px;
 	padding-bottom: 6px;
-	border-bottom: 1px solid $line;
+	border-bottom: 1px solid var(--c-line);
 	padding: 0 13px 10px 10px;
 
 	&:first-child {
@@ -170,7 +169,7 @@
 	font-weight: 800;
 	letter-spacing: 0.15em;
 	text-transform: uppercase;
-	color: $muted;
+	color: var(--c-muted);
 }
 
 .sec-body-wrap {
@@ -194,6 +193,6 @@
 .star-project-btn {
 	width: 100%;
 	margin-bottom: 6px;
-	--mdui-color-secondary-container: 45 35 0;
-	--mdui-color-on-secondary-container: 227 160 0; // $warning
+	--mdui-color-secondary-container: var(--c-star-btn-bg);
+	--mdui-color-on-secondary-container: var(--c-star-btn-fg);
 }

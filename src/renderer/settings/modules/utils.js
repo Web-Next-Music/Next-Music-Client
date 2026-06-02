@@ -14,13 +14,20 @@ export function setPath(obj, path, value) {
 }
 
 export function keepSelectValue(sel) {
-	const isEmpty = (v) => v === undefined || v === null || v === "";
-	let last = sel.value;
-	sel.addEventListener("change", () => {
-		if (isEmpty(sel.value)) {
-			if (!isEmpty(last)) sel.value = last;
-			return;
-		}
-		last = sel.value;
-	});
+	sel.addEventListener(
+		"click",
+		(e) => {
+			if (sel.multiple) return;
+			const item = e
+				.composedPath()
+				.find(
+					(el) => el?.tagName && el.tagName.toLowerCase() === "mdui-menu-item",
+				);
+			if (!item || !item.value || item.value !== sel.value) return;
+			e.stopImmediatePropagation();
+			const dropdown = sel.shadowRoot?.querySelector("mdui-dropdown");
+			if (dropdown) dropdown.open = false;
+		},
+		true,
+	);
 }
