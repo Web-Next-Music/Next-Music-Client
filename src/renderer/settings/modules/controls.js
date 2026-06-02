@@ -1,28 +1,21 @@
 import { state } from "./state.js";
-import { getPath, setPath } from "./utils.js";
+import { getPath, setPath, keepSelectValue } from "./utils.js";
 import { fieldName, fieldDesc } from "./i18n.js";
 import { scheduleSave } from "./dirty.js";
 
 export function mkToggle(path) {
-	const wrap = document.createElement("label");
-	wrap.className = "toggle";
-	const inp = document.createElement("input");
-	inp.type = "checkbox";
-	inp.checked = !!getPath(state.CONFIG, path);
-	inp.addEventListener("change", () => {
-		setPath(state.CONFIG, path, inp.checked);
+	const sw = document.createElement("mdui-switch");
+	sw.checked = !!getPath(state.CONFIG, path);
+	sw.addEventListener("change", () => {
+		setPath(state.CONFIG, path, sw.checked);
 		scheduleSave();
 	});
-	const track = document.createElement("span");
-	track.className = "t-track";
-	wrap.append(inp, track);
-	return wrap;
+	return sw;
 }
 
 export function mkText(path) {
-	const inp = document.createElement("input");
-	inp.type = "text";
-	inp.className = "inp";
+	const inp = document.createElement("mdui-text-field");
+	inp.variant = "outlined";
 	inp.value = getPath(state.CONFIG, path) ?? "";
 	inp.addEventListener("input", () => {
 		setPath(state.CONFIG, path, inp.value);
@@ -32,9 +25,10 @@ export function mkText(path) {
 }
 
 export function mkNumber(path) {
-	const inp = document.createElement("input");
+	const inp = document.createElement("mdui-text-field");
+	inp.variant = "outlined";
 	inp.type = "number";
-	inp.className = "inp num";
+	inp.classList.add("num");
 	inp.value = getPath(state.CONFIG, path) ?? 0;
 	inp.addEventListener("input", () => {
 		const v = parseInt(inp.value, 10);
@@ -45,23 +39,24 @@ export function mkNumber(path) {
 }
 
 export function mkSelect(path, optionsFn) {
-	const sel = document.createElement("select");
-	sel.className = "sel";
+	const sel = document.createElement("mdui-select");
+	sel.variant = "outlined";
 	function populate() {
 		const current = getPath(state.CONFIG, path) ?? "";
 		sel.innerHTML = "";
 		const opts = optionsFn();
 		const list = opts.length ? opts : [{ value: current, label: current }];
 		list.forEach(({ value, label }) => {
-			const o = document.createElement("option");
+			const o = document.createElement("mdui-menu-item");
 			o.value = value;
 			o.textContent = label;
-			if (value === current) o.selected = true;
 			sel.append(o);
 		});
+		sel.value = current;
 	}
 	populate();
 	sel._repopulate = populate;
+	keepSelectValue(sel);
 	sel.addEventListener("change", () => {
 		setPath(state.CONFIG, path, sel.value);
 		if (!path.endsWith("language")) scheduleSave();
@@ -71,8 +66,10 @@ export function mkSelect(path, optionsFn) {
 }
 
 export function mkArray(path) {
-	const ta = document.createElement("textarea");
-	ta.className = "ta";
+	const ta = document.createElement("mdui-text-field");
+	ta.variant = "outlined";
+	ta.classList.add("wide");
+	ta.rows = 4;
 	ta.placeholder = "https://example.com/script.js";
 	const arr = getPath(state.CONFIG, path);
 	ta.value = Array.isArray(arr) ? arr.join("\n") : "";

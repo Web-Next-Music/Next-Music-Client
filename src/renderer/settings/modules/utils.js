@@ -12,3 +12,15 @@ export function setPath(obj, path, value) {
 	}
 	cur[keys[keys.length - 1]] = value;
 }
+
+export function keepSelectValue(sel) {
+	const isEmpty = (v) => v === undefined || v === null || v === "";
+	let last = sel.value;
+	sel.addEventListener("change", () => {
+		if (isEmpty(sel.value)) {
+			if (!isEmpty(last)) sel.value = last;
+			return;
+		}
+		last = sel.value;
+	});
+}

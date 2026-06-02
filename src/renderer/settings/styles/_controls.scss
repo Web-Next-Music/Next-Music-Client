@@ -72,166 +72,6 @@
 	font-weight: 700;
 }
 
-// Material 3 style switch: outlined track + small icon thumb when off,
-// filled accent track + large checkmark thumb when on. Accent color unchanged.
-.toggle {
-	position: relative;
-	width: 38px;
-	height: 21px;
-	flex-shrink: 0;
-
-	input {
-		opacity: 0;
-		width: 0;
-		height: 0;
-
-		&:checked + .t-track {
-			background: $accent;
-			border-color: $accent;
-
-			&::after {
-				left: 17px;
-				width: 15px;
-				height: 15px;
-				background-color: $bg;
-				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232bfef5' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
-				background-size: 10px;
-			}
-		}
-	}
-}
-
-.t-track {
-	position: absolute;
-	inset: 0;
-	background: $bg;
-	border-radius: 500px;
-	border: 2px solid $muted;
-	cursor: pointer;
-	transition:
-		background 0.2s,
-		border-color 0.2s;
-
-	&::after {
-		content: "";
-		position: absolute;
-		left: 2px;
-		top: 50%;
-		transform: translateY(-50%);
-		width: 14px;
-		height: 14px;
-		border-radius: 50%;
-		background-color: $muted;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230a1019' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
-		background-size: 10px;
-		background-repeat: no-repeat;
-		background-position: center;
-		transition:
-			left 0.2s,
-			width 0.2s,
-			height 0.2s,
-			background-color 0.2s;
-	}
-}
-
-.inp {
-	background: $input-bg;
-	border: 1px solid $input-border;
-	border-radius: 10px;
-	color: $text;
-	font-size: 12px;
-	font-weight: 700;
-	padding: 5px 9px;
-	outline: none;
-	transition: border-color 0.15s;
-	width: 160px;
-	font-family: $font-base;
-
-	&:focus {
-		border-color: $accent;
-	}
-
-	&.sm {
-		width: 80px;
-	}
-
-	&.num {
-		width: 80px;
-
-		&::-webkit-outer-spin-button,
-		&::-webkit-inner-spin-button {
-			-webkit-appearance: none;
-		}
-	}
-}
-
-.sel {
-	font-family: $font-base;
-	background: $input-bg;
-	border: 1px solid $input-border;
-	border-radius: $r;
-	color: $text;
-	font-size: 12px;
-	padding: 5px 28px 5px 9px;
-	outline: none;
-	cursor: pointer;
-	appearance: none;
-	-webkit-appearance: none;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6b80' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-	background-repeat: no-repeat;
-	background-position: right 8px center;
-	transition: border-color 0.15s;
-	min-width: 120px;
-
-	&:focus {
-		border-color: $accent;
-	}
-
-	option {
-		background: $input-bg;
-	}
-}
-
-.ta {
-	font-family: $font-base;
-	background: $input-bg;
-	border: 1px solid $input-border;
-	border-radius: $r;
-	color: $text;
-	font-size: 12px;
-	font-weight: 700;
-	padding: 8px 10px;
-	resize: vertical;
-	outline: none;
-	width: 100%;
-	line-height: 1.6;
-	transition: border-color 0.15s;
-	min-height: 80px;
-
-	&:focus {
-		border-color: $accent;
-	}
-}
-
-.btn {
-	padding: 5px 13px;
-	border-radius: 8px;
-	font-family: $font-heading-large;
-	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-	cursor: pointer;
-	border: none;
-	background: #0e1514;
-	color: $text;
-	transition: background 0.15s;
-
-	&:hover {
-		background: $tile-hover;
-	}
-}
-
 .group-card {
 	border-radius: $r;
 	display: flex;
@@ -291,21 +131,10 @@
 }
 
 .save-restart-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	width: 100%;
 	margin: 0 0 8px;
-	padding: 7px 13px;
-	border-radius: 10px;
-	font-family: $font-heading-large;
-	font-size: 11px;
-	font-weight: 800;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	cursor: pointer;
-	border: none;
-	background: $save-btn-bg;
-	color: $save-btn-text;
+	--mdui-color-primary: 255 255 255;
+	--mdui-color-on-primary: 0 0 0;
 	transition:
 		opacity 0.2s,
 		transform 0.2s;
@@ -318,10 +147,6 @@
 		opacity: 1;
 		pointer-events: auto;
 		transform: translateY(0);
-	}
-
-	&:hover {
-		opacity: 0.85;
 	}
 }
 
@@ -367,24 +192,8 @@
 }
 
 .star-project-btn {
-	display: block;
 	width: 100%;
 	margin-bottom: 6px;
-	padding: 7px 13px;
-	border-radius: 10px;
-	border: none;
-	background: rgba(#e3a000, 0.07);
-	color: #e3a000;
-	font-size: 12px;
-	font-weight: 800;
-	cursor: pointer;
-	text-align: center;
-	transition:
-		background 0.15s,
-		border-color 0.15s;
-
-	&:hover {
-		background: rgba(#e3a000, 0.14);
-		border-color: rgba(#e3a000, 0.5);
-	}
+	--mdui-color-secondary-container: 45 35 0;
+	--mdui-color-on-secondary-container: 227 160 0; // $warning
 }

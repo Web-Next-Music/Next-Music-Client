@@ -1,6 +1,7 @@
 import { state } from "./state.js";
 import { t, ti } from "./i18n.js";
 import { scheduleSave } from "./dirty.js";
+import { keepSelectValue } from "./utils.js";
 
 export function rebuildExperimentsConfig(container) {
 	const experiments = {};
@@ -65,8 +66,6 @@ export function syncExperimentRowMeta(row, addonLock, name) {
 		}
 		meta.append(addonTag);
 	}
-
-	row.classList.toggle("experiments-row--stacked", meta.childElementCount > 0);
 }
 
 // meta: { addonLock?: { addonName: string, isConflict: boolean } | null }
@@ -78,32 +77,33 @@ export function mkExperimentsRow(name, value, container, meta = {}) {
 	const mainLine = document.createElement("div");
 	mainLine.className = "experiments-row-main";
 
-	const nameInp = document.createElement("input");
-	nameInp.type = "text";
-	nameInp.className = "inp experiments-name";
+	const nameInp = document.createElement("mdui-text-field");
+	nameInp.variant = "outlined";
+	nameInp.className = "experiments-name";
 	nameInp.placeholder = t("settings.experiments.name", "Experiment name");
 	nameInp.value = name;
 
-	const sel = document.createElement("select");
-	sel.className = "sel experiments-select";
+	const sel = document.createElement("mdui-select");
+	sel.variant = "outlined";
+	sel.className = "experiments-select";
 	["unset", "default", "on"].forEach((opt) => {
-		const o = document.createElement("option");
+		const o = document.createElement("mdui-menu-item");
 		o.value = opt;
 		o.textContent = opt;
-		if (opt === value) o.selected = true;
 		sel.append(o);
 	});
+	sel.value = value;
+	keepSelectValue(sel);
 
 	if (addonLock) {
 		row.classList.add("experiments-row--locked");
-		if (addonLock.isConflict) row.classList.add("experiments-row--conflict");
 
 		nameInp.disabled = true;
 		sel.disabled = true;
 		mainLine.append(nameInp, sel);
 	} else {
-		const delBtn = document.createElement("button");
-		delBtn.className = "btn experiments-del";
+		const delBtn = document.createElement("mdui-button-icon");
+		delBtn.className = "experiments-del";
 		delBtn.textContent = "×";
 
 		const onChange = () => {
@@ -133,13 +133,13 @@ export function renderExperimentsPanel(panel) {
 	const toolbar = document.createElement("div");
 	toolbar.className = "experiments-toolbar";
 
-	const searchInp = document.createElement("input");
-	searchInp.type = "text";
-	searchInp.className = "inp experiments-search";
+	const searchInp = document.createElement("mdui-text-field");
+	searchInp.variant = "outlined";
+	searchInp.className = "experiments-search";
 	searchInp.placeholder = t("settings.experiments.search", "Search…");
 
-	const addBtn = document.createElement("button");
-	addBtn.className = "btn experiments-add-btn";
+	const addBtn = document.createElement("mdui-button-icon");
+	addBtn.className = "experiments-add-btn";
 	addBtn.textContent = "+";
 
 	toolbar.append(searchInp, addBtn);

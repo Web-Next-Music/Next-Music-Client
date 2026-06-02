@@ -7,6 +7,23 @@
 	-webkit-user-select: none;
 }
 
+mdui-switch.star-gate-blocked {
+	opacity: 0.55;
+
+	&::part(track) {
+		background-color: rgba(255, 255, 255, 0.16);
+		border-color: transparent;
+	}
+
+	&::part(thumb) {
+		background-color: $bg;
+	}
+
+	&::part(checked-icon) {
+		color: $muted;
+	}
+}
+
 .star-gate-notice {
 	margin-top: 3px;
 	font-size: 11px;
@@ -79,24 +96,9 @@
 	color: $danger;
 }
 
-.gh-star-connect-btn {
-	background: rgba($accent, 0.08);
-	border-color: rgba($accent, 0.3);
-	color: $accent;
-
-	&:hover:not(:disabled) {
-		background: rgba($accent, 0.15);
-	}
-}
-
 .gh-star-disconnect-btn {
-	color: $danger;
-	background: rgba($danger, 0.1);
-	border-color: rgba($danger, 0.3);
-
-	&:hover:not(:disabled) {
-		background: rgba($danger, 0.18);
-	}
+	--mdui-color-primary: 239 68 68; // $danger
+	background-color: rgba(239, 68, 68, 0.12);
 }
 
 .gh-device-area {

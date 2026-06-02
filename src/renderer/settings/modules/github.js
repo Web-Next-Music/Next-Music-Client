@@ -72,7 +72,7 @@ export function buildGitHubStarBlock(onRefresh) {
 	actRow.className = "gh-star-actions";
 
 	async function doConnect() {
-		actRow.querySelectorAll("button").forEach((b) => (b.disabled = true));
+		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = true));
 		deviceArea.hidden = true;
 		errLine.hidden = true;
 		deviceCode.textContent = "…";
@@ -94,7 +94,7 @@ export function buildGitHubStarBlock(onRefresh) {
 		unsubCode?.();
 		unsubProgress?.();
 		deviceArea.hidden = true;
-		actRow.querySelectorAll("button").forEach((b) => (b.disabled = false));
+		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = false));
 
 		if (result?.error) {
 			errLine.textContent = result.error;
@@ -112,7 +112,7 @@ export function buildGitHubStarBlock(onRefresh) {
 	}
 
 	async function doDisconnect() {
-		actRow.querySelectorAll("button").forEach((b) => (b.disabled = true));
+		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = true));
 		await window.electronAPI?.disconnectGitHub?.();
 
 		if (!state.CONFIG.github) state.CONFIG.github = {};
@@ -127,19 +127,20 @@ export function buildGitHubStarBlock(onRefresh) {
 	}
 
 	if (!hasToken) {
-		const connectBtn = document.createElement("button");
-		connectBtn.className = "btn gh-star-connect-btn";
+		const connectBtn = document.createElement("mdui-button");
+		connectBtn.variant = "filled";
 		connectBtn.textContent = t("settings.github.connect");
 		connectBtn.addEventListener("click", doConnect);
 		actRow.append(connectBtn);
 	} else {
-		const recheckBtn = document.createElement("button");
-		recheckBtn.className = "btn";
+		const recheckBtn = document.createElement("mdui-button");
+		recheckBtn.variant = "tonal";
 		recheckBtn.textContent = t("settings.github.recheck");
 		recheckBtn.addEventListener("click", doConnect);
 
-		const disconnectBtn = document.createElement("button");
-		disconnectBtn.className = "btn gh-star-disconnect-btn";
+		const disconnectBtn = document.createElement("mdui-button");
+		disconnectBtn.variant = "text";
+		disconnectBtn.className = "gh-star-disconnect-btn";
 		disconnectBtn.textContent = t("settings.github.disconnect");
 		disconnectBtn.addEventListener("click", doDisconnect);
 

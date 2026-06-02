@@ -8,21 +8,13 @@
 }
 
 .experiments-search {
-	flex: 1 !important;
+	flex: 1;
 	width: auto !important;
-	font-weight: 700;
-	border-radius: $row-r 6px 6px $row-r;
 }
 
 .experiments-add-btn {
 	flex-shrink: 0;
-	width: 29px;
-	height: 29px;
-	border-radius: 6px $row-r $row-r 6px;
-	border: 1px solid $line;
-	padding: 5px 8px;
-	font-size: 13px;
-	line-height: 1;
+	font-size: 20px;
 }
 
 .experiments-rows {
@@ -76,25 +68,7 @@
 .experiments-row-main {
 	display: flex;
 	align-items: center;
-	gap: 3px;
-
-	// Controls are glued horizontally: slight joints, larger rounding on the
-	// outer ends (works for locked rows too, where the select is last).
-	> .inp,
-	> .sel,
-	> .btn {
-		border-radius: 6px;
-	}
-
-	> :first-child {
-		border-top-left-radius: $row-r;
-		border-bottom-left-radius: $row-r;
-	}
-
-	> :last-child {
-		border-top-right-radius: $row-r;
-		border-bottom-right-radius: $row-r;
-	}
+	gap: 6px;
 }
 
 .experiments-meta {
@@ -110,26 +84,21 @@
 }
 
 .experiments-name {
-	flex: 1 !important;
+	flex: 1;
 	width: auto !important;
 	min-width: 0;
 }
 
+.experiments-select {
+	width: 88px;
+}
+
 .experiments-del {
 	flex-shrink: 0;
-	width: 29px;
-	height: 29px;
-	padding: 0 9px;
-	color: $muted;
-	justify-content: center;
-	align-items: center;
-	border: 1px solid $line;
-	transition:
-		background 0.25s ease,
-		color 0.25s ease;
+	font-size: 18px;
 
 	&:hover {
-		color: $danger;
+		--mdui-color-on-surface-variant: 239 68 68; // $danger
 	}
 }
 
@@ -138,13 +107,6 @@
 
 	&:hover {
 		background: $bg2;
-	}
-
-	.inp,
-	.sel {
-		opacity: 0.6;
-		pointer-events: none;
-		cursor: default;
 	}
 }
 

@@ -65,11 +65,15 @@ function isStarGated(path) {
 function maybeGate(element, path) {
 	if (state.HAS_STARRED || !isStarGated(path)) return element;
 
-	element.querySelectorAll("input, select, textarea, button").forEach((el) => {
-		el.disabled = true;
-	});
+	element
+		.querySelectorAll(
+			"mdui-switch, mdui-text-field, mdui-select, mdui-button, input, select, textarea, button",
+		)
+		.forEach((el) => {
+			el.disabled = true;
+		});
 	const control = element.querySelector(
-		"label.toggle, input.inp, select.sel, textarea.ta",
+		"mdui-switch, mdui-text-field, mdui-select",
 	);
 	if (control) control.classList.add("star-gate-blocked");
 
@@ -144,9 +148,7 @@ export function renderNodes(nodes, container, depth) {
 						const enabled = !!getPath(state.CONFIG, enableField.path);
 						bodyWrap.classList.toggle("group-body--disabled", !enabled);
 					};
-					toggle
-						.querySelector("input")
-						.addEventListener("change", applyDisabled);
+					toggle.addEventListener("change", applyDisabled);
 					renderNodes(remainingChildren, bodyWrap, depth + 1);
 					applyDisabled();
 					container.append(bodyWrap);
@@ -159,7 +161,7 @@ export function renderNodes(nodes, container, depth) {
 				}
 			} else {
 				const card = document.createElement("div");
-				card.className = depth === 1 ? "group-card" : "group-card deep";
+				card.className = "group-card";
 
 				const cardHead = document.createElement("div");
 				cardHead.className = "group-card-head";
@@ -186,9 +188,7 @@ export function renderNodes(nodes, container, depth) {
 						const enabled = !!getPath(state.CONFIG, enableField.path);
 						cardBody.classList.toggle("group-body--disabled", !enabled);
 					};
-					toggle
-						.querySelector("input")
-						.addEventListener("change", applyDisabled);
+					toggle.addEventListener("change", applyDisabled);
 					renderNodes(remainingChildren, cardBody, depth + 1);
 					applyDisabled();
 					card.append(cardBody);
@@ -232,7 +232,8 @@ export function buildUI() {
 	const existingStarBtn = document.getElementById("star-project-btn");
 	if (existingStarBtn) existingStarBtn.remove();
 
-	const saveBtn = document.createElement("button");
+	const saveBtn = document.createElement("mdui-button");
+	saveBtn.variant = "filled";
 	saveBtn.id = "save-restart-btn";
 	saveBtn.className =
 		"save-restart-btn" + (state.hasPendingChanges ? " visible" : "");
@@ -249,7 +250,8 @@ export function buildUI() {
 	});
 
 	if (!state.HAS_STARRED) {
-		const starBtn = document.createElement("button");
+		const starBtn = document.createElement("mdui-button");
+		starBtn.variant = "tonal";
 		starBtn.id = "star-project-btn";
 		starBtn.className = "star-project-btn";
 		starBtn.dataset.i18n = "settings.starProject";
@@ -286,8 +288,8 @@ export function buildUI() {
 		if (tab.key === "programSettings") {
 			const btnRow = document.createElement("div");
 			btnRow.style.cssText = "margin-top:10px;display:flex;gap:8px;";
-			const btn = document.createElement("button");
-			btn.className = "btn";
+			const btn = document.createElement("mdui-button");
+			btn.variant = "tonal";
 			btn.dataset.i18n = "settings.openAddons";
 			btn.textContent = t("settings.openAddons", "Open Addons Folder");
 			btn.addEventListener("click", () =>

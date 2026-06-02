@@ -1,0 +1,83 @@
+@use "variables" as *;
+
+.mdui-theme-dark {
+	--mdui-color-primary: #{mdui-rgb($accent)};
+	--mdui-color-on-primary: 7 16 15;
+	--mdui-color-primary-container: 18 53 51;
+	--mdui-color-on-primary-container: #{mdui-rgb($accent)};
+
+	--mdui-color-secondary: #{mdui-rgb($accent)};
+	--mdui-color-on-secondary: 7 16 15;
+	--mdui-color-secondary-container: 30 36 42;
+	--mdui-color-on-secondary-container: #{mdui-rgb($text)};
+
+	--mdui-color-surface: #{mdui-rgb($bg)};
+	--mdui-color-surface-dim: #{mdui-rgb($bg)};
+	--mdui-color-surface-bright: #{mdui-rgb($tile-hover)};
+	--mdui-color-surface-container-lowest: 7 11 11;
+	--mdui-color-surface-container-low: #{mdui-rgb($bg-soft)};
+	--mdui-color-surface-container: #{mdui-rgb($panel)};
+	--mdui-color-surface-container-high: #{mdui-rgb($tile-hover)};
+	--mdui-color-surface-container-highest: 46 53 52;
+	--mdui-color-surface-variant: #{mdui-rgb($panel)};
+
+	--mdui-color-background: #{mdui-rgb($bg)};
+	--mdui-color-on-background: #{mdui-rgb($text)};
+	--mdui-color-on-surface: #{mdui-rgb($text)};
+	--mdui-color-on-surface-variant: #{mdui-rgb($muted)};
+
+	--mdui-color-outline: 74 81 80;
+	--mdui-color-outline-variant: 42 49 48;
+
+	--mdui-color-error: #{mdui-rgb($danger)};
+	--mdui-color-on-error: 255 255 255;
+
+	font-family: $font-base;
+}
+
+// Match the app's compact density and typography for mdui form controls.
+mdui-text-field,
+mdui-select {
+	width: 140px;
+	flex-shrink: 0;
+	--mdui-typescale-body-large-size: 12px;
+	--mdui-typescale-body-large-line-height: 17px;
+	// Rounds the outlined box (and the select's popup, which inherits it).
+	--mdui-shape-corner-extra-small: 10px;
+	font-family: $font-base;
+
+	&.num {
+		width: 70px;
+	}
+
+	&.wide {
+		width: 100%;
+	}
+}
+
+mdui-text-field::part(input),
+mdui-select::part(text-field__input) {
+	padding-top: 6px;
+	padding-bottom: 6px;
+}
+
+mdui-switch {
+	flex-shrink: 0;
+	transform: scale(0.8);
+	transform-origin: right center;
+}
+
+mdui-button {
+	font-family: $font-heading-large;
+	--mdui-typescale-label-large-size: 12px;
+	--mdui-typescale-label-large-line-height: 16px;
+	min-width: 42px;
+	height: 32px;
+	font-weight: 800;
+}
+
+mdui-button-icon {
+	width: 34px;
+	height: 34px;
+	font-size: 20px;
+}

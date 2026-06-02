@@ -1,7 +1,13 @@
+@use "sass:color";
+
+@function mdui-rgb($c) {
+	@return #{color.channel($c, "red", $space: rgb)}
+		#{color.channel($c, "green", $space: rgb)}
+		#{color.channel($c, "blue", $space: rgb)};
+}
+
 // Accent
 $accent: #80d5cf;
-$accent-gradient: rgba(43, 254, 245, 0.18);
-$dim-accent: rgba(43, 254, 245, 0.08);
 
 // Lines / dividers
 $line: rgba(255, 255, 255, 0.07);
@@ -15,7 +21,6 @@ $tile-hover: #252b2b;
 
 // Input fields
 $input-bg: $bg-soft;
-$input-border: $line;
 
 // Text
 $text: #e2ddea;
@@ -30,17 +35,6 @@ $warning: #e3a000;
 $tag-addon: #e3b341;
 $tag-builtin: #2bfef5;
 $tag-blocked: $danger;
-
-// Navigation (active pill)
-$nav-active-bg: #1e242a;
-$nav-active-text: $text;
-
-// Toggle
-$toggle-thumb-on: #111111;
-
-// Save button
-$save-btn-bg: #fff;
-$save-btn-text: #000;
 
 // Titlebar
 $tb-btn-hover: rgba(255, 255, 255, 0.07);
