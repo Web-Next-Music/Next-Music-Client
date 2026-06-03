@@ -100,9 +100,6 @@ jobs:
             release/*.AppImage
             release/*.deb
             release/*.pkg.tar.zst
-            release/latest.yml
-            release/latest-linux.yml
-            release/*.blockmap
 
       - name: Setup SSH for AUR
         if: matrix.os == 'ubuntu-latest'
