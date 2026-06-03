@@ -231,6 +231,167 @@
 	}
 }
 
+// Loading skeleton
+.skel {
+	position: relative;
+	overflow: hidden;
+	background: var(--c-skel-base);
+	border-radius: 6px;
+
+	&::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		transform: translateX(-100%);
+		background: linear-gradient(
+			90deg,
+			transparent,
+			var(--c-skel-shine),
+			transparent
+		);
+		animation: skel-shimmer 1.4s ease-in-out infinite;
+	}
+}
+
+@keyframes skel-shimmer {
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+// Sidebar skeleton nav items
+.skel-nav {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px;
+}
+
+.skel-nav-icon {
+	width: 18px;
+	height: 18px;
+	border-radius: 5px;
+	flex-shrink: 0;
+}
+
+.skel-nav-label {
+	height: 11px;
+	flex: 1;
+	max-width: 90px;
+	border-radius: 5px;
+}
+
+// Content skeleton panel
+.skel-panel {
+	width: 100%;
+	max-width: 600px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	animation: fadeIn 0.16s ease;
+}
+
+.skel-sec {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 18px 0 10px;
+	padding: 0 13px 10px 10px;
+	border-bottom: 1px solid var(--c-line);
+
+	&:first-child {
+		margin-top: 0;
+	}
+}
+
+.skel-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.skel-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	height: 56.8px;
+	padding: 11px 15px;
+	background: var(--c-panel);
+	border-radius: 4px;
+
+	&:first-child {
+		border-radius: $row-r $row-r 4px 4px;
+	}
+
+	&:last-child {
+		border-radius: 4px 4px $row-r $row-r;
+	}
+}
+
+.skel-row-text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.skel-line {
+	height: 13px;
+	border-radius: 5px;
+
+	&.skel-sub {
+		height: 11px;
+		opacity: 0.7;
+	}
+}
+
+.skel-switch {
+	width: 38px;
+	height: 21px;
+	border-radius: 11px;
+	flex-shrink: 0;
+}
+
+.skel-field {
+	width: 110px;
+	height: 30px;
+	border-radius: 10px;
+	flex-shrink: 0;
+}
+
+.skel-w30 {
+	width: 30%;
+}
+.skel-w35 {
+	width: 35%;
+}
+.skel-w40 {
+	width: 40%;
+}
+.skel-w45 {
+	width: 45%;
+}
+.skel-w50 {
+	width: 50%;
+}
+.skel-w55 {
+	width: 55%;
+}
+.skel-w60 {
+	width: 60%;
+}
+.skel-w65 {
+	width: 65%;
+}
+.skel-w70 {
+	width: 70%;
+}
+.skel-w75 {
+	width: 75%;
+}
+
 .tab-panel {
 	display: none;
 	width: 100%;

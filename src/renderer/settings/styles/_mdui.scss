@@ -57,6 +57,10 @@
 	// Disabled (star-gated) switch track tint.
 	--c-switch-track: rgba(255, 255, 255, 0.16);
 
+	// Loading skeleton
+	--c-skel-base: #{$panel};
+	--c-skel-shine: rgba(255, 255, 255, 0.07);
+
 	// "Star Project" tonal button (RGB channel triplets for mdui tokens).
 	--c-star-btn-bg: 45 35 0;
 	--c-star-btn-fg: 227 160 0;
@@ -119,6 +123,9 @@
 	--c-tag-builtin: #0c8294;
 
 	--c-switch-track: rgba(0, 0, 0, 0.18);
+
+	--c-skel-base: #{$l-tile-hover};
+	--c-skel-shine: rgba(255, 255, 255, 0.65);
 
 	--c-star-btn-bg: 253 240 199;
 	--c-star-btn-fg: 161 110 0;
