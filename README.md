@@ -130,7 +130,7 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 
 ## To change the program settings, open the program settings in tray lol.
 
-<img width="810" height="545" alt="image" src="https://github.com/user-attachments/assets/d5b81b27-3b44-4607-995b-af3cfe3c8529" />
+<img width="810" height="545" alt="image" src="https://github.com/user-attachments/assets/bb710a64-fee7-4dc9-aa25-f4f5100b59aa" />
 
 ## Recomended Scripts
 
