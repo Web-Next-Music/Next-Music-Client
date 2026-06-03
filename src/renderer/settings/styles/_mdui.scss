@@ -154,8 +154,7 @@ mdui-select::part(text-field__input) {
 
 mdui-switch {
 	flex-shrink: 0;
-	transform: scale(0.8);
-	transform-origin: right center;
+	zoom: 0.8;
 }
 
 mdui-button {
