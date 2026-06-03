@@ -121,31 +121,38 @@
 
 .sidebar-footer {
 	margin-top: auto;
-	padding: 10px 14px 12px;
+	padding: 8px;
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
 	flex-shrink: 0;
+}
+
+.ver-card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 10px;
+	border-radius: 12px;
+	background: var(--c-panel);
 }
 
 .ver-row {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
-	gap: 6px;
 	font-family: "Space Mono", monospace;
 }
 
 .ver-name {
 	font-size: 10px;
 	color: var(--c-muted);
-	opacity: 0.6;
+	opacity: 0.7;
 	white-space: nowrap;
 }
 
 .ver-val {
 	font-size: 10px;
-	color: var(--c-muted);
+	color: var(--c-tag-builtin);
 	white-space: nowrap;
 	text-align: right;
 }
