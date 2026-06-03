@@ -99,6 +99,11 @@
 		color 0.15s,
 		background 0.15s;
 
+	.nav-item-icon {
+		flex-shrink: 0;
+		opacity: 0.85;
+	}
+
 	&:hover {
 		color: var(--c-text);
 		background: var(--c-tile-hover);
