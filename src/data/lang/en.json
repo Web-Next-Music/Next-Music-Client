@@ -165,6 +165,7 @@
 			"desc": "Connect GitHub and star Next Music Client to unlock extra features!",
 			"deviceInstr": "Enter this code on GitHub (browser opened automatically):",
 			"connect": "Sign in",
+			"openLink": "Open GitHub",
 			"recheck": "Re-check star",
 			"disconnect": "Log out",
 			"tokenExpired": "Session expired. Please sign in again."

@@ -72,7 +72,19 @@ export function buildGitHubStarBlock(onRefresh) {
 	actRow.className = "gh-star-actions";
 
 	async function doConnect() {
-		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = true));
+		const origButtons = Array.from(actRow.children);
+		origButtons.forEach((b) => (b.style.display = "none"));
+		actRow.style.display = "none";
+
+		let verificationUri = null;
+		const openBtn = document.createElement("mdui-button");
+		openBtn.variant = "tonal";
+		openBtn.textContent = t("settings.github.openLink");
+		openBtn.addEventListener("click", () => {
+			if (verificationUri) window.electronAPI?.openExternal?.(verificationUri);
+		});
+		actRow.append(openBtn);
+
 		deviceArea.hidden = true;
 		errLine.hidden = true;
 		deviceCode.textContent = "…";
@@ -82,6 +94,8 @@ export function buildGitHubStarBlock(onRefresh) {
 			deviceArea.hidden = false;
 			deviceCode.textContent = info.userCode;
 			deviceTimer.textContent = `${info.expiresIn}s`;
+			verificationUri = info.verificationUri;
+			actRow.style.display = "";
 		});
 		const unsubProgress = window.electronAPI?.onGitHubDeviceProgress?.(
 			(secondsLeft) => {
@@ -94,7 +108,9 @@ export function buildGitHubStarBlock(onRefresh) {
 		unsubCode?.();
 		unsubProgress?.();
 		deviceArea.hidden = true;
-		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = false));
+		openBtn.remove();
+		origButtons.forEach((b) => (b.style.display = ""));
+		actRow.style.display = "";
 
 		if (result?.error) {
 			errLine.textContent = result.error;

@@ -35,24 +35,35 @@ mdui-switch.star-gate-blocked {
 .gh-star-block {
 	margin-bottom: 16px;
 	padding: 14px;
-	border-radius: $r;
+	border-radius: 12px;
 	background: var(--c-panel);
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: 10px;
 }
 
 .gh-star-header {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
+	padding: 0 6px 0 0;
 }
 
 .gh-star-icon {
 	color: var(--c-text);
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	flex-shrink: 0;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--c-muted) 10%, transparent);
+
+	svg {
+		width: 16px;
+		height: 16px;
+	}
 }
 
 .gh-star-title {
@@ -60,21 +71,24 @@ mdui-switch.star-gate-blocked {
 	font-weight: 800;
 	color: var(--c-text);
 	flex: 1;
+	letter-spacing: 0.1px;
 }
 
 .gh-star-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 	font-size: 11px;
-	padding: 2px 8px;
-	border-radius: 20px;
+	padding: 4px 11px;
+	border-radius: 9px;
 	background: rgba($muted, 0.12);
 	color: var(--c-muted);
 	white-space: nowrap;
 	font-weight: 700;
 
 	&--ok {
-		background: rgba($success, 0.1);
+		background: rgba($success, 0.14);
 		color: var(--c-success);
-		border-color: rgba($success, 0.25);
 	}
 }
 
@@ -89,11 +103,13 @@ mdui-switch.star-gate-blocked {
 	display: flex;
 	gap: 8px;
 	flex-wrap: wrap;
+	margin-top: 1px;
 }
 
 .gh-star-error {
 	font-size: 11px;
 	color: var(--c-danger);
+	font-weight: 700;
 }
 
 .gh-star-disconnect-btn {
@@ -103,9 +119,9 @@ mdui-switch.star-gate-blocked {
 
 .gh-device-area {
 	background: var(--c-input-bg);
-	border-radius: $r - 2px;
+	border-radius: 14px;
 	border: 1px solid var(--c-line);
-	padding: 10px 12px;
+	padding: 12px 14px;
 	display: flex;
 	flex-direction: column;
 	gap: 6px;

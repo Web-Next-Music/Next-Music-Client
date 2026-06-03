@@ -165,6 +165,7 @@ mdui-button {
 	min-width: 42px;
 	height: 32px;
 	font-weight: 800;
+	transition: filter 0.25s ease;
 }
 
 mdui-button-icon {
