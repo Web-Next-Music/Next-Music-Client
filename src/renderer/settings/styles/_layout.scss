@@ -11,10 +11,32 @@
 	flex-shrink: 0;
 }
 
-.tb-title {
+.tb-titlegroup {
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	pointer-events: none;
+}
+
+.tb-icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	background-image: url("../../../assets/nm-icons/nm-tray.png");
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	pointer-events: none;
+
+	.condemned & {
+		background-image: url("../../../assets/nm-icons/nm-tray-condemned.png");
+	}
+}
+
+.tb-title {
 	font-family: $font-heading-large;
 	font-weight: 700;
 	font-size: 14px;

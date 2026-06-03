@@ -8,6 +8,7 @@ import {
 import {
 	getBuiltinExperiments,
 	resolveBuiltinExperiments,
+	getBuiltinExperimentState,
 } from "../../builtinExperiments.js";
 import { configChangeNeedsRestart } from "../../internalConfig.js";
 import { getPaths, isDev, devUrl } from "../../../config.js";
@@ -69,6 +70,12 @@ export function createSettingsWindow() {
 		return;
 	}
 
+	const condemned =
+		getBuiltinExperimentState(
+			"nm_condemned_mode",
+			getConfig()?.experiments ?? {},
+		) === "on";
+
 	settingsWindow = new BrowserWindow({
 		width: 842,
 		height: 587,
@@ -87,6 +94,7 @@ export function createSettingsWindow() {
 			nodeIntegration: false,
 			sandbox: true,
 			backgroundThrottling: false,
+			additionalArguments: condemned ? ["--nmc-condemned"] : [],
 		},
 	});
 

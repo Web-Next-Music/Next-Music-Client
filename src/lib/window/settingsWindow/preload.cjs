@@ -2,6 +2,22 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
+if (process.argv.includes("--nmc-condemned")) {
+	const applyClass = () => document.documentElement.classList.add("condemned");
+
+	if (document.documentElement) {
+		applyClass();
+	} else {
+		const observer = new MutationObserver(() => {
+			if (document.documentElement) {
+				observer.disconnect();
+				applyClass();
+			}
+		});
+		observer.observe(document, { childList: true });
+	}
+}
+
 contextBridge.exposeInMainWorld("electronAPI", {
 	// Versions & Config
 	getVersions: () => ipcRenderer.invoke("settings:get-versions"),

@@ -20,6 +20,7 @@ const ICON_RESTORE = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none
     <rect x="0.5" y="0.5" width="9" height="9" rx="0.5" stroke="currentColor" stroke-width="1"/>
 </svg>`;
 
+
 export function toggleMaximize() {
 	window.electronAPI?.toggleMaximize?.();
 }

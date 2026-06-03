@@ -22,7 +22,10 @@
 	</head>
 	<body>
 		<div class="titlebar">
-			<span class="tb-title" data-i18n="settings.title">Settings</span>
+			<div class="tb-titlegroup">
+				<div class="tb-icon" aria-hidden="true"></div>
+				<span class="tb-title" data-i18n="settings.title">Settings</span>
+			</div>
 			<button
 				class="tb-btn tb-minimize"
 				onclick="window.electronAPI?.minimizeWindow()"
