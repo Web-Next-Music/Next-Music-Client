@@ -77,7 +77,6 @@
 	gap: 2px;
 	padding: 0 2px;
 
-	// No tag → no element, so the row's gap doesn't reserve empty space below.
 	&:empty {
 		display: none;
 	}
@@ -87,10 +86,18 @@
 	flex: 1;
 	width: auto !important;
 	min-width: 0;
+
+	&[disabled] {
+		border: 1px solid var(--c-tile-hover);
+	}
 }
 
 .experiments-select {
 	width: 88px;
+
+	&[disabled] {
+		border: 1px solid var(--c-tile-hover);
+	}
 }
 
 .experiments-del {
@@ -105,28 +112,31 @@
 .experiments-row--locked {
 	cursor: default;
 
-	&:hover {
-		background: var(--c-bg2);
+	mdui-text-field,
+	mdui-select {
+		border-radius: 10px;
 	}
 }
 
 .experiments-addon-tag {
-	font-size: 10px;
+	font-size: 11px;
+	font-weight: 700;
 	color: var(--c-tag-addon);
 	padding: 0 2px;
 	line-height: 1.3;
 }
 
 .experiments-builtin-tag {
-	font-size: 10px;
-	font-weight: 600;
+	font-size: 11px;
+	font-weight: 700;
 	color: var(--c-tag-builtin);
 	padding: 0 2px;
 	line-height: 1.3;
 }
 
 .experiments-addon-blocked {
-	font-size: 10px;
+	font-size: 11px;
+	font-weight: 700;
 	color: var(--c-danger);
 	padding: 0 2px;
 	line-height: 1.3;
