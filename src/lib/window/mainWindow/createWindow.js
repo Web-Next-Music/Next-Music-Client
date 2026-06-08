@@ -1,8 +1,12 @@
-import { BrowserWindow, session, nativeTheme, app } from "electron";
+import { BrowserWindow, ipcMain, session, nativeTheme, app } from "electron";
 import { createLoaderWindow } from "../createLoaderWindow.js";
 import { applyAddons } from "../../loadAddons.js";
-import { mergeAddonExperiments } from "../../addonExperiments.js";
+import {
+	mergeAddonExperiments,
+	getAllAddonExperimentNames,
+} from "../../addonExperiments.js";
 import { resolveBuiltinExperiments } from "../../builtinExperiments.js";
+import { getConfig } from "../../configManager.js";
 import { getAppIcon } from "../../../config.js";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -25,6 +29,18 @@ const apiFunctionsOrder = [
 	"customTracks",
 	"playerColor",
 ];
+
+if (!ipcMain.listenerCount("nmc:get-experiments")) {
+	ipcMain.on("nmc:get-experiments", (event) => {
+		const config = getConfig();
+		event.returnValue = {
+			experiments: mergeAddonExperiments(
+				resolveBuiltinExperiments(config?.experiments ?? {}),
+			),
+			managedNames: getAllAddonExperimentNames(),
+		};
+	});
+}
 
 let mainWindow;
 let cachedApiJs = null;

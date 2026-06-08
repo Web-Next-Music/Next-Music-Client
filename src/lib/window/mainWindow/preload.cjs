@@ -33,16 +33,29 @@ function parseExperimentsArg() {
 	}
 }
 
+function getExperimentsFromMain() {
+	try {
+		const result = ipcRenderer.sendSync("nmc:get-experiments");
+		if (result && typeof result === "object" && result.experiments)
+			return result;
+	} catch {
+		/* fall through */
+	}
+	return { experiments: parseExperimentsArg(), managedNames: [] };
+}
+
+const { experiments: rawExperiments, managedNames } = getExperimentsFromMain();
+
 const storeOverrides = {};
 const rscOverrides = {};
-for (const [name, state] of Object.entries(parseExperimentsArg())) {
+for (const [name, state] of Object.entries(rawExperiments)) {
 	if (state === "on" || state === "default") {
 		storeOverrides[name] = state;
 		rscOverrides[name] = { group: state, value: { title: state } };
 	}
 }
 
-function experimentPatcher(rscOverrides, storeOverrides) {
+function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 	const rscNames = Object.keys(rscOverrides);
 
 	const mentionsOverride = (str) =>
@@ -326,6 +339,13 @@ function experimentPatcher(rscOverrides, storeOverrides) {
 		for (const name of appliedKeys) {
 			if (!(name in storeOverrides)) delete patched[name];
 		}
+		// Remove stale entries from now-disabled addons. appliedKeys only covers
+		// the current page session; managedNames ensures cross-session cleanup.
+		if (managedNames) {
+			for (const name of managedNames) {
+				if (!(name in storeOverrides)) delete patched[name];
+			}
+		}
 		for (const name in storeOverrides) {
 			patched[name] = buildEntry(storeOverrides[name], data[name] || template);
 		}
@@ -340,8 +360,20 @@ function experimentPatcher(rscOverrides, storeOverrides) {
 		return writeOverrides();
 	};
 
+	function markExperimentsDone() {
+		window.__nmcExperimentsDone = true;
+		window.dispatchEvent(new Event("__nmcExperimentsApplied"));
+	}
+
 	let done = Object.keys(storeOverrides).length === 0;
-	const tryWrite = () => done || (done = writeOverrides());
+	if (done) window.__nmcExperimentsDone = true;
+
+	const tryWrite = () => {
+		if (done) return true;
+		done = writeOverrides();
+		if (done) markExperimentsDone();
+		return done;
+	};
 
 	if (!tryWrite()) {
 		let frames = 0;
@@ -382,7 +414,7 @@ function injectIntoMainWorld(code) {
 }
 
 injectIntoMainWorld(
-	`(${experimentPatcher.toString()})(${JSON.stringify(rscOverrides)}, ${JSON.stringify(storeOverrides)});`,
+	`(${experimentPatcher.toString()})(${JSON.stringify(rscOverrides)}, ${JSON.stringify(storeOverrides)}, ${JSON.stringify(managedNames)});`,
 );
 
 contextBridge.exposeInMainWorld("nmcConvert", {

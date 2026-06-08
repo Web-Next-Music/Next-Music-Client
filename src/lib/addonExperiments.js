@@ -67,6 +67,47 @@ export function getAddonExperimentOverrides() {
 	return overrides;
 }
 
+export function getAllAddonExperimentNames() {
+	const { addonsDirectory } = getPaths();
+	if (!fs.existsSync(addonsDirectory)) return [];
+
+	let entries;
+	try {
+		entries = fs.readdirSync(addonsDirectory, { withFileTypes: true });
+	} catch {
+		return [];
+	}
+
+	const names = new Set();
+
+	for (const entry of entries) {
+		if (!isAddonDirectory(addonsDirectory, entry)) continue;
+
+		const addonName = entry.name.startsWith("!")
+			? entry.name.slice(1)
+			: entry.name;
+		const overrideFile = path.join(
+			addonsDirectory,
+			entry.name,
+			"experiments.override",
+		);
+		if (!fs.existsSync(overrideFile)) continue;
+
+		try {
+			const content = fs.readFileSync(overrideFile, "utf-8");
+			for (const key of Object.keys(parseOverrideFile(content))) {
+				names.add(key);
+			}
+		} catch {
+			console.warn(
+				`[AddonExperiments] Could not read ${overrideFile} (addon: ${addonName})`,
+			);
+		}
+	}
+
+	return [...names];
+}
+
 export function mergeAddonExperiments(userExperiments) {
 	const overrides = getAddonExperimentOverrides();
 	const merged = { ...userExperiments };

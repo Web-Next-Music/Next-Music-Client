@@ -1,5 +1,6 @@
 import { getPaths } from "../config.js";
 import { getConfig } from "./configManager.js";
+import { getAddonExperimentOverrides } from "./addonExperiments.js";
 import fs from "fs";
 import path from "path";
 import http from "http";
@@ -64,8 +65,6 @@ function statDirent(dir, entry) {
 	}
 }
 
-// Cheap change-detection signature for a file (mtime + size), so the CSS poll
-// can skip re-reading unchanged files from disk.
 function fileSignature(stat) {
 	return `${stat.mtimeMs}:${stat.size}`;
 }
@@ -745,6 +744,8 @@ function startAddonCssLiveUpdates() {
 
 // Online addon loader
 const FETCH_TIMEOUT_MS = 10_000;
+const EXPERIMENTS_WAIT_TIMEOUT_MS = 20_000;
+const EXPERIMENTS_POLL_MS = 50;
 
 async function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
 	const controller = new AbortController();
@@ -757,6 +758,28 @@ async function fetchWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
 	} finally {
 		clearTimeout(timer);
 	}
+}
+
+async function waitForExperimentsApplied(webContents) {
+	const deadline = Date.now() + EXPERIMENTS_WAIT_TIMEOUT_MS;
+
+	while (Date.now() < deadline) {
+		try {
+			if (await webContents.executeJavaScript("!!window.__nmcExperimentsDone"))
+				return;
+		} catch {
+			// renderer is navigating or reloading — retry on next poll
+		}
+		await new Promise((r) => setTimeout(r, EXPERIMENTS_POLL_MS));
+	}
+
+	console.warn(
+		"[Addons] Experiments wait timed out, loading experiment addons anyway",
+	);
+}
+
+function addonNameFromPath(filePath) {
+	return path.relative(addonsDirectory, filePath).split(path.sep)[0];
 }
 
 async function applyAddons(mainWindow) {
@@ -782,26 +805,65 @@ async function applyAddons(mainWindow) {
 		await execAddonScript(script, label);
 	}
 
+	// Enabled experiment addons: their CSS/JS loads only after experiments apply.
+	const experimentAddonNames = new Set(
+		getAddonExperimentOverrides().map((o) => o.addonName),
+	);
+
 	const cssSnapshot = scanAddonCssFiles();
 	addonCssCache.clear();
 	addonCssMeta.clear();
 
-	for (const [filePath, { content, signature }] of cssSnapshot) {
-		addonCssCache.set(filePath, content);
-		addonCssMeta.set(filePath, signature);
+	const regularCss = new Map();
+	const experimentCss = new Map();
+
+	for (const [filePath, data] of cssSnapshot) {
+		addonCssCache.set(filePath, data.content);
+		addonCssMeta.set(filePath, data.signature);
+		const target = experimentAddonNames.has(addonNameFromPath(filePath))
+			? experimentCss
+			: regularCss;
+		target.set(filePath, data);
 	}
 
-	await applyCssSnapshot(cssSnapshot);
+	// Collect JS files in one pass, split by addon type
+	const regularJs = [];
+	const experimentJs = [];
 
 	await loadFilesFromDirectory(
 		addonsDirectory,
 		".js",
 		(jsContent, filePath) => {
-			const label = relativeAddonPath(filePath);
-			console.log(`Load JS: ${label}`);
-			execJS(jsContent, label);
+			const target = experimentAddonNames.has(addonNameFromPath(filePath))
+				? experimentJs
+				: regularJs;
+			target.push({ jsContent, filePath });
 		},
 	);
+
+	// Load regular addons immediately
+	await applyCssSnapshot(regularCss);
+
+	for (const { jsContent, filePath } of regularJs) {
+		const label = relativeAddonPath(filePath);
+		console.log(`Load JS: ${label}`);
+		execJS(jsContent, label);
+	}
+
+	// Load experiment-overriding addons only after their experiments are confirmed applied.
+	// Preload always gets fresh experiments via IPC, so storeOverrides is already
+	// correct — no need for a post-load correction call here.
+	if (experimentAddonNames.size > 0) {
+		await waitForExperimentsApplied(mainWindow.webContents);
+
+		await applyCssSnapshot(experimentCss);
+
+		for (const { jsContent, filePath } of experimentJs) {
+			const label = relativeAddonPath(filePath);
+			console.log(`Load JS (after experiments): ${label}`);
+			execJS(jsContent, label);
+		}
+	}
 
 	const onlineAddons = config.programSettings.addons.onlineScripts ?? [];
 
