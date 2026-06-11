@@ -2,7 +2,7 @@
 	--bg: var(--ym-background-color-primary-enabled-basic);
 	--sur: var(--ym-background-color-primary-enabled-content);
 	--bor: var(--ym-outline-color-primary-disabled);
-	--acc: #2bfef5;
+	--acc: #00c9c0;
 	--acc-dim: rgba(43, 254, 245, 0.12);
 	--acc-bor: rgba(43, 254, 245, 0.28);
 	--txt: var(--ym-controls-color-primary-text-enabled_variant);
@@ -29,7 +29,8 @@ html {
 }
 body {
 	color: var(--txt);
-	font-family: "Syne", "Science Gothic", sans-serif;
+	font-family: "Nunito", sans-serif;
+	font-weight: 600;
 	min-height: 100vh;
 	overflow-x: hidden;
 	border: 0.0625rem solid var(--bor);
@@ -65,8 +66,6 @@ header {
 	align-items: center;
 	gap: 12px;
 	transition: border-color 0.25s;
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
 }
 .logo-icon {
 	width: 38px;
@@ -90,11 +89,12 @@ header {
 	color: var(--acc);
 }
 .header-text p {
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.58rem;
 	color: var(--mut);
 	margin-top: 3px;
 	letter-spacing: 0.05em;
+	font-weight: 700;
 }
 
 /* Tabs */
@@ -106,8 +106,6 @@ header {
 	padding: 16px 32px 0;
 	border-bottom: 1px solid var(--bor);
 	transition: border-color 0.25s;
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
 }
 .tab {
 	padding: 8px 18px;
@@ -117,7 +115,7 @@ header {
 	border-bottom: none;
 	background: transparent;
 	color: var(--mut);
-	font-family: "Syne", "Science Gothic", sans-serif;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.8rem;
 	font-weight: 700;
 	cursor: pointer;
@@ -147,7 +145,7 @@ header {
 	background: var(--sur);
 }
 .tc {
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.55rem;
 	padding: 1px 6px;
 	border-radius: 20px;
@@ -166,18 +164,17 @@ header {
 	padding: 18px 32px 0;
 	position: relative;
 	z-index: 1;
-	backdrop-filter: blur(16px);
-	-webkit-backdrop-filter: blur(16px);
 }
 .search-box {
 	width: 100%;
+	font-weight: 700;
 	max-width: 420px;
 	background: var(--inp-bg);
 	border: 1px solid var(--bor);
 	border-radius: 1000px;
 	padding: 9px 14px 9px 36px;
 	color: var(--txt);
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.75rem;
 	outline: none;
 	transition: border-color 0.2s;
@@ -191,7 +188,7 @@ header {
 .search-icon {
 	position: absolute;
 	left: 46px;
-	top: 50%;
+	top: calc(50% + 2px);
 	color: var(--mut);
 	pointer-events: none;
 	font-size: 0.8rem;
@@ -212,7 +209,7 @@ main {
 	display: block;
 }
 .sec-label {
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.58rem;
 	letter-spacing: 0.15em;
 	color: var(--mut);
@@ -232,7 +229,7 @@ main {
 	text-align: center;
 	padding: 40px 0;
 	color: var(--mut);
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.72rem;
 }
 
@@ -246,8 +243,6 @@ main {
 /* Card */
 .card {
 	background: var(--sur);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
 	border: 1px solid var(--bor);
 	border-radius: 14px;
 	padding: 16px;
@@ -330,11 +325,11 @@ main {
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 3px;
+	gap: 1px;
 	overflow: hidden;
 }
 .card-name {
-	font-weight: 700;
+	font-weight: 800;
 	font-size: 0.88rem;
 	letter-spacing: -0.01em;
 	display: flex;
@@ -357,12 +352,13 @@ main {
 	cursor: pointer;
 }
 .card-sub {
-	font-family: "Space Mono", monospace;
-	font-size: 0.56rem;
+	font-family: "Nunito", sans-serif;
+	font-size: 0.7rem;
 	color: var(--mut);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	font-weight: 700;
 }
 .card-sub-link {
 	color: var(--mut);
@@ -406,7 +402,7 @@ main {
 	padding: 8px 10px;
 	border-radius: 9px;
 	border: none;
-	font-family: "Syne", "Science Gothic", sans-serif;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.76rem;
 	font-weight: 700;
 	cursor: pointer;
@@ -507,7 +503,7 @@ main {
 	display: inline-flex;
 	align-items: center;
 	gap: 3px;
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.56rem;
 	font-weight: 700;
 	padding: 2px 6px;
@@ -558,7 +554,7 @@ main {
 	text-align: center;
 	padding: 48px 0;
 	color: var(--mut);
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.72rem;
 	line-height: 2.4;
 }
@@ -599,15 +595,12 @@ main {
 	align-items: center;
 	justify-content: center;
 	padding: 20px;
-	backdrop-filter: blur(5px);
 }
 .modal-bg.hidden {
 	display: none;
 }
 .modal {
 	background: var(--sur);
-	backdrop-filter: blur(20px);
-	-webkit-backdrop-filter: blur(20px);
 	border: 1px solid var(--bor);
 	border-radius: 14px;
 	width: 100%;
@@ -639,12 +632,13 @@ main {
 	font-size: 0.85rem;
 	line-height: 1.75;
 	color: var(--txt);
+	font-weight: 700;
 }
 .modal-body h1,
 .modal-body h2,
 .modal-body h3 {
 	margin: 0 0 10px;
-	font-weight: 700;
+	font-weight: 800;
 }
 .modal-body h1 {
 	font-size: 1.18em;
@@ -663,7 +657,7 @@ main {
 	color: var(--acc);
 	padding: 1px 5px;
 	border-radius: 4px;
-	font-family: "Space Mono", monospace;
+	font-family: "JetBrains Mono", "Space Mono", monospace;
 	font-size: 0.8em;
 }
 .modal-body pre {
@@ -705,7 +699,7 @@ main {
 	text-align: center;
 	padding: 36px;
 	color: var(--mut);
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.72rem;
 }
 
@@ -767,7 +761,7 @@ main {
 	color: #f59e0b;
 }
 .restart-text {
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.72rem;
 	color: var(--txt);
 	letter-spacing: 0.01em;
@@ -781,7 +775,7 @@ main {
 	border: none;
 	background: var(--ym-controls-color-primary-default-enabled);
 	color: #0a0a0f;
-	font-family: "Syne", "Science Gothic", sans-serif;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.76rem;
 	font-weight: 700;
 	cursor: pointer;
@@ -861,7 +855,7 @@ header {
 	max-width: calc(100% - 30px);
 }
 .editor-modal-badge {
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.54rem;
 	font-weight: 700;
 	letter-spacing: 0.08em;
@@ -881,7 +875,7 @@ header {
 /* CodeMirror fills the host */
 .editor-wrap .CodeMirror {
 	height: 100%;
-	font-family: "Space Mono", monospace;
+	font-family: "JetBrains Mono", "Space Mono", monospace;
 	font-size: 0.78rem;
 	line-height: 1.65;
 	border-radius: 0;
@@ -975,7 +969,7 @@ header {
 	background: var(--sur);
 }
 .editor-status-msg {
-	font-family: "Space Mono", monospace;
+	font-family: "Nunito", sans-serif;
 	font-size: 0.65rem;
 	color: var(--mut);
 	flex: 1 1 0;
