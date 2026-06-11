@@ -79,8 +79,6 @@
 	gap: 3px;
 }
 
-// Head and its rows form one glued stack: tight 3px joints, slightly rounded
-// where they meet, more rounded on the outer ends.
 .group-card-head {
 	display: flex;
 	align-items: center;
@@ -114,7 +112,7 @@
 
 	.row {
 		border-radius: 4px;
-		background-color: var(--c-bg-soft);
+		background-color: var(--c-bg);
 		border: none;
 
 		&:hover {

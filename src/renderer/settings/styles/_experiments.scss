@@ -23,9 +23,6 @@
 	gap: 3px;
 }
 
-// Glued tile stack (same look as .row-group): tight 3px joints with a slight
-// radius where rows meet, larger rounding on the outer ends. The :not(.hidden)
-// selectors keep the rounding on the visually first/last rows while searching.
 .experiments-row {
 	display: flex;
 	flex-direction: column;
