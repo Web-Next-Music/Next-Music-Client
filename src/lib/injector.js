@@ -60,9 +60,6 @@ export default function injector(mainWindow, config) {
 			"../../node_modules/lamejs/lame.all.js",
 		);
 
-		// Build a single batch script (one executeJavaScript round-trip instead
-		// of one per file). Each fragment is wrapped in try/catch so a failure
-		// in one injected file can't abort the rest of the batch.
 		const fragments = [
 			`window.__APP_VERSION__ = ${JSON.stringify(`Next Music/${app.getVersion()}`)};`,
 		];

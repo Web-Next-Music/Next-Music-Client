@@ -1,5 +1,3 @@
-import "./style.scss";
-
 const api = window.nmcUpdate;
 
 if (api) {

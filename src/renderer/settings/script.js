@@ -1,12 +1,9 @@
-import "mdui/mdui.css";
 import "mdui/components/switch.js";
 import "mdui/components/text-field.js";
 import "mdui/components/select.js";
 import "mdui/components/menu-item.js";
 import "mdui/components/button.js";
 import "mdui/components/button-icon.js";
-
-import "./style.scss";
 
 import { state } from "./modules/state.js";
 import { refresh } from "./modules/ui.js";

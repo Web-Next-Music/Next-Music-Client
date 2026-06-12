@@ -7,7 +7,7 @@ import {
 } from "../../addonExperiments.js";
 import { resolveBuiltinExperiments } from "../../builtinExperiments.js";
 import { getConfig } from "../../configManager.js";
-import { getAppIcon } from "../../../config.js";
+import { getAppIcon, isDev, devUrl } from "../../../config.js";
 import { fileURLToPath } from "url";
 import path from "path";
 import injector from "../../injector.js";
@@ -234,10 +234,18 @@ export function createWindow(config) {
 		isMainFrame,
 	) {
 		if (isMainFrame) {
-			mainWindow.loadFile(
-				__dirname,
-				"../../../renderer/fallback/fallback.html",
-			);
+			if (isDev) {
+				mainWindow.loadURL(
+					`${devUrl}/src/renderer/fallback/fallback.html`,
+				);
+			} else {
+				mainWindow.loadFile(
+					path.join(
+						__dirname,
+						"../../../renderer/fallback/fallback.html",
+					),
+				);
+			}
 		}
 	}
 

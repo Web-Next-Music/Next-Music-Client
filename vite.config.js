@@ -39,7 +39,7 @@ const DIST = "dist";
 const EXTRA_COPY_DIRS = ["src/data"];
 
 const RENDERER_BASE = join(SRC, "renderer");
-const STATIC_RENDERER_DIRS = ["fallback", "info"];
+const STATIC_RENDERER_DIRS = ["info"];
 
 const STALE_OUTPUTS = [
 	join(DIST, "renderer", "info_v2", "loader", "script.cjs"),
@@ -347,6 +347,7 @@ export default defineConfig(({ command }) => ({
 				info_v2: resolve(__dirname, "src/renderer/info_v2/index.html"),
 				loader: resolve(__dirname, "src/renderer/loader/index.html"),
 				settings: resolve(__dirname, "src/renderer/settings/index.html"),
+				fallback: resolve(__dirname, "src/renderer/fallback/fallback.html"),
 			},
 		},
 	},
