@@ -1,12 +1,9 @@
 import { BrowserWindow, nativeImage, ipcMain } from "electron";
 import { getCurrentVersionWV } from "../../lib/getAppVersion.js";
-import { getTrayIconPath, getPaths, isDev, devUrl } from "../../config.js";
+import { getTrayIconPath, getPaths } from "../../config.js";
 import { getConfig } from "../../lib/configManager.js";
-import { fileURLToPath } from "url";
+import { loadRendererPage } from "../paths.js";
 import { checkGitHubStar } from "../githubStarAuth.js";
-import path from "path";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (!ipcMain.listenerCount("get-app-version")) {
 	ipcMain.on("get-app-version", (event) => {
@@ -58,13 +55,7 @@ export function createInfoV2Window() {
 		},
 	});
 
-	if (isDev) {
-		infoWindow.loadURL(`${devUrl}/src/renderer/info_v2/index.html`);
-	} else {
-		infoWindow.loadFile(
-			path.join(__dirname, "../../renderer/info_v2/index.html"),
-		);
-	}
+	loadRendererPage(infoWindow, "info_v2/index.html");
 
 	infoWindow.setMenu(null);
 

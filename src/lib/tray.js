@@ -10,9 +10,9 @@ import {
 import { checkForUpdates } from "./update/updateController.js";
 import { getCurrentVersionWV } from "./getAppVersion.js";
 import { getTrayIconPath, getPaths } from "../config.js";
-import { getConfig } from "../lib/configManager.js";
-import { getBuiltinExperimentState } from "./builtinExperiments.js";
-import { initLanguages, t } from "../lib/langManager.js";
+import { getConfig } from "./configManager.js";
+import { getBuiltinExperimentState } from "./experiments/builtinExperiments.js";
+import { initLanguages, t } from "./langManager.js";
 import { createInfoWindow } from "./window/createInfoWindow.js";
 import { createInfoV2Window } from "./window/createInfoV2Window.js";
 import {

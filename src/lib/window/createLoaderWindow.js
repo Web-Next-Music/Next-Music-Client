@@ -1,7 +1,8 @@
 import { BrowserWindow } from "electron";
-import { getAppIcon, isDev, devUrl } from "../../config.js";
+import { getAppIcon } from "../../config.js";
 import { getConfig } from "../configManager.js";
-import { getBuiltinExperimentState } from "../builtinExperiments.js";
+import { getBuiltinExperimentState } from "../experiments/builtinExperiments.js";
+import { loadRendererPage } from "../paths.js";
 import { fileURLToPath } from "url";
 import path from "path";
 
@@ -35,13 +36,7 @@ export function createLoaderWindow() {
 		},
 	});
 
-	if (isDev) {
-		loaderWindow.loadURL(`${devUrl}/src/renderer/loader/index.html`);
-	} else {
-		loaderWindow.loadFile(
-			path.join(__dirname, "../../renderer/loader/index.html"),
-		);
-	}
+	loadRendererPage(loaderWindow, "loader/index.html");
 
 	// Exposed so the update controller can drive the in-window update card.
 	global.loaderWindow = loaderWindow;

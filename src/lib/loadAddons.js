@@ -1,6 +1,6 @@
 import { getPaths } from "../config.js";
 import { getConfig } from "./configManager.js";
-import { getAddonExperimentOverrides } from "./addonExperiments.js";
+import { getAddonExperimentOverrides } from "./experiments/addonExperiments.js";
 import fs from "fs";
 import path from "path";
 import http from "http";

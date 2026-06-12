@@ -1,5 +1,5 @@
-import { getPaths } from "../config.js";
-import { getConfig } from "./configManager.js";
+import { getPaths } from "../../config.js";
+import { getConfig } from "../configManager.js";
 import fs from "fs";
 import path from "path";
 

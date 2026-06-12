@@ -4,10 +4,12 @@ import { applyAddons } from "../../loadAddons.js";
 import {
 	mergeAddonExperiments,
 	getAllAddonExperimentNames,
-} from "../../addonExperiments.js";
-import { resolveBuiltinExperiments } from "../../builtinExperiments.js";
+} from "../../experiments/addonExperiments.js";
+import { resolveBuiltinExperiments } from "../../experiments/builtinExperiments.js";
 import { getConfig } from "../../configManager.js";
-import { getAppIcon, isDev, devUrl } from "../../../config.js";
+import { getAppIcon } from "../../../config.js";
+import { loadRendererPage } from "../../paths.js";
+import { API_FUNCTIONS_ORDER } from "../../api/order.js";
 import { fileURLToPath } from "url";
 import path from "path";
 import injector from "../../injector.js";
@@ -20,15 +22,6 @@ const titlebarFolder = path.resolve(__dirname, "..", "..", "titlebar");
 const apiBundleFile = path.resolve(__dirname, "..", "..", "api", "bundle.js");
 const apiFunctionsDir = path.resolve(__dirname, "..", "..", "api", "functions");
 const apiMainFile = path.resolve(__dirname, "..", "..", "api", "main.js");
-const apiFunctionsOrder = [
-	"enableDevPanel",
-	"utils",
-	"toasts",
-	"filePatch",
-	"player",
-	"customTracks",
-	"playerColor",
-];
 
 if (!ipcMain.listenerCount("nmc:get-experiments")) {
 	ipcMain.on("nmc:get-experiments", (event) => {
@@ -162,7 +155,7 @@ export function createWindow(config) {
 			if (fs.existsSync(apiBundleFile)) {
 				cachedApiJs = fs.readFileSync(apiBundleFile, "utf-8");
 			} else {
-				const parts = apiFunctionsOrder.map((name) =>
+				const parts = API_FUNCTIONS_ORDER.map((name) =>
 					fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
 				);
 				const mainJs = fs.readFileSync(apiMainFile, "utf-8");
@@ -234,18 +227,7 @@ export function createWindow(config) {
 		isMainFrame,
 	) {
 		if (isMainFrame) {
-			if (isDev) {
-				mainWindow.loadURL(
-					`${devUrl}/src/renderer/fallback/fallback.html`,
-				);
-			} else {
-				mainWindow.loadFile(
-					path.join(
-						__dirname,
-						"../../../renderer/fallback/fallback.html",
-					),
-				);
-			}
+			loadRendererPage(mainWindow, "fallback/fallback.html");
 		}
 	}
 

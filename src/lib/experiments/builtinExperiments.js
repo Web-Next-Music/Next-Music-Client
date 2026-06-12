@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 const BUILTIN_EXPERIMENTS_PATH = path.resolve(
 	__dirname,
 	"..",
+	"..",
 	"data",
 	"experiments.json",
 );

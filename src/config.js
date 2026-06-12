@@ -2,7 +2,7 @@
 
 import { app } from "electron";
 import path from "path";
-import { getBuiltinExperimentState } from "./lib/builtinExperiments.js";
+import { getBuiltinExperimentState } from "./lib/experiments/builtinExperiments.js";
 
 export const isDev = !app.isPackaged;
 export const devUrl = "http://localhost:6788";
@@ -99,70 +99,6 @@ export const defaultConfig = {
 	},
 };
 
-// Injector list
-export const injectList = [
-	{
-		file: "alwaysExpandedPlayer.css",
-		condition: (config) => config?.programSettings?.alwaysExpandedPlayer,
-	},
-	{
-		file: "antiSelect.css",
-		condition: (config) => config?.programSettings?.antiSelect,
-	},
-	{
-		file: "fastPlay.js",
-		condition: (config) => config?.programSettings?.fastPlay,
-	},
-	{
-		file: "lamejs.js",
-		condition: (config) => config?.programSettings?.downloader,
-	},
-	{
-		file: "downloader.js",
-		condition: (config) => config?.programSettings?.downloader,
-	},
-	{
-		file: "listenAlongClient.js",
-		condition: (config) => config?.alpha?.listenAlong?.enable,
-	},
-	{
-		file: "liteVersionMode.js",
-	},
-	{
-		file: "lrclib.js",
-		condition: (config) => config?.programSettings?.lrclib,
-	},
-	{
-		file: "nextStore.js",
-		condition: (config) => config?.programSettings?.addons?.enable,
-	},
-	{
-		file: "nextTitle.js",
-		condition: (config) => config?.windowSettings?.nextTitle,
-	},
-	{
-		file: "noAutoZoom.css",
-		condition: (config) => config?.programSettings?.disableAutoZoom,
-	},
-	{
-		file: "obsWidget.js",
-		condition: (config) => config?.programSettings?.obsWidget,
-	},
-	{
-		file: "siteRPCServer.js",
-		condition: (config) =>
-			config?.programSettings?.richPresence?.enable !== false,
-	},
-	{
-		file: "ugcShare.js",
-		condition: (config) => config?.programSettings?.ugcShare,
-	},
-	{
-		file: "volumeNormalization.js",
-		condition: (config) => config?.alpha?.volumeNormalization,
-	},
-];
-
 // Paths
 export function getPaths() {
 	const userData = app.getPath("userData");
@@ -174,6 +110,3 @@ export function getPaths() {
 		configFilePath: path.join(userData, "Config.json"),
 	};
 }
-
-// Config load/save/merge logic lives in lib/configManager.js (single source of
-// truth). This module only owns paths and the default config schema.

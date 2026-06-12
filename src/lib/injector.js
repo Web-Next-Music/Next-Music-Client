@@ -1,4 +1,4 @@
-import { injectList } from "../config.js";
+import { injectList } from "../injectList.js";
 import { app } from "electron";
 import path from "path";
 import fs from "fs";

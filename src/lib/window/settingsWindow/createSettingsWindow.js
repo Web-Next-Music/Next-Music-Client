@@ -4,14 +4,15 @@ import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
 import {
 	getAddonExperimentOverrides,
 	mergeAddonExperiments,
-} from "../../addonExperiments.js";
+} from "../../experiments/addonExperiments.js";
 import {
 	getBuiltinExperiments,
 	resolveBuiltinExperiments,
 	getBuiltinExperimentState,
-} from "../../builtinExperiments.js";
+} from "../../experiments/builtinExperiments.js";
 import { configChangeNeedsRestart } from "../../internalConfig.js";
-import { getPaths, isDev, devUrl } from "../../../config.js";
+import { getPaths } from "../../../config.js";
+import { loadRendererPage } from "../../paths.js";
 import { fileURLToPath } from "url";
 
 import path from "path";
@@ -98,13 +99,7 @@ export function createSettingsWindow() {
 		},
 	});
 
-	if (isDev) {
-		settingsWindow.loadURL(`${devUrl}/src/renderer/settings/index.html`);
-	} else {
-		settingsWindow.loadFile(
-			path.join(__dirname, "../../../renderer/settings/index.html"),
-		);
-	}
+	loadRendererPage(settingsWindow, "settings/index.html");
 
 	settingsWindow.once("ready-to-show", () => settingsWindow.show());
 
