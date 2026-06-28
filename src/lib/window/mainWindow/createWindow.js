@@ -43,6 +43,7 @@ let cachedTitleBarJs = null;
 export function createWindow(config) {
 	const startMinimized = config?.launchSettings?.startMinimized;
 	const titleBarEnabled = config.windowSettings?.titleBar?.enable;
+	const transparentBg = config.windowSettings?.transparentBg;
 
 	let loaderWindow;
 	if (config.launchSettings.loaderWindow && !startMinimized) {
@@ -56,7 +57,12 @@ export function createWindow(config) {
 		minWidth: config.windowSettings.freeWindowResize ? 1 : 800,
 		minHeight: config.windowSettings.freeWindowResize ? 1 : 650,
 		alwaysOnTop: config.windowSettings.alwaysOnTop,
-		backgroundColor: nativeTheme.shouldUseDarkColors ? "#0D0D0D" : "#E6E6E6",
+		transparent: transparentBg,
+		backgroundColor: transparentBg
+			? "#00000000"
+			: nativeTheme.shouldUseDarkColors
+				? "#0D0D0D"
+				: "#E6E6E6",
 		icon: getAppIcon(config?.experiments),
 		frame: !titleBarEnabled,
 		roundedCorners: true,

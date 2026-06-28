@@ -49,6 +49,7 @@ export const defaultConfig = {
 		alwaysOnTop: false,
 		freeWindowResize: false,
 		nextTitle: true,
+		transparentBg: false,
 	},
 
 	programSettings: {
