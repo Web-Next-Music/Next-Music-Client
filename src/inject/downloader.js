@@ -632,7 +632,9 @@
 			output.set(mp3Raw, id3Tag.length);
 		}
 
-		const artist = sanitize(track.artistNames?.[0] ?? "Unknown");
+		const artist = sanitize(
+			track.artistNames?.length ? track.artistNames.join(", ") : "Unknown",
+		);
 		const title = sanitize(track.title ?? "track");
 		const filename = `${artist} - ${title}.mp3`;
 
