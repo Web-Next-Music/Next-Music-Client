@@ -49,13 +49,21 @@ function searchFiber(fiber, cls, depth = 0) {
 		}
 
 		function searchObj(obj, visited = new Set()) {
-			if (!obj || typeof obj !== "object" || visited.has(obj)) return;
-			visited.add(obj);
-			if (obj instanceof cls) {
-				found.push(obj);
+			if (
+				!obj ||
+				typeof obj !== "object" ||
+				visited.has(obj) ||
+				obj instanceof Window
+			)
 				return;
-			}
-			for (const v of Object.values(obj)) searchObj(v, visited);
+			visited.add(obj);
+			try {
+				if (obj instanceof cls) {
+					found.push(obj);
+					return;
+				}
+				for (const v of Object.values(obj)) searchObj(v, visited);
+			} catch {}
 		}
 
 		searchObj(fiber.memoizedProps);
