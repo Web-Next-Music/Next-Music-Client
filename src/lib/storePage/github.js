@@ -228,8 +228,16 @@ export function parseGitmodules(text) {
 	return map;
 }
 
+const gitmodulesBranch = new Map();
+
 export async function loadGitmodules(owner, repo, force = false) {
-	for (const branch of ["main", "master", "HEAD"]) {
+	const repoKey = `${owner}/${repo}`;
+	const known = gitmodulesBranch.get(repoKey);
+	const branches = known
+		? [known, ...["main", "master", "HEAD"].filter((b) => b !== known)]
+		: ["main", "master", "HEAD"];
+
+	for (const branch of branches) {
 		try {
 			const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.gitmodules`;
 			const { status, data } = await cachedGet(url, {
@@ -238,8 +246,10 @@ export async function loadGitmodules(owner, repo, force = false) {
 				api: false,
 			});
 
-			if (status === 200 && typeof data === "string" && data.length > 0)
+			if (status === 200 && typeof data === "string" && data.length > 0) {
+				gitmodulesBranch.set(repoKey, branch);
 				return parseGitmodules(data);
+			}
 		} catch {}
 	}
 	return {};
@@ -270,7 +280,7 @@ function rawUrl(owner, repo, filePath) {
 // One recursive tree call returns the whole repo, replacing the per-directory
 // contents walk. Returns null when unusable (truncated on huge repos, errors),
 // so callers fall back to the contents API.
-async function repoTree(owner, repo, token, force = false) {
+export async function repoTree(owner, repo, token, force = false) {
 	try {
 		const { status, data } = await cachedGet(
 			`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
@@ -321,7 +331,7 @@ function metaFromTree(owner, repo, paths, root) {
 }
 
 async function findLogoRecursive(owner, repo, dirPath, depth = 0, token) {
-	if (depth > 5) return null;
+	if (depth > 1) return null;
 	try {
 		const items = await ghContents(owner, repo, dirPath, token);
 		const logo = pickImg(items);
@@ -347,7 +357,7 @@ async function findBrandingDir(owner, repo, items, depth = 0, token) {
 	);
 
 	if (branding) return branding.path;
-	if (depth >= 3) return null;
+	if (depth >= 1) return null;
 
 	for (const sub of items.filter((i) => i.type === "dir")) {
 		try {
@@ -365,7 +375,7 @@ async function findBrandingDir(owner, repo, items, depth = 0, token) {
 	return null;
 }
 
-export async function pLimit(tasks, limit = 3) {
+export async function pLimit(tasks, limit = 6) {
 	const results = [];
 	let i = 0;
 
@@ -382,7 +392,14 @@ export async function pLimit(tasks, limit = 3) {
 	return results;
 }
 
-export async function getSection(owner, repo, section, token, force = false) {
+export async function getSection(
+	owner,
+	repo,
+	section,
+	token,
+	force = false,
+	rootPaths = null,
+) {
 	const gitmodules = await loadGitmodules(owner, repo, force);
 	const prefix = section + "/";
 	const result = [];
@@ -402,29 +419,58 @@ export async function getSection(owner, repo, section, token, force = false) {
 		});
 	}
 
+	const addDir = (name) => {
+		if (!name || seenNames.has(name.toLowerCase())) return;
+		seenNames.add(name.toLowerCase());
+		result.push({
+			name,
+			path: prefix + name,
+			submodule: false,
+			subUrl: null,
+		});
+	};
+
+	if (rootPaths) {
+		for (const p of rootPaths) {
+			if (!p.startsWith(prefix)) continue;
+			const rest = p.slice(prefix.length);
+			if (!rest.includes("/")) continue;
+			addDir(rest.split("/")[0]);
+		}
+
+		return result;
+	}
+
 	try {
 		const items = await ghContents(owner, repo, section, token, force);
 
 		for (const item of items) {
 			if (item.type !== "dir") continue;
-			if (seenNames.has(item.name.toLowerCase())) continue;
-			result.push({
-				name: item.name,
-				path: item.path,
-				submodule: false,
-				subUrl: null,
-			});
+			addDir(item.name);
 		}
 	} catch {}
 
 	return result;
 }
 
-export async function getFolderMeta(owner, repo, f, token, force = false) {
+export async function getFolderMeta(
+	owner,
+	repo,
+	f,
+	token,
+	force = false,
+	rootPaths = null,
+) {
 	const cacheKey = "meta:" + (f.submodule ? f.subUrl || f.name : f.path);
 	const cached = getEntry(cacheKey);
 
 	if (!force && isFresh(cached, META_TTL)) return cached.v;
+
+	if (!f.submodule && rootPaths) {
+		const result = metaFromTree(owner, repo, rootPaths, f.path);
+		setEntry(cacheKey, result);
+		return result;
+	}
 
 	try {
 		let o = owner,
@@ -493,14 +539,23 @@ export async function getFolderMeta(owner, repo, f, token, force = false) {
 }
 
 export async function getCatalog(owner, repo, section, token, force = false) {
-	const items = await getSection(owner, repo, section, token, force);
+	const rootPaths = await repoTree(owner, repo, token, force);
+
+	const items = await getSection(
+		owner,
+		repo,
+		section,
+		token,
+		force,
+		rootPaths,
+	);
 
 	return pLimit(
 		items.map((f) => async () => ({
 			...f,
-			...(await getFolderMeta(owner, repo, f, token, force)),
+			...(await getFolderMeta(owner, repo, f, token, force, rootPaths)),
 		})),
-		3,
+		6,
 	);
 }
 

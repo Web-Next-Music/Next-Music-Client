@@ -6,16 +6,45 @@ const { addonsDirectory } = getPaths();
 
 export { addonsDirectory };
 
+const DIR_TTL = 1000;
+let dirCache = null;
+let dirCacheAt = 0;
+
+function isInternalEntry(name) {
+	return name.replace(/^!/, "").startsWith(".");
+}
+
+function readAddonsDir() {
+	if (dirCache && Date.now() - dirCacheAt < DIR_TTL) return dirCache;
+
+	try {
+		dirCache = fs
+			.readdirSync(addonsDirectory)
+			.filter((n) => !isInternalEntry(n));
+	} catch {
+		dirCache = [];
+	}
+
+	dirCacheAt = Date.now();
+	return dirCache;
+}
+
+export function invalidateAddonsDir() {
+	dirCache = null;
+}
+
+export function findRawEntry(name) {
+	const needle = name.toLowerCase();
+	return (
+		readAddonsDir().find(
+			(n) => n.replace(/^!/, "").toLowerCase() === needle,
+		) || null
+	);
+}
+
 export function getLocalReleaseTag(addonName) {
 	try {
-		const raw =
-			fs
-				.readdirSync(addonsDirectory)
-				.find(
-					(n) =>
-						n.replace(/^!/, "").toLowerCase() ===
-						addonName.toLowerCase(),
-				) || addonName;
+		const raw = findRawEntry(addonName) || addonName;
 
 		const tagFile = path.join(addonsDirectory, raw, ".git-release");
 		if (fs.existsSync(tagFile))
@@ -29,14 +58,7 @@ export function getLocalReleaseTag(addonName) {
 
 export function getLocalCommitHash(addonName) {
 	try {
-		const raw =
-			fs
-				.readdirSync(addonsDirectory)
-				.find(
-					(n) =>
-						n.replace(/^!/, "").toLowerCase() ===
-						addonName.toLowerCase(),
-				) || addonName;
+		const raw = findRawEntry(addonName) || addonName;
 
 		const headFile = path.join(addonsDirectory, raw, ".git", "HEAD");
 
@@ -83,23 +105,14 @@ export function getLocalCommitHash(addonName) {
 }
 
 export function installedEntries() {
-	try {
-		return fs.readdirSync(addonsDirectory).map((n) => ({
-			name: n.replace(/^!/, "").toLowerCase(),
-			enabled: !n.startsWith("!"),
-		}));
-	} catch {
-		return [];
-	}
+	return readAddonsDir().map((n) => ({
+		name: n.replace(/^!/, "").toLowerCase(),
+		enabled: !n.startsWith("!"),
+	}));
 }
 
 export function findEntry(name) {
-	const needle = name.toLowerCase();
-	return (
-		fs
-			.readdirSync(addonsDirectory)
-			.find((n) => n.replace(/^!/, "").toLowerCase() === needle) || null
-	);
+	return findRawEntry(name);
 }
 
 export function fsToggle(name) {
@@ -113,6 +126,8 @@ export function fsToggle(name) {
 		path.join(addonsDirectory, disabled ? found.slice(1) : "!" + found),
 	);
 
+	invalidateAddonsDir();
+
 	return !disabled;
 }
 
@@ -123,13 +138,14 @@ export function fsDelete(name) {
 			recursive: true,
 			force: true,
 		});
+
+	invalidateAddonsDir();
 }
 
 export function getCustomEntries(knownNames) {
 	try {
 		const knownSet = new Set(knownNames.map((n) => n.toLowerCase()));
-		return fs
-			.readdirSync(addonsDirectory)
+		return readAddonsDir()
 			.filter((n) => !knownSet.has(n.replace(/^!/, "").toLowerCase()))
 			.map((n) => {
 				const clean = n.replace(/^!/, "");

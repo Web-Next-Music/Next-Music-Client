@@ -13,6 +13,7 @@ import {
 	getLatestNmRelease,
 	fetchReadme,
 	getRateLimitState,
+	pLimit,
 } from "./github.js";
 
 import { getLogo, setLogo } from "./cache.js";
@@ -33,6 +34,8 @@ import {
 	fsToggle,
 	fsDelete,
 	getCustomEntries,
+	findRawEntry,
+	invalidateAddonsDir,
 } from "./filesystem.js";
 
 import { getPaths } from "../../config.js";
@@ -58,9 +61,12 @@ const text = (t, ct = "text/plain; charset=utf-8") => ({
 	body: Buffer.from(t, "utf8"),
 });
 
-const binary = (buf, ct) => ({
+const binary = (buf, ct, cacheControl) => ({
 	status: 200,
-	headers: { "Content-Type": ct },
+	headers: {
+		"Content-Type": ct,
+		...(cacheControl ? { "Cache-Control": cacheControl } : {}),
+	},
 	body: buf,
 });
 
@@ -71,6 +77,20 @@ const notFound = () => ({
 });
 
 const LOGO_TTL = 7 * 24 * 60 * 60 * 1000;
+const LOGO_CACHE_CONTROL = "public, max-age=604800";
+const STATIC_CACHE_CONTROL = "public, max-age=86400";
+
+const staticCache = new Map();
+
+function readStatic(filePath) {
+	const hit = staticCache.get(filePath);
+	if (hit !== undefined) return hit;
+
+	const buf = fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
+	staticCache.set(filePath, buf);
+
+	return buf;
+}
 
 const IMG_MIME = {
 	".png": "image/png",
@@ -81,11 +101,58 @@ const IMG_MIME = {
 	".svg": "image/svg+xml",
 };
 
+async function checkUpdate(name, subUrl, token, force) {
+	try {
+		if (!name || !subUrl) return { name, hasUpdate: false };
+		const normalized = normalizeGitUrl(subUrl);
+
+		const m =
+			normalized &&
+			normalized.match(
+				/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
+			);
+
+		if (!m) return { name, hasUpdate: false };
+		const [, owner, repo] = m;
+
+		const localTag = getLocalReleaseTag(name);
+
+		if (localTag) {
+			const nmRelease = await getLatestNmRelease(
+				owner,
+				repo,
+				token,
+				force,
+			);
+			if (!nmRelease) return { name, hasUpdate: false };
+
+			return {
+				name,
+				hasUpdate: nmRelease.tag !== localTag,
+				remoteHash: nmRelease.tag,
+				localHash: localTag,
+			};
+		}
+
+		const remoteHash = await getRemoteHeadCommit(owner, repo, token, force);
+		const localHash = getLocalCommitHash(name);
+
+		return {
+			name,
+			hasUpdate: !!remoteHash && !!localHash && remoteHash !== localHash,
+			remoteHash,
+			localHash,
+		};
+	} catch (e) {
+		return { name, hasUpdate: false, error: e.message };
+	}
+}
+
 export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 	if (method === "GET" && (urlPath === "/" || urlPath === "")) {
 		const htmlPath = path.join(PUBLIC_DIR, "index.html");
-		let html = fs.readFileSync(htmlPath, "utf8");
-		html = html
+		const html = readStatic(htmlPath)
+			.toString("utf8")
 			.replace("SKELS_ADDONS", skels(6))
 			.replace("SKELS_THEMES", skels(6));
 		return text(html, "text/html; charset=utf-8");
@@ -105,15 +172,15 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			urlPath.slice("/assets/fonts/".length),
 		);
 
-		if (fs.existsSync(filePath)) {
-			const ext = path.extname(filePath).toLowerCase();
-			return binary(
-				fs.readFileSync(filePath),
-				MIME[ext] || "application/octet-stream",
-			);
-		}
+		const buf = readStatic(filePath);
+		if (!buf) return notFound();
 
-		return notFound();
+		const ext = path.extname(filePath).toLowerCase();
+		return binary(
+			buf,
+			MIME[ext] || "application/octet-stream",
+			STATIC_CACHE_CONTROL,
+		);
 	}
 
 	if (method === "GET" && urlPath.startsWith("/public/")) {
@@ -122,15 +189,15 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			urlPath.slice("/public/".length),
 		);
 
-		if (fs.existsSync(filePath)) {
-			const ext = path.extname(filePath).toLowerCase();
-			return binary(
-				fs.readFileSync(filePath),
-				MIME[ext] || "application/octet-stream",
-			);
-		}
+		const buf = readStatic(filePath);
+		if (!buf) return notFound();
 
-		return notFound();
+		const ext = path.extname(filePath).toLowerCase();
+		return binary(
+			buf,
+			MIME[ext] || "application/octet-stream",
+			STATIC_CACHE_CONTROL,
+		);
 	}
 
 	if (method === "GET" && urlPath === "/api/installed")
@@ -172,7 +239,8 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 		if (!qp.url) return notFound();
 
 		const cached = getLogo(qp.url, LOGO_TTL);
-		if (cached) return binary(cached.body, cached.contentType);
+		if (cached)
+			return binary(cached.body, cached.contentType, LOGO_CACHE_CONTROL);
 
 		try {
 			const r = await httpsGet(qp.url);
@@ -181,7 +249,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const contentType = r.headers["content-type"] || "image/png";
 			setLogo(qp.url, r.body, contentType);
 
-			return binary(r.body, contentType);
+			return binary(r.body, contentType, LOGO_CACHE_CONTROL);
 		} catch {
 			return notFound();
 		}
@@ -192,11 +260,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const { name, file } = qp;
 			if (!name || !file) return notFound();
 
-			const raw =
-				fs
-					.readdirSync(addonsDirectory)
-					.find((n) => n.replace(/^!/, "") === name) || name;
-
+			const raw = findRawEntry(name) || name;
 			const filePath = path.join(addonsDirectory, raw, file);
 
 			if (!fs.existsSync(filePath)) return notFound();
@@ -204,6 +268,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			return binary(
 				fs.readFileSync(filePath),
 				IMG_MIME[path.extname(file).toLowerCase()] || "image/png",
+				LOGO_CACHE_CONTROL,
 			);
 		} catch {
 			return notFound();
@@ -215,11 +280,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const { name, file } = qp;
 			if (!name || !file) return notFound();
 
-			const raw =
-				fs
-					.readdirSync(addonsDirectory)
-					.find((n) => n.replace(/^!/, "") === name) || name;
-
+			const raw = findRawEntry(name) || name;
 			const filePath = path.join(addonsDirectory, raw, file);
 
 			if (!fs.existsSync(filePath)) return notFound();
@@ -323,6 +384,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				}
 
 				applyHandleEventsMerge(dest, oldHandleEvents);
+				invalidateAddonsDir();
 
 				return json({
 					ok: true,
@@ -344,6 +406,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			}
 
 			applyHandleEventsMerge(dest, oldHandleEvents);
+			invalidateAddonsDir();
 
 			return json({ ok: true });
 		} catch (e) {
@@ -352,51 +415,34 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 	}
 
 	if (method === "GET" && urlPath === "/api/check-update") {
+		const token = getConfig().github?.accessToken || undefined;
+
+		return json(
+			await checkUpdate(
+				qp.name,
+				qp.subUrl ? decodeURIComponent(qp.subUrl) : null,
+				token,
+				qp.force === "1",
+			),
+		);
+	}
+
+	if (method === "POST" && urlPath === "/api/check-updates") {
 		try {
-			const { name, subUrl } = qp;
-			if (!name || !subUrl) return json({ hasUpdate: false });
-			const normalized = normalizeGitUrl(decodeURIComponent(subUrl));
-
-			const m =
-				normalized &&
-				normalized.match(
-					/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
-				);
-
-			if (!m) return json({ hasUpdate: false });
-			const [, owner, repo] = m;
-
+			const { items = [], force = false } = JSON.parse(await getBody());
 			const token = getConfig().github?.accessToken || undefined;
-			const force = qp.force === "1";
 
-			const localTag = getLocalReleaseTag(name);
-			if (localTag) {
-				const nmRelease = await getLatestNmRelease(
-					owner,
-					repo,
-					token,
-					force,
-				);
-				if (!nmRelease) return json({ hasUpdate: false });
+			const results = await pLimit(
+				items.map(
+					(it) => () =>
+						checkUpdate(it.name, it.subUrl, token, !!force),
+				),
+				6,
+			);
 
-				return json({
-					hasUpdate: nmRelease.tag !== localTag,
-					remoteHash: nmRelease.tag,
-					localHash: localTag,
-				});
-			}
-
-			const [remoteHash, localHash] = await Promise.all([
-				getRemoteHeadCommit(owner, repo, token, force),
-				Promise.resolve(getLocalCommitHash(name)),
-			]);
-
-			const hasUpdate =
-				!!remoteHash && !!localHash && remoteHash !== localHash;
-
-			return json({ hasUpdate, remoteHash, localHash });
+			return json(results);
 		} catch (e) {
-			return json({ hasUpdate: false, error: e.message });
+			return json({ error: e.message }, 500);
 		}
 	}
 
@@ -429,41 +475,17 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				getCurrentLangCode() ||
 				"en";
 
-			console.log(
-				"[Store /api/lang] langCode:",
-				langCode,
-				"dir:",
-				languagesDirectory,
-			);
-
 			const langFile = path.join(languagesDirectory, `${langCode}.json`);
-
-			if (fs.existsSync(langFile)) {
-				console.log("[Store /api/lang] serving:", langFile);
-				return text(
-					fs.readFileSync(langFile, "utf-8"),
-					"application/json; charset=utf-8",
-				);
-			}
-
 			const enFile = path.join(languagesDirectory, "en.json");
 
-			if (fs.existsSync(enFile)) {
-				console.log("[Store /api/lang] fallback to en:", enFile);
-				return text(
-					fs.readFileSync(enFile, "utf-8"),
-					"application/json; charset=utf-8",
-				);
-			}
+			const buf = readStatic(langFile) || readStatic(enFile);
+			if (!buf) return json({ error: "Language file not found" }, 404);
 
-			console.warn(
-				"[Store /api/lang] no lang file found in:",
-				languagesDirectory,
+			return text(
+				buf.toString("utf8"),
+				"application/json; charset=utf-8",
 			);
-
-			return json({ error: "Language file not found" }, 404);
 		} catch (e) {
-			console.error("[Store /api/lang] error:", e.message);
 			return json({ error: e.message }, 500);
 		}
 	}
@@ -554,14 +576,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const { name } = qp;
 			if (!name) return json({ exists: false });
 
-			const raw =
-				fs
-					.readdirSync(addonsDirectory)
-					.find(
-						(n) =>
-							n.replace(/^!/, "").toLowerCase() ===
-							name.toLowerCase(),
-					) || null;
+			const raw = findRawEntry(name);
 
 			if (!raw) return json({ exists: false });
 			const filePath = path.join(
@@ -581,14 +596,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const { name } = qp;
 			if (!name) throw new Error("Missing name");
 
-			const raw =
-				fs
-					.readdirSync(addonsDirectory)
-					.find(
-						(n) =>
-							n.replace(/^!/, "").toLowerCase() ===
-							name.toLowerCase(),
-					) || null;
+			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
 			const filePath = path.join(
@@ -614,14 +622,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			if (!name) throw new Error("Missing name");
 			JSON.parse(content);
 
-			const raw =
-				fs
-					.readdirSync(addonsDirectory)
-					.find(
-						(n) =>
-							n.replace(/^!/, "").toLowerCase() ===
-							name.toLowerCase(),
-					) || null;
+			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
 			const filePath = path.join(
@@ -646,14 +647,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const { name } = JSON.parse(await getBody());
 			if (!name) throw new Error("Missing name");
 
-			const raw =
-				fs
-					.readdirSync(addonsDirectory)
-					.find(
-						(n) =>
-							n.replace(/^!/, "").toLowerCase() ===
-							name.toLowerCase(),
-					) || null;
+			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
 			const filePath = path.join(

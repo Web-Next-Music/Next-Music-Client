@@ -180,22 +180,40 @@ async function doDownload(argsJson, btn, event) {
 	}
 }
 
-// Submodule update check
-async function checkSubmoduleUpdate(f, section) {
-	if (!f.submodule || !f.subUrl) return;
+// Submodule update check (batched: one request for the whole section)
+async function checkSubmoduleUpdates(items, section) {
+	const pending = items.filter((f) => {
+		if (!f.submodule || !f.subUrl) return false;
+		const card = document.getElementById("card-" + section + "-" + f.name);
+		return !!card && card.classList.contains("installed");
+	});
 
+	if (!pending.length) return;
+
+	try {
+		const results = await api("/api/check-updates", {
+			items: pending.map((f) => ({ name: f.name, subUrl: f.subUrl })),
+		});
+
+		if (!Array.isArray(results)) return;
+
+		const updatable = new Set(
+			results.filter((r) => r.hasUpdate).map((r) => r.name),
+		);
+
+		for (const f of pending) {
+			if (updatable.has(f.name)) showUpdateButton(f, section);
+		}
+	} catch {}
+}
+
+function showUpdateButton(f, section) {
 	const cid = section + "-" + f.name;
 	const card = document.getElementById("card-" + cid);
 
 	if (!card || !card.classList.contains("installed")) return;
+
 	try {
-		const params = new URLSearchParams({ name: f.name, subUrl: f.subUrl });
-		const result = await fetch("/api/check-update?" + params).then((r) =>
-			r.json(),
-		);
-
-		if (!result.hasUpdate) return;
-
 		const actions = card.querySelector(".card-actions");
 
 		if (!actions) return;

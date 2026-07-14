@@ -52,7 +52,7 @@ function buildCard(f, i, section, inst) {
 	const phId = "ph-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
 
 	const logoTag = f.logo
-		? `<img class="card-logo" id="${phId}" src="/api/logo?url=${encodeURIComponent(f.logo)}" loading="lazy" onerror="var p=document.createElement('div');p.className='card-logo-ph';p.innerHTML=window.ICONS['${section === "themes" ? "theme" : "addon"}'];this.parentNode.replaceChild(p,this);">`
+		? `<img class="card-logo" id="${phId}" src="/api/logo?url=${encodeURIComponent(f.logo)}" loading="lazy" decoding="async" onerror="var p=document.createElement('div');p.className='card-logo-ph';p.innerHTML=window.ICONS['${section === "themes" ? "theme" : "addon"}'];this.parentNode.replaceChild(p,this);">`
 		: `<div class="card-logo-ph">${iconSvg}</div>`;
 
 	const rmIcon = f.readme
@@ -143,7 +143,7 @@ function buildCustomCard(item, i) {
 
 	const phId2 = "ph-custom-" + item.name.replace(/[^a-zA-Z0-9]/g, "_");
 	const logoTag = item.logo
-		? `<img class="card-logo" id="${phId2}" src="${item.logo}" loading="lazy" onerror="var p=document.createElement('div');p.className='card-logo-ph custom';p.innerHTML=window.ICONS['${iconKey}'];this.parentNode.replaceChild(p,this);">`
+		? `<img class="card-logo" id="${phId2}" src="${item.logo}" loading="lazy" decoding="async" onerror="var p=document.createElement('div');p.className='card-logo-ph custom';p.innerHTML=window.ICONS['${iconKey}'];this.parentNode.replaceChild(p,this);">`
 		: `<div class="card-logo-ph custom">${iconSvg}</div>`;
 
 	const rmIcon = item.readme

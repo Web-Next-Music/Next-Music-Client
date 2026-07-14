@@ -17,6 +17,8 @@ function renderInstalled(all) {
 }
 
 // Load installed
+let installedInflight = null;
+
 async function loadInstalled(instant = false) {
 	const grid = document.getElementById("grid-installed");
 
@@ -24,17 +26,25 @@ async function loadInstalled(instant = false) {
 		renderInstalled([...allItems.custom]);
 	}
 
-	try {
-		const all = await fetch(
-			"/api/custom?known=" + encodeURIComponent(JSON.stringify([])),
-		).then((r) => r.json());
+	if (installedInflight) return installedInflight;
 
-		renderInstalled(all);
-	} catch (e) {
-		if (!allItems.installed || !allItems.installed.length) {
-			grid.innerHTML = `<div class="empty">${t("store.statusFailedLoadInstalled")}<br><code>${e.message}</code></div>`;
+	installedInflight = (async () => {
+		try {
+			const all = await fetch(
+				"/api/custom?known=" + encodeURIComponent(JSON.stringify([])),
+			).then((r) => r.json());
+
+			renderInstalled(all);
+		} catch (e) {
+			if (!allItems.installed || !allItems.installed.length) {
+				grid.innerHTML = `<div class="empty">${t("store.statusFailedLoadInstalled")}<br><code>${e.message}</code></div>`;
+			}
+		} finally {
+			installedInflight = null;
 		}
-	}
+	})();
+
+	return installedInflight;
 }
 
 // Load a store section
@@ -79,11 +89,10 @@ async function loadSection(section, repoSection, gridId, countId) {
 			.map(({ f, inst }, i) => buildCard(f, i, section, inst))
 			.join("");
 
-		itemsWithInst.forEach(({ f, inst }) => {
-			if (inst && f.submodule && f.subUrl) {
-				checkSubmoduleUpdate(f, section);
-			}
-		});
+		checkSubmoduleUpdates(
+			itemsWithInst.filter(({ inst }) => inst).map(({ f }) => f),
+			section,
+		);
 
 		return true;
 	} catch (e) {
