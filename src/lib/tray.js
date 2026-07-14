@@ -51,28 +51,36 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
 					label: t("tray.openMusicFolder"),
 					click: async () => {
 						if (nextMusicDirectory)
-							await shell.openPath(path.normalize(nextMusicDirectory));
+							await shell.openPath(
+								path.normalize(nextMusicDirectory),
+							);
 					},
 				},
 				{
 					label: t("tray.openAddonsFolder"),
 					click: async () => {
 						if (addonsDirectory)
-							await shell.openPath(path.normalize(addonsDirectory));
+							await shell.openPath(
+								path.normalize(addonsDirectory),
+							);
 					},
 				},
 				{
 					label: t("tray.openLanguageFolder"),
 					click: async () => {
 						if (languagesDirectory)
-							await shell.openPath(path.normalize(languagesDirectory));
+							await shell.openPath(
+								path.normalize(languagesDirectory),
+							);
 					},
 				},
 				{
 					label: t("tray.openConfig"),
 					click: async () => {
 						if (configFilePath)
-							await shell.openPath(path.normalize(configFilePath));
+							await shell.openPath(
+								path.normalize(configFilePath),
+							);
 					},
 				},
 			],
@@ -156,7 +164,8 @@ function selInfoVer() {
 	const config = getConfig();
 
 	if (
-		getBuiltinExperimentState("nm_info_v2", config?.experiments ?? {}) === "on"
+		getBuiltinExperimentState("nm_info_v2", config?.experiments ?? {}) ===
+		"on"
 	) {
 		createInfoV2Window();
 	} else {

@@ -68,7 +68,9 @@ storeChannel.onmessage = ({ data }) => {
 		const { name, section } = payload;
 
 		["grid-installed", "grid-custom"].forEach((gridId) => {
-			const card = document.querySelector(`#${gridId} [data-name="${name}"]`);
+			const card = document.querySelector(
+				`#${gridId} [data-name="${name}"]`,
+			);
 			if (card) card.remove();
 		});
 
@@ -135,7 +137,8 @@ async function doDownload(argsJson, btn, event) {
 		if (card) {
 			card.classList.add("installed");
 			card.classList.remove("item-disabled");
-			const settingsBtnId = "settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
+			const settingsBtnId =
+				"settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
 			card.querySelector(".card-actions").innerHTML = renderButtons(
 				CARD_BUTTONS_AFTER_DOWNLOAD,
 				{
@@ -213,7 +216,8 @@ async function checkSubmoduleUpdate(f, section) {
 			? existingToggle.classList.contains("btn-on")
 			: true;
 
-		const settingsBtnId = "settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
+		const settingsBtnId =
+			"settings-btn-" + cid.replace(/[^a-zA-Z0-9]/g, "_");
 		const hasUpdate = CARD_BUTTONS_WITH_UPDATE.includes("update");
 
 		actions.innerHTML = renderButtons(CARD_BUTTONS_WITH_UPDATE, {
@@ -317,19 +321,25 @@ async function doToggle(name, btn, event) {
 		const nowEnabled = !wasEnabled;
 
 		document.querySelectorAll(".card").forEach((c) => {
-			if ((c.dataset.name || "").toLowerCase() !== name.toLowerCase()) return;
+			if ((c.dataset.name || "").toLowerCase() !== name.toLowerCase())
+				return;
 			const toggleBtn = c.querySelector(".btn-on, .btn-off");
 			if (!toggleBtn) return;
 			const isIcon = toggleBtn.classList.contains("btn-toggle-icon");
 			if (nowEnabled) {
-				toggleBtn.className = "btn btn-on" + (isIcon ? " btn-toggle-icon" : "");
-				toggleBtn.innerHTML = isIcon ? ICONS.disable : t("store.btnDisable");
+				toggleBtn.className =
+					"btn btn-on" + (isIcon ? " btn-toggle-icon" : "");
+				toggleBtn.innerHTML = isIcon
+					? ICONS.disable
+					: t("store.btnDisable");
 				toggleBtn.title = isIcon ? t("store.tooltipDisable") : "";
 				c.classList.remove("item-disabled");
 			} else {
 				toggleBtn.className =
 					"btn btn-off" + (isIcon ? " btn-toggle-icon" : "");
-				toggleBtn.innerHTML = isIcon ? ICONS.enable : t("store.btnEnable");
+				toggleBtn.innerHTML = isIcon
+					? ICONS.enable
+					: t("store.btnEnable");
 				toggleBtn.title = isIcon ? t("store.tooltipEnable") : "";
 				c.classList.add("item-disabled");
 			}
@@ -339,7 +349,9 @@ async function doToggle(name, btn, event) {
 		broadcastChange("toggled", { name, enabled: nowEnabled });
 	} else {
 		btn.className = wasEnabled ? "btn btn-on" : "btn btn-off";
-		btn.innerHTML = wasEnabled ? t("store.btnDisable") : t("store.btnEnable");
+		btn.innerHTML = wasEnabled
+			? t("store.btnDisable")
+			: t("store.btnEnable");
 
 		const errSpan = document.createElement("span");
 
@@ -377,13 +389,17 @@ async function doDelete(name, btn, event) {
 				setTimeout(() => {
 					card.remove();
 					if (inCustom) {
-						const customGrid = document.getElementById("grid-custom");
+						const customGrid =
+							document.getElementById("grid-custom");
 						const remaining = customGrid
 							? customGrid.querySelectorAll(".card").length
 							: 0;
-						document.getElementById("tc-custom").textContent = remaining;
+						document.getElementById("tc-custom").textContent =
+							remaining;
 						if (remaining === 0)
-							document.getElementById("tab-custom").style.display = "none";
+							document.getElementById(
+								"tab-custom",
+							).style.display = "none";
 					}
 
 					setTimeout(loadInstalled, 100);
@@ -391,15 +407,23 @@ async function doDelete(name, btn, event) {
 
 				// Reset matching addons/themes cards in other grids
 				["addons", "themes"].forEach((section) => {
-					const sCard = document.querySelector(`#grid-${section} .card`);
+					const sCard = document.querySelector(
+						`#grid-${section} .card`,
+					);
 					const match = sCard
-						? [...document.querySelectorAll(`#grid-${section} .card`)].find(
+						? [
+								...document.querySelectorAll(
+									`#grid-${section} .card`,
+								),
+							].find(
 								(c) =>
-									(c.dataset.name || "").toLowerCase() === name.toLowerCase(),
+									(c.dataset.name || "").toLowerCase() ===
+									name.toLowerCase(),
 							)
 						: null;
 
-					if (!match || !match.classList.contains("installed")) return;
+					if (!match || !match.classList.contains("installed"))
+						return;
 
 					match.classList.remove("installed", "item-disabled");
 					const allSectionItems = allItems[section] || [];
@@ -427,7 +451,9 @@ async function doDelete(name, btn, event) {
 				card.classList.remove("installed", "item-disabled");
 
 				const itemName = card.dataset.name;
-				const section = card.id.startsWith("card-themes") ? "themes" : "addons";
+				const section = card.id.startsWith("card-themes")
+					? "themes"
+					: "addons";
 				const allSectionItems = allItems[section] || [];
 				const f = allSectionItems.find((x) => x.name === itemName);
 
@@ -450,8 +476,12 @@ async function doDelete(name, btn, event) {
 
 				// Remove matching cards from installed/custom grids
 				["grid-installed", "grid-custom"].forEach((gridId) => {
-					const c = [...document.querySelectorAll(`#${gridId} .card`)].find(
-						(c) => (c.dataset.name || "").toLowerCase() === name.toLowerCase(),
+					const c = [
+						...document.querySelectorAll(`#${gridId} .card`),
+					].find(
+						(c) =>
+							(c.dataset.name || "").toLowerCase() ===
+							name.toLowerCase(),
 					);
 					if (c) c.remove();
 				});
@@ -462,7 +492,8 @@ async function doDelete(name, btn, event) {
 				const tcCustom = document.getElementById("tc-custom");
 				if (tcCustom) tcCustom.textContent = remaining;
 				const tabCustom = document.getElementById("tab-custom");
-				if (tabCustom && remaining === 0) tabCustom.style.display = "none";
+				if (tabCustom && remaining === 0)
+					tabCustom.style.display = "none";
 
 				setTimeout(loadInstalled, 300);
 			}
@@ -473,7 +504,8 @@ async function doDelete(name, btn, event) {
 		let deletedSection = null;
 		if (card) {
 			if (card.id.startsWith("card-themes")) deletedSection = "themes";
-			else if (card.id.startsWith("card-addons")) deletedSection = "addons";
+			else if (card.id.startsWith("card-addons"))
+				deletedSection = "addons";
 		}
 
 		broadcastChange("deleted", { name, section: deletedSection });

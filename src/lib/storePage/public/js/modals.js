@@ -27,7 +27,9 @@ async function openReadme(name, readmeUrl, event) {
 
 		const r = await fetch(fetchUrl);
 
-		document.getElementById("modal-body").innerHTML = md2html(await r.text());
+		document.getElementById("modal-body").innerHTML = md2html(
+			await r.text(),
+		);
 	} catch {
 		document.getElementById("modal-body").innerHTML =
 			`<div class="modal-loading">${t("store.statusFailedReadme")}</div>`;
@@ -41,7 +43,9 @@ function closeModal() {
 document.addEventListener("keydown", (e) => {
 	if (e.key === "Escape") {
 		if (
-			document.getElementById("editor-modal-bg").classList.contains("hidden")
+			document
+				.getElementById("editor-modal-bg")
+				.classList.contains("hidden")
 		) {
 			closeModal();
 		}

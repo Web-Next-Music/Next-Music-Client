@@ -16,7 +16,8 @@
 		);
 		for (const use of uses) {
 			if (plusA && plusA.contains(use)) continue;
-			const href = use.getAttribute("xlink:href") || use.getAttribute("href");
+			const href =
+				use.getAttribute("xlink:href") || use.getAttribute("href");
 			if (href) return href;
 		}
 		return null;
@@ -163,7 +164,8 @@
 
 		const obs = new MutationObserver(() => {
 			const newHref =
-				sourceUse.getAttribute("xlink:href") || sourceUse.getAttribute("href");
+				sourceUse.getAttribute("xlink:href") ||
+				sourceUse.getAttribute("href");
 			if (newHref && newHref !== ICON_HREF) {
 				ICON_HREF = newHref;
 				const a = getPlusLink();

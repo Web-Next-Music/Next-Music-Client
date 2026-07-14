@@ -168,7 +168,10 @@ export function renderExperimentsPanel(panel) {
 		if (addonLock) {
 			rowsWrap.append(
 				mkExperimentsRow(name, addonLock.value, rowsWrap, {
-					addonLock: { addonName: addonLock.addonName, isConflict: true },
+					addonLock: {
+						addonName: addonLock.addonName,
+						isConflict: true,
+					},
 				}),
 			);
 		} else {
@@ -190,7 +193,9 @@ export function renderExperimentsPanel(panel) {
 	searchInp.addEventListener("input", () => {
 		const q = searchInp.value.toLowerCase().trim();
 		rowsWrap.querySelectorAll(".experiments-row").forEach((row) => {
-			const n = row.querySelector(".experiments-name").value.toLowerCase();
+			const n = row
+				.querySelector(".experiments-name")
+				.value.toLowerCase();
 			row.classList.toggle("hidden", q !== "" && !n.includes(q));
 		});
 	});

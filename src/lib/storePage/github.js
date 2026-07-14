@@ -85,7 +85,9 @@ function cachedGet(url, opts = {}) {
 	const pending = inflight.get(key);
 	if (pending) return pending;
 
-	const request = fetchWithCache(url, opts).finally(() => inflight.delete(key));
+	const request = fetchWithCache(url, opts).finally(() =>
+		inflight.delete(key),
+	);
 
 	inflight.set(key, request);
 	return request;
@@ -286,7 +288,9 @@ async function repoTree(owner, repo, token, force = false) {
 
 function pickImgPath(paths) {
 	const named = paths.find(
-		(p) => /^(image|icon|logo|preview)\./i.test(p.split("/").pop()) && isImg(p),
+		(p) =>
+			/^(image|icon|logo|preview)\./i.test(p.split("/").pop()) &&
+			isImg(p),
 	);
 
 	return named || paths.find((p) => isImg(p)) || null;

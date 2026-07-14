@@ -49,21 +49,33 @@ function replaceDefinesPlugin() {
 						/__ENCRYPTION_KEY__/g,
 						JSON.stringify(ENCRYPTION_KEY_VALUE),
 					);
-					code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
+					code = code.replace(
+						/__APP_VERSION__/g,
+						JSON.stringify(APP_VERSION),
+					);
 					return code;
 				}
 			}
 		},
 		transform(code, id) {
-			if (id.includes("src/inject/") && code.includes("__ENCRYPTION_KEY__")) {
+			if (
+				id.includes("src/inject/") &&
+				code.includes("__ENCRYPTION_KEY__")
+			) {
 				code = code.replace(
 					/__ENCRYPTION_KEY__/g,
 					JSON.stringify(ENCRYPTION_KEY_VALUE),
 				);
 				return { code };
 			}
-			if (id.includes("src/inject/") && code.includes("__APP_VERSION__")) {
-				code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
+			if (
+				id.includes("src/inject/") &&
+				code.includes("__APP_VERSION__")
+			) {
+				code = code.replace(
+					/__APP_VERSION__/g,
+					JSON.stringify(APP_VERSION),
+				);
 				return { code };
 			}
 		},
@@ -106,8 +118,14 @@ export default defineConfig(({ command }) => ({
 			input: {
 				info_v2: resolve(__dirname, "src/renderer/info_v2/index.html"),
 				loader: resolve(__dirname, "src/renderer/loader/index.html"),
-				settings: resolve(__dirname, "src/renderer/settings/index.html"),
-				fallback: resolve(__dirname, "src/renderer/fallback/fallback.html"),
+				settings: resolve(
+					__dirname,
+					"src/renderer/settings/index.html",
+				),
+				fallback: resolve(
+					__dirname,
+					"src/renderer/fallback/fallback.html",
+				),
 			},
 		},
 	},

@@ -84,7 +84,11 @@ export function loadConfig() {
 		}
 	} catch {
 		config = structuredClone(defaultConfig);
-		fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+		fs.writeFileSync(
+			configFilePath,
+			JSON.stringify(config, null, 2),
+			"utf-8",
+		);
 	}
 
 	return config;
@@ -100,7 +104,11 @@ export function saveConfig(newConfig) {
 	config = reorderConfig(newConfig, defaultConfig);
 
 	try {
-		fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2), "utf-8");
+		fs.writeFileSync(
+			configFilePath,
+			JSON.stringify(config, null, 2),
+			"utf-8",
+		);
 	} catch (err) {
 		console.error("[Config] Failed to save config:", err);
 	}

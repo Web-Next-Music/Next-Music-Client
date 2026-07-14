@@ -8,7 +8,9 @@ function isAddonDirectory(addonsDirectory, entry) {
 	if (!entry.isSymbolicLink()) return false;
 
 	try {
-		return fs.statSync(path.join(addonsDirectory, entry.name)).isDirectory();
+		return fs
+			.statSync(path.join(addonsDirectory, entry.name))
+			.isDirectory();
 	} catch {
 		return false;
 	}

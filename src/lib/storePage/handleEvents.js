@@ -52,9 +52,13 @@ export function mergeHandleEvents(oldData, newData) {
 
 		const oldVal = oldData[key];
 		const newIsPlainObj =
-			typeof newVal === "object" && newVal !== null && !Array.isArray(newVal);
+			typeof newVal === "object" &&
+			newVal !== null &&
+			!Array.isArray(newVal);
 		const oldIsPlainObj =
-			typeof oldVal === "object" && oldVal !== null && !Array.isArray(oldVal);
+			typeof oldVal === "object" &&
+			oldVal !== null &&
+			!Array.isArray(oldVal);
 
 		if (newIsPlainObj && oldIsPlainObj) {
 			result[key] = mergeHandleEvents(oldVal, newVal);

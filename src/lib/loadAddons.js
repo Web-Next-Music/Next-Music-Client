@@ -59,7 +59,11 @@ function statDirent(dir, entry) {
 
 	try {
 		const stat = fs.statSync(fullPath);
-		return { fullPath, isDirectory: stat.isDirectory(), isFile: stat.isFile() };
+		return {
+			fullPath,
+			isDirectory: stat.isDirectory(),
+			isFile: stat.isFile(),
+		};
 	} catch {
 		return null;
 	}
@@ -152,14 +156,20 @@ function startAssetServer(port = 2007) {
 	return new Promise((resolve) => {
 		const server = http.createServer((req, res) => {
 			function send(status, body, headers = {}) {
-				res.writeHead(status, { "Content-Type": "text/plain", ...headers });
+				res.writeHead(status, {
+					"Content-Type": "text/plain",
+					...headers,
+				});
 				res.end(body);
 			}
 
 			let parsed;
 
 			try {
-				parsed = new URL(req.url, `http://127.0.0.1:${assetServerPort}`);
+				parsed = new URL(
+					req.url,
+					`http://127.0.0.1:${assetServerPort}`,
+				);
 			} catch {
 				return send(400, "Bad URL");
 			}
@@ -183,13 +193,17 @@ function startAssetServer(port = 2007) {
 				if (!addonDir) return send(404, `Addon '${name}' not found`);
 
 				const assetsRoot = findAssetsDir(addonDir);
-				if (!assetsRoot) return send(404, "Assets folder not found for addon");
+				if (!assetsRoot)
+					return send(404, "Assets folder not found for addon");
 
 				const safeFileName = path.basename(fileName);
 				const filePath = findFileRecursive(assetsRoot, safeFileName);
 
 				if (!filePath)
-					return send(404, `File '${safeFileName}' not found in assets`);
+					return send(
+						404,
+						`File '${safeFileName}' not found in assets`,
+					);
 
 				if (!filePath.startsWith(assetsRoot + path.sep)) {
 					return send(403, "Forbidden");
@@ -219,7 +233,10 @@ function startAssetServer(port = 2007) {
 					try {
 						fs.mkdirSync(assetsRoot, { recursive: true });
 					} catch (err) {
-						console.error("[download_asset] Cannot create assets dir:", err);
+						console.error(
+							"[download_asset] Cannot create assets dir:",
+							err,
+						);
 						return send(500, "Cannot create assets directory");
 					}
 				}
@@ -236,7 +253,8 @@ function startAssetServer(port = 2007) {
 						return send(400, "Invalid JSON body");
 					}
 
-					if (!url || typeof url !== "string") return send(400, "Missing url");
+					if (!url || typeof url !== "string")
+						return send(400, "Missing url");
 
 					if (!fileName || typeof fileName !== "string")
 						return send(400, "Missing fileName");
@@ -246,7 +264,10 @@ function startAssetServer(port = 2007) {
 					const destPath = safeResolve(assetsRoot, safeFileName);
 
 					if (!destPath)
-						return send(400, "Invalid fileName (traversal detected)");
+						return send(
+							400,
+							"Invalid fileName (traversal detected)",
+						);
 					try {
 						const controller = new AbortController();
 						const timer = setTimeout(
@@ -265,15 +286,22 @@ function startAssetServer(port = 2007) {
 						}
 
 						if (!fetchRes.ok) {
-							return send(502, `Fetch failed: HTTP ${fetchRes.status}`);
+							return send(
+								502,
+								`Fetch failed: HTTP ${fetchRes.status}`,
+							);
 						}
 
-						const buffer = Buffer.from(await fetchRes.arrayBuffer());
+						const buffer = Buffer.from(
+							await fetchRes.arrayBuffer(),
+						);
 						fs.writeFileSync(destPath, buffer);
 						console.log(
 							`[download_asset] Saved '${safeFileName}' → ${destPath}`,
 						);
-						res.writeHead(200, { "Content-Type": "application/json" });
+						res.writeHead(200, {
+							"Content-Type": "application/json",
+						});
 
 						res.end(
 							JSON.stringify({
@@ -284,7 +312,8 @@ function startAssetServer(port = 2007) {
 						);
 					} catch (err) {
 						console.error("[download_asset] Error:", err);
-						if (!res.headersSent) send(500, `Download error: ${err.message}`);
+						if (!res.headersSent)
+							send(500, `Download error: ${err.message}`);
 					}
 				});
 				return;
@@ -336,7 +365,9 @@ function startAssetServer(port = 2007) {
 					try {
 						const parsedData = JSON.parse(fileContent);
 						const wrapped = JSON.stringify({ data: parsedData });
-						res.writeHead(200, { "Content-Type": "application/json" });
+						res.writeHead(200, {
+							"Content-Type": "application/json",
+						});
 						res.end(wrapped);
 					} catch (e) {
 						console.error("[get_handle] Invalid JSON:", e);
@@ -350,7 +381,10 @@ function startAssetServer(port = 2007) {
 		});
 
 		server.on("error", (err) => {
-			console.error(`[Assets] Server error on port ${port}:`, err.message);
+			console.error(
+				`[Assets] Server error on port ${port}:`,
+				err.message,
+			);
 			resolve(port);
 		});
 
@@ -393,7 +427,10 @@ function loadFilesFromDirectory(directory, extension, callback) {
 				if (info.isDirectory) {
 					if (entry.name.startsWith("!")) continue;
 
-					if (directory === addonsDirectory && !ADDON_DIRS.has(entry.name)) {
+					if (
+						directory === addonsDirectory &&
+						!ADDON_DIRS.has(entry.name)
+					) {
 						ADDON_DIRS.set(entry.name, fullPath);
 						console.log(
 							`[Assets] Pre-registered addon: ${entry.name} → ${fullPath}`,
@@ -412,7 +449,9 @@ function loadFilesFromDirectory(directory, extension, callback) {
 						continue;
 					}
 
-					pending.push(loadFilesFromDirectory(fullPath, extension, callback));
+					pending.push(
+						loadFilesFromDirectory(fullPath, extension, callback),
+					);
 					continue;
 				}
 
@@ -606,9 +645,16 @@ function cssRemovalScript(filePath) {
 
 async function execAddonScript(script, label) {
 	if (!activeAddonsWindow || activeAddonsWindow.isDestroyed()) return;
+	if (!activeAddonsWindow.webContents.getURL().includes("music.yandex.ru"))
+		return;
 
 	try {
-		await activeAddonsWindow.webContents.executeJavaScript(script);
+		await activeAddonsWindow.webContents.executeJavaScript(
+			`(() => {
+				if (!location.host.includes("music.yandex.ru")) return;
+				return (() => {${script}})();
+			})()`,
+		);
 	} catch (err) {
 		console.error(`[Addons] executeJavaScript failed for '${label}':`, err);
 	}
@@ -765,7 +811,11 @@ async function waitForExperimentsApplied(webContents) {
 
 	while (Date.now() < deadline) {
 		try {
-			if (await webContents.executeJavaScript("!!window.__nmcExperimentsDone"))
+			if (
+				await webContents.executeJavaScript(
+					"!!window.__nmcExperimentsDone",
+				)
+			)
 				return;
 		} catch {
 			// renderer is navigating or reloading — retry on next poll
@@ -791,7 +841,9 @@ async function applyAddons(mainWindow) {
 	}
 
 	if (!mainWindow) {
-		console.error("[Addons] mainWindow is not provided - aborting applyAddons");
+		console.error(
+			"[Addons] mainWindow is not provided - aborting applyAddons",
+		);
 		return;
 	}
 
@@ -875,7 +927,10 @@ async function applyAddons(mainWindow) {
 			try {
 				content = await fetchWithTimeout(url);
 			} catch (err) {
-				console.error(`[Addons] Failed to fetch '${url}':`, err.message);
+				console.error(
+					`[Addons] Failed to fetch '${url}':`,
+					err.message,
+				);
 				return;
 			}
 
@@ -900,7 +955,9 @@ async function applyAddons(mainWindow) {
 					url,
 				);
 			} else {
-				console.warn(`[Addons] Unknown file type for online addon: ${url}`);
+				console.warn(
+					`[Addons] Unknown file type for online addon: ${url}`,
+				);
 			}
 		}),
 	);

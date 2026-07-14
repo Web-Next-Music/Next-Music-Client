@@ -92,11 +92,19 @@ function findMods(require) {
 				componentsMod = m;
 			}
 
-			if (!notificationCopyMod && typeof m.NotificationCopy === "function") {
+			if (
+				!notificationCopyMod &&
+				typeof m.NotificationCopy === "function"
+			) {
 				notificationCopyMod = m;
 			}
 
-			if (notificationMod && reactMod && componentsMod && notificationCopyMod)
+			if (
+				notificationMod &&
+				reactMod &&
+				componentsMod &&
+				notificationCopyMod
+			)
 				break;
 		} catch {}
 	}
@@ -112,7 +120,8 @@ function notify(message, containerId, extra, cover) {
 		[Math.random()],
 		{},
 		(require) => {
-			const { notificationMod, reactMod, componentsMod } = findMods(require);
+			const { notificationMod, reactMod, componentsMod } =
+				findMods(require);
 
 			if (!notificationMod || !reactMod || !componentsMod) {
 				console.warn("[nextmusicApi] toast modules not found");
@@ -192,7 +201,8 @@ function notifyError(errorText, containerId, extra) {
 		[Math.random()],
 		{},
 		(require) => {
-			const { notificationMod, reactMod, componentsMod } = findMods(require);
+			const { notificationMod, reactMod, componentsMod } =
+				findMods(require);
 
 			if (!notificationMod || !reactMod || !componentsMod) {
 				console.warn("[nextmusicApi] notifyError modules not found");
@@ -222,7 +232,9 @@ function dismissToast(notificationId) {
 		(require) => {
 			const { notificationMod } = findMods(require);
 			if (!notificationMod) {
-				console.warn("[nextmusicApi] notificationMod not found for dismiss");
+				console.warn(
+					"[nextmusicApi] notificationMod not found for dismiss",
+				);
 				return;
 			}
 			notificationMod.dismiss({ notificationId, forceClose: true });

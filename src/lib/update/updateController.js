@@ -289,7 +289,9 @@ function pickAsset(release, type) {
 	if (type === "nsis") ext = ".exe";
 	else if (type === "pacman") ext = ".pkg.tar.zst";
 	else ext = ".deb";
-	return assets.find((a) => typeof a.name === "string" && a.name.endsWith(ext));
+	return assets.find(
+		(a) => typeof a.name === "string" && a.name.endsWith(ext),
+	);
 }
 
 function installSystemPackage(file, type) {
@@ -347,7 +349,8 @@ function downloadFile(url, dest) {
 							return;
 						}
 
-						const total = Number(res.headers["content-length"]) || 0;
+						const total =
+							Number(res.headers["content-length"]) || 0;
 						let transferred = 0;
 
 						res.on("data", (chunk) => {
@@ -356,10 +359,13 @@ function downloadFile(url, dest) {
 							const dt = (now - lastTime) / 1000;
 							if (dt >= 0.25) {
 								sendToLoader("nmc-update:progress", {
-									percent: total ? (transferred / total) * 100 : 0,
+									percent: total
+										? (transferred / total) * 100
+										: 0,
 									transferred,
 									total,
-									bytesPerSecond: (transferred - lastBytes) / dt,
+									bytesPerSecond:
+										(transferred - lastBytes) / dt,
 								});
 								lastTime = now;
 								lastBytes = transferred;

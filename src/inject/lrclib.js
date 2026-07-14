@@ -22,13 +22,24 @@
 
 	// Walk React fiber tree to find MST stores
 	function findStores() {
-		const KEYS = ["lyrics", "lyricId", "loadingState", "trackId", "writers"];
+		const KEYS = [
+			"lyrics",
+			"lyricId",
+			"loadingState",
+			"trackId",
+			"writers",
+		];
 		const root = document.getElementById("__next") ?? document.body;
 		const visited = new Set(),
 			found = [];
 
 		function walk(obj, path = "", depth = 0) {
-			if (!obj || typeof obj !== "object" || depth > 8 || visited.has(obj))
+			if (
+				!obj ||
+				typeof obj !== "object" ||
+				depth > 8 ||
+				visited.has(obj)
+			)
 				return;
 			visited.add(obj);
 			if (Object.keys(obj).filter((k) => KEYS.includes(k)).length >= 3) {
@@ -124,7 +135,9 @@
 		proto.getLyricsText = async function (url, ...rest) {
 			const s = String(url ?? "");
 			if (s.startsWith(FAKE))
-				return G.lrclibCache.get(s.replace(FAKE, "").split("?")[0]) ?? "";
+				return (
+					G.lrclibCache.get(s.replace(FAKE, "").split("?")[0]) ?? ""
+				);
 			return orig.call(this, url, ...rest);
 		};
 	}
@@ -192,8 +205,16 @@
 							const cur = rootSV?.sonataState?.entityMeta;
 							if (String(cur?.id ?? "") === id)
 								mstPatch(cur, [
-									{ op: "replace", path: "/hasLyrics", value: true },
-									{ op: "replace", path: "/hasSyncLyrics", value: true },
+									{
+										op: "replace",
+										path: "/hasLyrics",
+										value: true,
+									},
+									{
+										op: "replace",
+										path: "/hasSyncLyrics",
+										value: true,
+									},
 								]);
 						} catch {}
 					}, 30);

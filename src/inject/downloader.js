@@ -86,7 +86,8 @@
 	// Getting audio URL and decryption key via the players captured file info
 	async function getTrackFileInfo() {
 		const url = window.nextmusicApi?.getCurrentMp3Url?.();
-		if (!url) throw new Error("Audio URL not available - play the track first");
+		if (!url)
+			throw new Error("Audio URL not available - play the track first");
 		const keyHex = window.nextmusicApi?.getCurrentTrackKey?.() ?? "";
 		return { url, keyHex };
 	}
@@ -146,7 +147,9 @@
 				try {
 					const canvas = document.createElement("canvas");
 					canvas.width = canvas.height = COVER_SIZE;
-					canvas.getContext("2d").drawImage(img, 0, 0, COVER_SIZE, COVER_SIZE);
+					canvas
+						.getContext("2d")
+						.drawImage(img, 0, 0, COVER_SIZE, COVER_SIZE);
 					canvas.toBlob(
 						(blob) => {
 							if (!blob) {
@@ -242,7 +245,8 @@
 		if (track.title) frames.push(_textTag("\xA9nam", track.title));
 		if (track.artistNames?.length)
 			frames.push(_textTag("\xA9ART", track.artistNames.join(", ")));
-		if (track.albumTitle) frames.push(_textTag("\xA9alb", track.albumTitle));
+		if (track.albumTitle)
+			frames.push(_textTag("\xA9alb", track.albumTitle));
 		if (track.year) frames.push(_textTag("\xA9day", String(track.year)));
 
 		if (cover) frames.push(_coverTag(cover.data, cover.mime));
@@ -331,7 +335,9 @@
 					buf[o + 6] = (lo >>> 8) & 255;
 					buf[o + 7] = lo & 255;
 				}
-			} else if (["trak", "mdia", "minf", "stbl", "edts"].includes(type)) {
+			} else if (
+				["trak", "mdia", "minf", "stbl", "edts"].includes(type)
+			) {
 				_updateChunkOffsets(buf, pos + 8, boxEnd, delta);
 			}
 			pos = boxEnd;
@@ -385,7 +391,10 @@
 				moovContent[pos + 7],
 			);
 			if (type !== "udta")
-				filtered = _concat(filtered, moovContent.subarray(pos, pos + size));
+				filtered = _concat(
+					filtered,
+					moovContent.subarray(pos, pos + size),
+				);
 			pos += size;
 		}
 
@@ -396,7 +405,11 @@
 			_updateChunkOffsets(newMoov, 8, newMoov.length, delta);
 		}
 
-		return _concat(buf.subarray(0, moovStart), newMoov, buf.subarray(moovEnd));
+		return _concat(
+			buf.subarray(0, moovStart),
+			newMoov,
+			buf.subarray(moovEnd),
+		);
 	}
 
 	// ID3v2.3
@@ -514,7 +527,8 @@
 		);
 
 		const leftFloat = audioBuffer.getChannelData(0);
-		const rightFloat = channels > 1 ? audioBuffer.getChannelData(1) : leftFloat;
+		const rightFloat =
+			channels > 1 ? audioBuffer.getChannelData(1) : leftFloat;
 
 		function toInt16(f32) {
 			const out = new Int16Array(f32.length);
@@ -562,7 +576,8 @@
 	// Downloading
 	async function fetchWithProgress(url, onProgress) {
 		const res = await fetch(url);
-		if (!res.ok) throw new Error(`Audio download error: HTTP ${res.status}`);
+		if (!res.ok)
+			throw new Error(`Audio download error: HTTP ${res.status}`);
 
 		const contentLength = res.headers.get("Content-Length");
 		if (!contentLength || !res.body)
@@ -618,7 +633,9 @@
 					(audioBuf[9] & 0x7f);
 				audioStart = 10 + existingSize;
 			}
-			output = new Uint8Array(id3Tag.length + audioBuf.length - audioStart);
+			output = new Uint8Array(
+				id3Tag.length + audioBuf.length - audioStart,
+			);
 			output.set(id3Tag, 0);
 			output.set(audioBuf.subarray(audioStart), id3Tag.length);
 		} else {
@@ -633,7 +650,9 @@
 		}
 
 		const artist = sanitize(
-			track.artistNames?.length ? track.artistNames.join(", ") : "Unknown",
+			track.artistNames?.length
+				? track.artistNames.join(", ")
+				: "Unknown",
 		);
 		const title = sanitize(track.title ?? "track");
 		const filename = `${artist} - ${title}.mp3`;
@@ -671,7 +690,8 @@
 		const track = window.nextmusicApi?.getCurrentTrack?.();
 		const trackId = track?.id ?? null;
 
-		if (lastTrackId === trackId && document.getElementById(DL_BTN_ID)) return;
+		if (lastTrackId === trackId && document.getElementById(DL_BTN_ID))
+			return;
 		removeDownloadButton();
 		lastTrackId = trackId;
 

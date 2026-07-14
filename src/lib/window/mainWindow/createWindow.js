@@ -96,12 +96,14 @@ export function createWindow(config) {
 	return mainWindow;
 
 	function setupCSP() {
-		session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-			const headers = details.responseHeaders || {};
-			delete headers["content-security-policy"];
-			delete headers["Content-Security-Policy"];
-			callback({ responseHeaders: headers });
-		});
+		session.defaultSession.webRequest.onHeadersReceived(
+			(details, callback) => {
+				const headers = details.responseHeaders || {};
+				delete headers["content-security-policy"];
+				delete headers["Content-Security-Policy"];
+				callback({ responseHeaders: headers });
+			},
+		);
 	}
 
 	function setupTitleBarEvents() {
@@ -122,10 +124,26 @@ export function createWindow(config) {
 		});
 	}
 
+	function isOnYandexMusic() {
+		if (!mainWindow || mainWindow.isDestroyed()) return false;
+		return mainWindow.webContents.getURL().includes("music.yandex.ru");
+	}
+
+	function runInPage(code) {
+		if (!isOnYandexMusic()) return;
+		mainWindow.webContents
+			.executeJavaScript(
+				`(() => {
+					if (!location.host.includes("music.yandex.ru")) return;
+					${code}
+				})()`,
+			)
+			.catch(console.error);
+	}
+
 	function setupLoadHandlers() {
 		mainWindow.webContents.on("did-finish-load", () => {
-			const url = mainWindow.webContents.getURL();
-			if (!url.includes("music.yandex.ru")) return;
+			if (!isOnYandexMusic()) return;
 
 			injector(mainWindow, config);
 
@@ -162,15 +180,16 @@ export function createWindow(config) {
 				cachedApiJs = fs.readFileSync(apiBundleFile, "utf-8");
 			} else {
 				const parts = API_FUNCTIONS_ORDER.map((name) =>
-					fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
+					fs.readFileSync(
+						path.join(apiFunctionsDir, `${name}.js`),
+						"utf-8",
+					),
 				);
 				const mainJs = fs.readFileSync(apiMainFile, "utf-8");
 				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;
 			}
 		}
-		mainWindow.webContents
-			.executeJavaScript(`(() => {\n${cachedApiJs}\n})()`)
-			.catch(console.error);
+		runInPage(cachedApiJs);
 	}
 
 	function injectTitleBar() {
@@ -195,8 +214,8 @@ export function createWindow(config) {
 			config.windowSettings?.titleBar?.nextText?.enable === true;
 		const showYandexMusicVersion =
 			showNextText &&
-			config.windowSettings?.titleBar?.nextText?.displayYandexMusicVersion ===
-				true;
+			config.windowSettings?.titleBar?.nextText
+				?.displayYandexMusicVersion === true;
 
 		const titleBarConfig = {
 			showNextText,
@@ -204,14 +223,13 @@ export function createWindow(config) {
 			version: app.getVersion(),
 		};
 
-		mainWindow.webContents
-			.executeJavaScript(
-				`window.__nmcTitleBarConfig = ${JSON.stringify(titleBarConfig)};`,
-			)
-			.catch(console.error);
+		if (!isOnYandexMusic()) return;
 
 		mainWindow.webContents.insertCSS(css).catch(console.error);
-		mainWindow.webContents.executeJavaScript(js).catch(console.error);
+		runInPage(
+			`window.__nmcTitleBarConfig = ${JSON.stringify(titleBarConfig)};
+			${js}`,
+		);
 	}
 
 	function closeLoaderWindow() {

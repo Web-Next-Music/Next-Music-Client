@@ -4,5 +4,5 @@
 			auto,
 			calc(100% - var(--player-bar-height) - var(--ym-spacer-size-m))
 		)
-		"playerbar playerbar" auto "barBelow barBelow" auto/auto 1fr !important;
+		"playerbar playerbar" auto "barBelow barBelow" auto / auto 1fr !important;
 }

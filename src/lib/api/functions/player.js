@@ -12,7 +12,9 @@ function isPlayerLike(obj) {
 
 function refreshPlayers() {
 	const root = document.getElementById("__next") || document.body;
-	const fiberKey = Object.keys(root).find((k) => k.startsWith("__reactFiber"));
+	const fiberKey = Object.keys(root).find((k) =>
+		k.startsWith("__reactFiber"),
+	);
 	if (!fiberKey) return [];
 
 	const found = [];
@@ -22,7 +24,8 @@ function refreshPlayers() {
 		if (isPlayerLike(fiber.stateNode)) found.push(fiber.stateNode);
 		let state = fiber.memoizedState;
 		while (state) {
-			if (isPlayerLike(state.memoizedState)) found.push(state.memoizedState);
+			if (isPlayerLike(state.memoizedState))
+				found.push(state.memoizedState);
 			state = state.next;
 		}
 		function searchObj(obj, visited = new Set()) {
@@ -95,7 +98,10 @@ function applyCustomTrackToQueue(id, queue) {
 	const entityList = queue.playerQueue.queueState.entityList.value;
 	for (let i = 0; i < entityList.length; i++) {
 		const ent = entityList[i]?.entity;
-		if (ent && (ent.entityData?.meta?.id === id || ent._customTrackId === id)) {
+		if (
+			ent &&
+			(ent.entityData?.meta?.id === id || ent._customTrackId === id)
+		) {
 			watchEntityForCustomTrack(ent, id);
 			ent._customTrackId = id;
 			return i;
@@ -152,7 +158,10 @@ function getCurrentTrack() {
 		}
 	}
 
-	const artists = (meta.artists ?? []).map((a) => ({ id: a.id, name: a.name }));
+	const artists = (meta.artists ?? []).map((a) => ({
+		id: a.id,
+		name: a.name,
+	}));
 
 	return {
 		id: meta.id,

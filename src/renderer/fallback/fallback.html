@@ -7,11 +7,48 @@
 		<link rel="stylesheet" href="./fallback.scss" />
 	</head>
 	<body>
-		<img
-			class="next_logo"
-			src="../../assets/nm-icons/nm-logo.png"
-			alt="Next Music Logo"
-		/>
-		<div class="error_text">An error occurred while loading the page.</div>
+		<div class="fallback_titlebar" id="titlebar" hidden>
+			<button type="button" class="fallback_titlebar_button" id="minimize" aria-label="Minimize">
+				<svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M0 0.5H10" stroke="currentColor" stroke-width="1" />
+				</svg>
+			</button>
+			<button type="button" class="fallback_titlebar_button" id="maximize" aria-label="Maximize">
+				<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<rect x="0.5" y="0.5" width="9" height="9" rx="0.5" stroke="currentColor" stroke-width="1" />
+				</svg>
+			</button>
+			<button type="button" class="fallback_titlebar_button fallback_titlebar_close" id="close" aria-label="Close">
+				<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+				</svg>
+			</button>
+		</div>
+
+		<div class="fallback_content">
+			<img
+				class="next_logo"
+				src="../../assets/nm-icons/nm-logo.png"
+				alt="Next Music Logo"
+			/>
+			<div class="error_text">An error occurred while loading the page.</div>
+		</div>
+
+		<script type="module">
+			if (window.nmcWindow) {
+				const titlebar = document.getElementById("titlebar");
+				titlebar.hidden = false;
+
+				document
+					.getElementById("minimize")
+					.addEventListener("click", () => window.nmcWindow.minimize());
+				document
+					.getElementById("maximize")
+					.addEventListener("click", () => window.nmcWindow.maximize());
+				document
+					.getElementById("close")
+					.addEventListener("click", () => window.nmcWindow.close());
+			}
+		</script>
 	</body>
 </html>

@@ -19,8 +19,9 @@
 		"build:linux": "vite build && vite build --config vite.main.config.js && cross-env pnpm_config_verify_deps_before_run=false electron-builder --linux --publish never",
 		"build:all": "vite build && vite build --config vite.main.config.js && cross-env pnpm_config_verify_deps_before_run=false electron-builder --win --linux --publish never",
 		"start": "electron dist/index.js",
-		"format": "prettier --write .",
-		"format:check": "prettier --check ."
+		"format": "biome format --write .",
+		"format:check": "biome check .",
+		"lint": "biome lint ."
 	},
 	"build": {
 		"appId": "com.nextmusic.client",
@@ -32,10 +33,7 @@
 				"repo": "Next-Music-Client"
 			}
 		],
-		"files": [
-			"dist/**/*",
-			"package.json"
-		],
+		"files": ["dist/**/*", "package.json"],
 		"directories": {
 			"buildResources": "src/assets",
 			"output": "release"
@@ -45,9 +43,7 @@
 			"target": [
 				{
 					"target": "nsis",
-					"arch": [
-						"x64"
-					]
+					"arch": ["x64"]
 				}
 			],
 			"icon": "src/assets/nm-icons/icon-256.png",
@@ -55,24 +51,14 @@
 		},
 		"linux": {
 			"artifactName": "${name}_${version}_${arch}.${ext}",
-			"target": [
-				"AppImage",
-				"deb",
-				"pacman"
-			],
+			"target": ["AppImage", "deb", "pacman"],
 			"category": "Audio",
 			"maintainer": "Diramix <39developer@diram1x.ru>",
 			"icon": "src/assets/nm-icons/icon-256.png",
 			"executableName": "next-music"
 		},
 		"pacman": {
-			"depends": [
-				"gtk3",
-				"libnotify",
-				"nss",
-				"libxss",
-				"glibc"
-			],
+			"depends": ["gtk3", "libnotify", "nss", "libxss", "glibc"],
 			"artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
 		}
 	},
@@ -84,20 +70,13 @@
 	"author": "Diramix <39developer@diram1x.ru>",
 	"license": "MIT",
 	"type": "module",
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"@parcel/watcher",
-			"electron",
-			"electron-winstaller",
-			"esbuild"
-		]
-	},
 	"bugs": {
 		"url": "https://github.com/Web-Next-Music/Next-Music-Client/issues"
 	},
 	"homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
 	"devDependencies": {
-		"codemirror": "^6.0.2",
+		"@biomejs/biome": "^2.5.3",
+		"codemirror": "^5.65.21",
 		"concurrently": "^10.0.3",
 		"cross-env": "^10.1.0",
 		"dotenv": "^17.4.2",
@@ -106,7 +85,6 @@
 		"esbuild": "^0.28.1",
 		"html-minifier-terser": "^7.2.0",
 		"lightningcss": "^1.32.0",
-		"prettier": "^3.9.5",
 		"sass": "^1.101.0",
 		"scss": "^0.2.4",
 		"terser": "^5.49.0",

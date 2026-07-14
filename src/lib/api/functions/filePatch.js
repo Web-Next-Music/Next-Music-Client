@@ -69,7 +69,10 @@ function patchFileInfo() {
 					if (info?.url && info?.trackId) {
 						_mp3UrlMap.set(String(info.trackId), info.url);
 						_mp3KeyMap.set(String(info.trackId), info.key ?? "");
-						_codecMap.set(String(info.trackId), info.codec ?? "mp3");
+						_codecMap.set(
+							String(info.trackId),
+							info.codec ?? "mp3",
+						);
 					}
 				}
 				return result;

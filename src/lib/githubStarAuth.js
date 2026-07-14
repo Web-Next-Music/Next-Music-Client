@@ -64,7 +64,10 @@ async function checkRepoStarred(accessToken) {
 async function requestDeviceCodes() {
 	const res = await fetch("https://github.com/login/device/code", {
 		method: "POST",
-		headers: { "Content-Type": "application/json", Accept: "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
 		body: JSON.stringify({
 			client_id: GITHUB_CLIENT_ID,
 			scope: "offline_access",
@@ -89,21 +92,27 @@ async function pollForToken(deviceCode, intervalSec, expiresIn, onProgress) {
 				return;
 			}
 
-			onProgress?.(Math.max(0, Math.round((deadline - Date.now()) / 1000)));
+			onProgress?.(
+				Math.max(0, Math.round((deadline - Date.now()) / 1000)),
+			);
 
 			try {
-				const res = await fetch("https://github.com/login/oauth/access_token", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Accept: "application/json",
+				const res = await fetch(
+					"https://github.com/login/oauth/access_token",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Accept: "application/json",
+						},
+						body: JSON.stringify({
+							client_id: GITHUB_CLIENT_ID,
+							device_code: deviceCode,
+							grant_type:
+								"urn:ietf:params:oauth:grant-type:device_code",
+						}),
 					},
-					body: JSON.stringify({
-						client_id: GITHUB_CLIENT_ID,
-						device_code: deviceCode,
-						grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-					}),
-				});
+				);
 
 				const data = await res.json();
 
@@ -111,7 +120,8 @@ async function pollForToken(deviceCode, intervalSec, expiresIn, onProgress) {
 					resolve({
 						accessToken: data.access_token,
 						refreshToken: data.refresh_token || null,
-						expiresAt: Date.now() + (data.expires_in || 28800) * 1000,
+						expiresAt:
+							Date.now() + (data.expires_in || 28800) * 1000,
 					});
 					return;
 				}
@@ -173,7 +183,9 @@ async function tryCheckGitHubStar() {
 				saveConfig(config);
 				console.log("[GitHub Auth] Token refreshed successfully");
 
-				const hasStarred = await checkRepoStarred(refreshed.accessToken);
+				const hasStarred = await checkRepoStarred(
+					refreshed.accessToken,
+				);
 				console.log(`[GitHub Auth] Star: ${hasStarred ? "✔" : "❌"}`);
 				return { hasStarred };
 			} catch (refreshErr) {
@@ -185,7 +197,11 @@ async function tryCheckGitHubStar() {
 					config.github.accessToken = null;
 					config.github.refreshToken = null;
 					saveConfig(config);
-					return { hasStarred: false, tokenExpired: true, fatal: true };
+					return {
+						hasStarred: false,
+						tokenExpired: true,
+						fatal: true,
+					};
 				}
 				return { hasStarred: false, transient: true };
 			}
@@ -215,7 +231,10 @@ export async function connectGitHubDeviceFlow(onUserCode, onProgress) {
 	try {
 		codes = await requestDeviceCodes();
 	} catch (err) {
-		console.error("[GitHub Auth] ❌ Device code request failed:", err.message);
+		console.error(
+			"[GitHub Auth] ❌ Device code request failed:",
+			err.message,
+		);
 		return { hasStarred: false, error: err.message };
 	}
 

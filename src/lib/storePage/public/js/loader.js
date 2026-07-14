@@ -101,7 +101,9 @@ async function loadCustom() {
 	if (!grid || !countEl || !tabBtn) return;
 
 	try {
-		const known = [...allItems.addons, ...allItems.themes].map((f) => f.name);
+		const known = [...allItems.addons, ...allItems.themes].map(
+			(f) => f.name,
+		);
 		const r = await fetch(
 			"/api/custom?known=" + encodeURIComponent(JSON.stringify(known)),
 		);
@@ -117,7 +119,9 @@ async function loadCustom() {
 			return;
 		}
 
-		grid.innerHTML = items.map((item, i) => buildCustomCard(item, i)).join("");
+		grid.innerHTML = items
+			.map((item, i) => buildCustomCard(item, i))
+			.join("");
 	} catch (e) {
 		if (grid)
 			grid.innerHTML = `<div class="empty">${t("store.statusFailedLoad", { section: t("store.tabInstalled") })}<br><code>${e.message}</code></div>`;

@@ -18,7 +18,9 @@ ws.onmessage = (e) => {
 	document
 		.getElementById("widget")
 		.style.setProperty("--track-color", state.color || "#141414");
-	document.getElementById("ts_end").textContent = formatTime(state.durationSec);
+	document.getElementById("ts_end").textContent = formatTime(
+		state.durationSec,
+	);
 };
 
 function tick() {

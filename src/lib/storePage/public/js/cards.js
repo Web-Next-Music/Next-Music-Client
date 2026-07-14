@@ -117,7 +117,10 @@ function buildCard(f, i, section, inst) {
 	}
 
 	if (inst) {
-		setTimeout(() => checkAndShowSettingsBtn(f.name, settingsBtnId, true), 0);
+		setTimeout(
+			() => checkAndShowSettingsBtn(f.name, settingsBtnId, true),
+			0,
+		);
 	}
 
 	return `<div class="${cls}" style="animation-delay:${i * 0.048}s" id="card-${cid}" data-name="${f.name}" ${rmAttr}>
@@ -167,7 +170,10 @@ function buildCustomCard(item, i) {
 		? `onclick="openReadme('${esc(item.name)}','${esc(item.readme)}',event)"`
 		: "";
 
-	setTimeout(() => checkAndShowSettingsBtn(item.name, settingsBtnId, true), 0);
+	setTimeout(
+		() => checkAndShowSettingsBtn(item.name, settingsBtnId, true),
+		0,
+	);
 
 	return `<div class="${cls}" style="animation-delay:${i * 0.048}s" id="card-custom-${item.name}" data-name="${item.name}" ${rmAttr}>
   <div class="card-top">

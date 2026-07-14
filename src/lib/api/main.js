@@ -136,14 +136,18 @@ window.nextmusicApi = {
 		);
 		if (!res.ok) {
 			const text = await res.text();
-			throw new Error(`[downloadAsset] Server error ${res.status}: ${text}`);
+			throw new Error(
+				`[downloadAsset] Server error ${res.status}: ${text}`,
+			);
 		}
 		return res.json();
 	},
 
 	nextText(text) {
 		if (window.__nmcTitleBarConfig?.showYandexMusicVersion) {
-			console.warn("nextText ignored: Yandex Music version mode is enabled");
+			console.warn(
+				"nextText ignored: Yandex Music version mode is enabled",
+			);
 			return;
 		}
 		const el = document.querySelector(".TitleBar_nextText");

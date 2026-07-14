@@ -42,7 +42,9 @@ export async function downloadTree(
 
 			const m =
 				subUrl &&
-				subUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/);
+				subUrl.match(
+					/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
+				);
 
 			if (m) {
 				const subGm = await loadGitmodules(m[1], m[2]);
@@ -195,7 +197,9 @@ async function _extractZipBuffer(zipBuf, destDir) {
 			const { inflateRawSync } = await import("zlib");
 			fileData = inflateRawSync(compData);
 		} else {
-			throw new Error(`Unsupported ZIP compression method: ${compMethod}`);
+			throw new Error(
+				`Unsupported ZIP compression method: ${compMethod}`,
+			);
 		}
 
 		const outPath = path.join(destDir, ...relName.split("/"));

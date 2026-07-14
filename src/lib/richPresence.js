@@ -45,7 +45,9 @@ function initWS() {
 	console.log(`[WS] Starting WebSocket server on port ${WSPORT}…`);
 
 	wss = new WebSocketServer({ port: WSPORT }, () =>
-		console.log(`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`),
+		console.log(
+			`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`,
+		),
 	);
 
 	wss.on("error", (err) => {
@@ -196,7 +198,9 @@ function updateActivity(data) {
 	}
 
 	if (githubButton && !userHasStarred) {
-		console.log("[RPC] GitHub button ignored - user has not starred the repo");
+		console.log(
+			"[RPC] GitHub button ignored - user has not starred the repo",
+		);
 	}
 
 	const activityObject = {
@@ -205,7 +209,9 @@ function updateActivity(data) {
 		details: title,
 		state: artist,
 		largeImageKey: img,
-		...(resolvedLargeImageUrl ? { largeImageUrl: resolvedLargeImageUrl } : {}),
+		...(resolvedLargeImageUrl
+			? { largeImageUrl: resolvedLargeImageUrl }
+			: {}),
 		statusDisplayType: 1,
 		instance: false,
 		...detailsUrlField,
@@ -237,7 +243,9 @@ function updateActivity(data) {
 
 	const timestampDiff =
 		lastActivity?.startTimestamp != null
-			? Math.abs(activityObject.startTimestamp - lastActivity.startTimestamp)
+			? Math.abs(
+					activityObject.startTimestamp - lastActivity.startTimestamp,
+				)
 			: Infinity;
 
 	if (hasChanged) {

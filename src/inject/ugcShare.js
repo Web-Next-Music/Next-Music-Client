@@ -39,7 +39,8 @@
 			const out = new Uint8Array(binaryString.length);
 
 			for (let i = 0; i < binaryString.length; i++) {
-				out[i] = binaryString.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
+				out[i] =
+					binaryString.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
 			}
 
 			// Decode to string and parse JSON
@@ -73,7 +74,10 @@
 
 		// Prevent spam from repeated paste events
 		const now = Date.now();
-		if (trackKey === lastPlayedToken && now - lastPlayTime < PLAY_COOLDOWN_MS) {
+		if (
+			trackKey === lastPlayedToken &&
+			now - lastPlayTime < PLAY_COOLDOWN_MS
+		) {
 			return;
 		}
 
@@ -98,7 +102,9 @@
 			id: "shared-" + Date.now(),
 			url: decodedData.url,
 			title: decodedData.title || "Shared Track",
-			artists: decodedData.artist ? [{ id: 0, name: decodedData.artist }] : [],
+			artists: decodedData.artist
+				? [{ id: 0, name: decodedData.artist }]
+				: [],
 			cover: decodedData.cover,
 		});
 
@@ -187,7 +193,9 @@
 		);
 		if (!container) {
 			// Let's log what containers we can find
-			const allContainers = document.querySelectorAll('[class*="PlayerBar"]');
+			const allContainers = document.querySelectorAll(
+				'[class*="PlayerBar"]',
+			);
 
 			return;
 		}

@@ -50,8 +50,12 @@ function applyStaticI18n() {
 	const closeBtn = document.querySelector(".store-close-btn");
 	if (closeBtn) closeBtn.title = t("store.tooltipClose");
 
-	const tabAddons = document.querySelector("[onclick*=\"switchTab('addons'\"]");
-	const tabThemes = document.querySelector("[onclick*=\"switchTab('themes'\"]");
+	const tabAddons = document.querySelector(
+		"[onclick*=\"switchTab('addons'\"]",
+	);
+	const tabThemes = document.querySelector(
+		"[onclick*=\"switchTab('themes'\"]",
+	);
 
 	const tabInstalled = document.querySelector(
 		"[onclick*=\"switchTab('installed'\"]",

@@ -117,7 +117,10 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 	}
 
 	if (method === "GET" && urlPath.startsWith("/public/")) {
-		const filePath = path.join(PUBLIC_DIR, urlPath.slice("/public/".length));
+		const filePath = path.join(
+			PUBLIC_DIR,
+			urlPath.slice("/public/".length),
+		);
 
 		if (fs.existsSync(filePath)) {
 			const ext = path.extname(filePath).toLowerCase();
@@ -262,7 +265,8 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 						/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
 					);
 
-				if (!m) throw new Error("Cannot parse submodule URL: " + subUrl);
+				if (!m)
+					throw new Error("Cannot parse submodule URL: " + subUrl);
 				const [, subOwner, subRepo] = m;
 
 				const cacheKey = `${subOwner}/${subRepo}`;
@@ -272,7 +276,12 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				const hasCachedRelease = !!releaseCache[releaseCacheKey];
 
 				try {
-					nmRelease = await getLatestNmRelease(subOwner, subRepo, token, true);
+					nmRelease = await getLatestNmRelease(
+						subOwner,
+						subRepo,
+						token,
+						true,
+					);
 				} catch {
 					apiAvailable = false;
 				}
@@ -305,7 +314,11 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 							true,
 						);
 						if (sha)
-							fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
+							fs.writeFileSync(
+								path.join(dest, ".git-commit"),
+								sha,
+								"utf8",
+							);
 					} catch {}
 				}
 
@@ -346,7 +359,9 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 			const m =
 				normalized &&
-				normalized.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/);
+				normalized.match(
+					/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
+				);
 
 			if (!m) return json({ hasUpdate: false });
 			const [, owner, repo] = m;
@@ -356,7 +371,12 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 			const localTag = getLocalReleaseTag(name);
 			if (localTag) {
-				const nmRelease = await getLatestNmRelease(owner, repo, token, force);
+				const nmRelease = await getLatestNmRelease(
+					owner,
+					repo,
+					token,
+					force,
+				);
 				if (!nmRelease) return json({ hasUpdate: false });
 
 				return json({
@@ -371,7 +391,8 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				Promise.resolve(getLocalCommitHash(name)),
 			]);
 
-			const hasUpdate = !!remoteHash && !!localHash && remoteHash !== localHash;
+			const hasUpdate =
+				!!remoteHash && !!localHash && remoteHash !== localHash;
 
 			return json({ hasUpdate, remoteHash, localHash });
 		} catch (e) {
@@ -404,7 +425,9 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const { languagesDirectory } = getPaths();
 			const config = getConfig();
 			const langCode =
-				config?.programSettings?.language || getCurrentLangCode() || "en";
+				config?.programSettings?.language ||
+				getCurrentLangCode() ||
+				"en";
 
 			console.log(
 				"[Store /api/lang] langCode:",
@@ -453,12 +476,16 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				wins.find((w) => {
 					const url = w.webContents.getURL();
 					return (
-						url.includes("music.yandex") || url.includes("music.yandex.ru")
+						url.includes("music.yandex") ||
+						url.includes("music.yandex.ru")
 					);
 				}) ||
 				wins.find((w) => {
 					const url = w.webContents.getURL();
-					return !url.includes("nextstore://") && !url.startsWith("file://");
+					return (
+						!url.includes("nextstore://") &&
+						!url.startsWith("file://")
+					);
 				}) ||
 				null;
 
@@ -488,7 +515,8 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 	if (method === "POST" && urlPath === "/api/open-url") {
 		try {
 			const { url } = JSON.parse(await getBody());
-			if (!url || !url.startsWith("https://")) throw new Error("Invalid URL");
+			if (!url || !url.startsWith("https://"))
+				throw new Error("Invalid URL");
 			await shell.openExternal(url);
 			return json({ ok: true });
 		} catch (e) {
@@ -501,10 +529,15 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const wins = BrowserWindow.getAllWindows();
 
 			const mainWin =
-				wins.find((w) => w.webContents.getURL().includes("music.yandex")) ||
+				wins.find((w) =>
+					w.webContents.getURL().includes("music.yandex"),
+				) ||
 				wins.find((w) => {
 					const u = w.webContents.getURL();
-					return !u.startsWith("nextstore://") && !u.startsWith("file://");
+					return (
+						!u.startsWith("nextstore://") &&
+						!u.startsWith("file://")
+					);
 				}) ||
 				wins[0];
 
@@ -525,11 +558,17 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				fs
 					.readdirSync(addonsDirectory)
 					.find(
-						(n) => n.replace(/^!/, "").toLowerCase() === name.toLowerCase(),
+						(n) =>
+							n.replace(/^!/, "").toLowerCase() ===
+							name.toLowerCase(),
 					) || null;
 
 			if (!raw) return json({ exists: false });
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = path.join(
+				addonsDirectory,
+				raw,
+				"handleEvents.json",
+			);
 
 			return json({ exists: fs.existsSync(filePath), path: filePath });
 		} catch (e) {
@@ -546,11 +585,17 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				fs
 					.readdirSync(addonsDirectory)
 					.find(
-						(n) => n.replace(/^!/, "").toLowerCase() === name.toLowerCase(),
+						(n) =>
+							n.replace(/^!/, "").toLowerCase() ===
+							name.toLowerCase(),
 					) || null;
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = path.join(
+				addonsDirectory,
+				raw,
+				"handleEvents.json",
+			);
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");
@@ -573,11 +618,17 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				fs
 					.readdirSync(addonsDirectory)
 					.find(
-						(n) => n.replace(/^!/, "").toLowerCase() === name.toLowerCase(),
+						(n) =>
+							n.replace(/^!/, "").toLowerCase() ===
+							name.toLowerCase(),
 					) || null;
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = path.join(
+				addonsDirectory,
+				raw,
+				"handleEvents.json",
+			);
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");
@@ -599,11 +650,17 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				fs
 					.readdirSync(addonsDirectory)
 					.find(
-						(n) => n.replace(/^!/, "").toLowerCase() === name.toLowerCase(),
+						(n) =>
+							n.replace(/^!/, "").toLowerCase() ===
+							name.toLowerCase(),
 					) || null;
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = path.join(
+				addonsDirectory,
+				raw,
+				"handleEvents.json",
+			);
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");

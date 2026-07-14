@@ -3,7 +3,8 @@ import { t } from "./i18n.js";
 
 export function buildGitHubStarBlock(onRefresh) {
 	const hasStarred = state.HAS_STARRED;
-	const hasToken = !!state.CONFIG?.github?.accessToken && !state.TOKEN_EXPIRED;
+	const hasToken =
+		!!state.CONFIG?.github?.accessToken && !state.TOKEN_EXPIRED;
 
 	const wrap = document.createElement("div");
 	wrap.className = "gh-star-block";
@@ -20,7 +21,8 @@ export function buildGitHubStarBlock(onRefresh) {
 	title.textContent = t("settings.github.title");
 
 	const badge = document.createElement("span");
-	badge.className = "gh-star-badge" + (hasStarred ? " gh-star-badge--ok" : "");
+	badge.className =
+		"gh-star-badge" + (hasStarred ? " gh-star-badge--ok" : "");
 	badge.textContent = hasStarred
 		? t("settings.github.starred")
 		: t("settings.github.notStarred");
@@ -81,7 +83,8 @@ export function buildGitHubStarBlock(onRefresh) {
 		openBtn.variant = "tonal";
 		openBtn.textContent = t("settings.github.openLink");
 		openBtn.addEventListener("click", () => {
-			if (verificationUri) window.electronAPI?.openExternal?.(verificationUri);
+			if (verificationUri)
+				window.electronAPI?.openExternal?.(verificationUri);
 		});
 		actRow.append(openBtn);
 
@@ -128,7 +131,9 @@ export function buildGitHubStarBlock(onRefresh) {
 	}
 
 	async function doDisconnect() {
-		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = true));
+		actRow
+			.querySelectorAll("mdui-button")
+			.forEach((b) => (b.disabled = true));
 		await window.electronAPI?.disconnectGitHub?.();
 
 		if (!state.CONFIG.github) state.CONFIG.github = {};

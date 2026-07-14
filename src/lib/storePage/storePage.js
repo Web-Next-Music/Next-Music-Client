@@ -17,7 +17,9 @@ export function setupStorePage() {
 		const method = request.method;
 
 		const getBody = () =>
-			request.arrayBuffer().then((ab) => Buffer.from(ab).toString("utf8"));
+			request
+				.arrayBuffer()
+				.then((ab) => Buffer.from(ab).toString("utf8"));
 
 		let senderWcId = null;
 

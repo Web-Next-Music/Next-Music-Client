@@ -59,7 +59,9 @@ function md2html(t) {
 	t = t
 		.split(/\n\n+/)
 		.map((b) =>
-			b.trim().startsWith("<") ? b : "<p>" + b.replace(/\n/g, " ") + "</p>",
+			b.trim().startsWith("<")
+				? b
+				: "<p>" + b.replace(/\n/g, " ") + "</p>",
 		)
 		.join("\n");
 	return t;

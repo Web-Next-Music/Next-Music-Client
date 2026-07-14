@@ -154,7 +154,10 @@ export function processDir(
 				}
 			}
 			if (isInjectFile) {
-				code = code.replace(/__APP_VERSION__/g, JSON.stringify(appVersion));
+				code = code.replace(
+					/__APP_VERSION__/g,
+					JSON.stringify(appVersion),
+				);
 			}
 
 			const result = esbuild.transformSync(code, {
@@ -162,7 +165,10 @@ export function processDir(
 				format: "esm",
 				target: "es2022",
 			});
-			writeFileSync(outFile, result.code.replace(/\n/g, " ").trimEnd() + "\n");
+			writeFileSync(
+				outFile,
+				result.code.replace(/\n/g, " ").trimEnd() + "\n",
+			);
 		} else if (ext === ".html" && allowHtml) {
 			minifyHTML(file, outFile);
 		} else {
@@ -243,7 +249,8 @@ export function createElectronAssetsPlugin(encryptionKey, appVersion) {
 			for (const file of ["config.js", "events.js", "index.js"]) {
 				const src = join(SRC, file);
 				const out = join(DIST, file);
-				if (existsSync(src)) minifyJS(src, out, encryptionKey, appVersion);
+				if (existsSync(src))
+					minifyJS(src, out, encryptionKey, appVersion);
 			}
 
 			for (const dir of STATIC_RENDERER_DIRS) {

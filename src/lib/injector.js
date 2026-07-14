@@ -39,7 +39,8 @@ function injectCssFile(injectedPath) {
 
 function injectJsFile(injectedPath, encryptionKey) {
 	window.__NEXT_MUSIC_ENCRYPTION_KEY__ = encryptionKey;
-	if (document.querySelector(`script[data-injected="${injectedPath}"]`)) return;
+	if (document.querySelector(`script[data-injected="${injectedPath}"]`))
+		return;
 
 	const script = document.createElement("script");
 	script.type = "text/javascript";
@@ -88,7 +89,11 @@ export default function injector(mainWindow, config) {
 			const injectScript = isCSS
 				? serializeInvocation(injectCssFile, fullPath)
 				: isJS
-					? serializeInvocation(injectJsFile, fullPath, ENCRYPTION_KEY)
+					? serializeInvocation(
+							injectJsFile,
+							fullPath,
+							ENCRYPTION_KEY,
+						)
 					: "";
 
 			if (!injectScript) continue;
@@ -100,7 +105,12 @@ export default function injector(mainWindow, config) {
 		}
 
 		mainWindow.webContents
-			.executeJavaScript(fragments.join("\n"))
+			.executeJavaScript(
+				`(() => {
+					if (!location.host.includes("music.yandex.ru")) return;
+					${fragments.join("\n")}
+				})()`,
+			)
 			.then(() => {
 				console.log("[Injector] Injected:", injected.join(", "));
 			})

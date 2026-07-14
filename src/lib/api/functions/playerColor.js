@@ -30,7 +30,10 @@ function _findSonataStore() {
 						seen.add(node);
 						const rootNode = walkToRoot(node);
 						const sv = rootNode?.storedValue;
-						if (sv?.sonataState?.entityMeta?.averageColor !== undefined) {
+						if (
+							sv?.sonataState?.entityMeta?.averageColor !==
+							undefined
+						) {
 							return sv;
 						}
 					}
@@ -40,7 +43,8 @@ function _findSonataStore() {
 		}
 
 		return (
-			walkFiber(fiber.child, depth + 1) || walkFiber(fiber.sibling, depth + 1)
+			walkFiber(fiber.child, depth + 1) ||
+			walkFiber(fiber.sibling, depth + 1)
 		);
 	}
 

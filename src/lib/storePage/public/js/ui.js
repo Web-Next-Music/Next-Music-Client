@@ -41,7 +41,10 @@ async function showRateLimitBanner() {
 
 	if (!state || !state.limited) return;
 
-	const minutes = Math.max(1, Math.ceil((state.resetAt - Date.now()) / 60000));
+	const minutes = Math.max(
+		1,
+		Math.ceil((state.resetAt - Date.now()) / 60000),
+	);
 
 	const banner = document.createElement("div");
 

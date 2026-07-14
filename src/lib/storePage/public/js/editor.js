@@ -118,7 +118,10 @@ async function saveHandleEvents() {
 	try {
 		parsed = JSON.parse(content);
 	} catch (e) {
-		setEditorStatus(t("store.statusInvalidJson", { message: e.message }), true);
+		setEditorStatus(
+			t("store.statusInvalidJson", { message: e.message }),
+			true,
+		);
 		return;
 	}
 

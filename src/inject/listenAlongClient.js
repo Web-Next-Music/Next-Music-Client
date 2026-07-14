@@ -3,8 +3,10 @@
 		playerBar: '[class*="PlayerBar_root"]',
 		albumLink: '[class*="Meta_albumLink"]',
 		playButtonIcon: '[class*="BaseSonataControlsDesktop_playButtonIcon__"]',
-		timeSlider: '[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
-		fullscreenSlider: 'input[class*="FullscreenPlayerDesktopContent_slider"]',
+		timeSlider:
+			'[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
+		fullscreenSlider:
+			'input[class*="FullscreenPlayerDesktopContent_slider"]',
 		lyricsLine: '[class*="SyncLyricsLine_root"]',
 		seekSources: [
 			'[class*="PlayerBarDesktopWithBackgroundProgressBar_slider"]',
@@ -441,7 +443,8 @@
 		const island = document.getElementById("__li_island__");
 
 		if (!island) return;
-		if (_islandVisible && !island.classList.contains("island-hiding")) return;
+		if (_islandVisible && !island.classList.contains("island-hiding"))
+			return;
 
 		_islandVisible = true;
 		island.classList.remove("island-hiding");
@@ -664,7 +667,9 @@
 		const use = el.querySelector("svg use");
 		if (!use) return null;
 		return (
-			use.getAttributeNS(XLINK, "href") || use.getAttribute("href") || null
+			use.getAttributeNS(XLINK, "href") ||
+			use.getAttribute("href") ||
+			null
 		);
 	}
 
@@ -925,7 +930,9 @@
 
 	if (!WSS_HOST) {
 		islandSetDisconnected(false);
-		console.warn("Listen Along: no server configured (__wss param missing)");
+		console.warn(
+			"Listen Along: no server configured (__wss param missing)",
+		);
 		return;
 	}
 
@@ -941,7 +948,9 @@
 
 	function navigateAndPlay(p) {
 		if (_navigatingToPath === p) {
-			console.log(`⏭️ Already navigating to trackId "${p}", skip duplicate`);
+			console.log(
+				`⏭️ Already navigating to trackId "${p}", skip duplicate`,
+			);
 			return;
 		}
 
@@ -1103,7 +1112,8 @@
 		);
 
 		function attachObserver() {
-			const target = document.querySelector(SEL.playerBar) || document.body;
+			const target =
+				document.querySelector(SEL.playerBar) || document.body;
 			new MutationObserver(check).observe(target, {
 				subtree: true,
 				childList: true,
@@ -1188,7 +1198,9 @@
 			} else {
 				const fsSlider =
 					e.target.closest?.(SEL.fullscreenSlider) ||
-					(e.target.matches?.(SEL.fullscreenSlider) ? e.target : null);
+					(e.target.matches?.(SEL.fullscreenSlider)
+						? e.target
+						: null);
 				const slider = fsSlider || getSlider();
 				if (!slider) return;
 				val = parseInt(slider.value);
@@ -1218,7 +1230,8 @@
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 	function getTrackId() {
-		if (typeof window.nextmusicApi?.getCurrentTrack !== "function") return null;
+		if (typeof window.nextmusicApi?.getCurrentTrack !== "function")
+			return null;
 		const track = window.nextmusicApi.getCurrentTrack();
 		if (!track || !track.id) return null;
 		if (UUID_RE.test(String(track.id))) return null; // local track
@@ -1317,7 +1330,9 @@
 				const p = link.getAttribute("href");
 				if (p) {
 					if (isSyncPaused && !isNavigating && !_userPausedSync) {
-						console.log("Album href appeared (observer) - auto-resuming sync");
+						console.log(
+							"Album href appeared (observer) - auto-resuming sync",
+						);
 						resumeSync();
 					} else if (!isSyncPaused) {
 						trySend(p);
@@ -1325,7 +1340,9 @@
 				} else if (!isSyncPaused && !isNavigating) {
 					isSyncPaused = true;
 					islandSetSyncPaused();
-					console.log("⏸️ Album href removed (observer) - sync paused");
+					console.log(
+						"⏸️ Album href removed (observer) - sync paused",
+					);
 				}
 			});
 			attrObs.observe(link, {
@@ -1349,7 +1366,9 @@
 				} else if (!isSyncPaused && !isNavigating) {
 					isSyncPaused = true;
 					islandSetSyncPaused();
-					console.log("⏸️ Album href gone (bar observer) - sync paused");
+					console.log(
+						"⏸️ Album href gone (bar observer) - sync paused",
+					);
 				}
 				attachAttrObserver();
 			}).observe(bar, { childList: true, subtree: true });

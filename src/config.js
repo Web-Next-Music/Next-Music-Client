@@ -56,7 +56,8 @@ export const defaultConfig = {
 		richPresence: {
 			enable: true,
 			rpcTitle: "Next Music",
-			largeImageUrl: "https://github.com/Web-Next-Music/Next-Music-Client",
+			largeImageUrl:
+				"https://github.com/Web-Next-Music/Next-Music-Client",
 			buttons: {
 				trackButton: true,
 				githubButton: true,

@@ -12,8 +12,8 @@
 	--nm-obs-border: 1px solid
 		color-mix(
 			in oklab,
-			hsl(240 calc(1 * 4%) 60.784%/0.2) 100%,
-			hsl(0 0% 0%/0.2) 0%
+			hsl(240 calc(1 * 4%) 60.784% / 0.2) 100%,
+			hsl(0 0% 0% / 0.2) 0%
 		);
 }
 
@@ -35,7 +35,11 @@ body {
 	padding: 10px;
 	border-radius: 12px;
 	box-sizing: border-box;
-	background-color: color-mix(in srgb, var(--track-color, #141414) 70%, black);
+	background-color: color-mix(
+		in srgb,
+		var(--track-color, #141414) 70%,
+		black
+	);
 	border: var(--nm-obs-border);
 	transition: background-color 0.3s ease-in;
 }

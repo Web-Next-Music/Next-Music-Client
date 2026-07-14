@@ -44,9 +44,11 @@
 				desiredGain = Math.max(minGain, Math.min(maxGain, desiredGain));
 
 				if (desiredGain > gainNode.gain.value) {
-					gainNode.gain.value += (desiredGain - gainNode.gain.value) * attack;
+					gainNode.gain.value +=
+						(desiredGain - gainNode.gain.value) * attack;
 				} else {
-					gainNode.gain.value += (desiredGain - gainNode.gain.value) * release;
+					gainNode.gain.value +=
+						(desiredGain - gainNode.gain.value) * release;
 				}
 
 				requestAnimationFrame(normalize);
