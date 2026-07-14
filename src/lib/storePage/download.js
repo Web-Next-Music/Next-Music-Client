@@ -14,8 +14,9 @@ export async function downloadTree(
 	owner,
 	repo,
 	gitmodules,
+	token,
 ) {
-	const items = await ghContents(owner, repo, contentPath);
+	const items = await ghContents(owner, repo, contentPath, token, true);
 	fs.mkdirSync(destDir, { recursive: true });
 
 	for (const item of items) {
@@ -29,11 +30,12 @@ export async function downloadTree(
 				owner,
 				repo,
 				gitmodules,
+				token,
 			);
 		} else if (item.type === "submodule" || item.type === "commit") {
 			const rawUrl =
 				gitmodules[item.path] ||
-				(await resolveSubmoduleUrl(owner, repo, item.path)) ||
+				(await resolveSubmoduleUrl(owner, repo, item.path, token)) ||
 				"";
 
 			const subUrl = normalizeGitUrl(rawUrl);
@@ -50,6 +52,7 @@ export async function downloadTree(
 					m[1],
 					m[2],
 					subGm,
+					token,
 				);
 			}
 		}
@@ -201,13 +204,13 @@ async function _extractZipBuffer(zipBuf, destDir) {
 	}
 }
 
-export async function downloadSourceZip(owner, repo, destDir) {
+export async function downloadSourceZip(owner, repo, destDir, token) {
 	for (const branch of ["main", "master", "HEAD"]) {
 		let r;
 		try {
 			r = await httpsGet(
 				`https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`,
-				{},
+				token ? { Authorization: `Bearer ${token}` } : {},
 				60000,
 			);
 		} catch {

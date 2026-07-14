@@ -61,6 +61,7 @@
 		"statusFailedLoad": "Failed to load {section}.",
 		"statusFailedLoadInstalled": "Failed to load installed items.",
 		"statusRestartRequired": "Restart required to apply changes",
+		"statusRateLimited": "GitHub API rate limit reached. Showing cached data, resets in {minutes} min.",
 		"statusError": "Error",
 		"statusSaved": "✓ Saved",
 		"statusSaveFailed": "Save failed",

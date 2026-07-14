@@ -165,6 +165,7 @@ Promise.all([
 		currentTab = "custom";
 	}
 	loadCustom();
+	showRateLimitBanner();
 });
 
 // Expose globals

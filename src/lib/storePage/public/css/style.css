@@ -731,8 +731,9 @@ main {
 	opacity: 0.7;
 }
 
-/* ── Restart banner ──────────────────────────────────────────────────────────── */
-#restart-banner {
+/* Restart banner */
+#restart-banner,
+#ratelimit-banner {
 	position: fixed;
 	bottom: 24px;
 	left: 50%;
@@ -751,9 +752,15 @@ main {
 		opacity 0.3s ease;
 	white-space: nowrap;
 }
-#restart-banner.visible {
+#restart-banner.visible,
+#ratelimit-banner.visible {
 	opacity: 1;
 	transform: translateX(-50%) translateY(0);
+}
+#ratelimit-banner {
+	bottom: 80px;
+	white-space: normal;
+	max-width: 420px;
 }
 .restart-icon {
 	display: flex;
@@ -762,7 +769,8 @@ main {
 }
 .restart-text {
 	font-family: "Nunito", sans-serif;
-	font-size: 0.72rem;
+	font-size: 13px;
+	font-weight: 700;
 	color: var(--txt);
 	letter-spacing: 0.01em;
 }

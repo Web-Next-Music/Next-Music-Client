@@ -8,13 +8,14 @@ import {
 	httpsGet,
 	normalizeGitUrl,
 	loadGitmodules,
-	getSection,
-	getFolderMeta,
+	getCatalog,
 	getRemoteHeadCommit,
 	getLatestNmRelease,
 	fetchReadme,
-	pLimit,
+	getRateLimitState,
 } from "./github.js";
+
+import { getLogo, setLogo } from "./cache.js";
 
 import {
 	downloadTree,
@@ -68,6 +69,8 @@ const notFound = () => ({
 	headers: {},
 	body: Buffer.alloc(0),
 });
+
+const LOGO_TTL = 7 * 24 * 60 * 60 * 1000;
 
 const IMG_MIME = {
 	".png": "image/png",
@@ -139,27 +142,24 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 		}
 	}
 
+	if (method === "GET" && urlPath === "/api/rate-limit")
+		return json(getRateLimitState());
+
 	if (method === "GET" && urlPath.startsWith("/api/section/")) {
 		const section = urlPath.slice("/api/section/".length);
 		const token = getConfig().github?.accessToken || undefined;
+		const force = qp.force === "1";
 
 		try {
-			const items = await getSection(GITHUB_OWNER, GITHUB_REPO, section, token);
-			const result = await pLimit(
-				items.map((f) => async () => {
-					const meta = await getFolderMeta(GITHUB_OWNER, GITHUB_REPO, f, token);
-					return {
-						name: f.name,
-						path: f.path,
-						submodule: f.submodule,
-						subUrl: f.subUrl,
-						...meta,
-					};
-				}),
-				3,
+			const items = await getCatalog(
+				GITHUB_OWNER,
+				GITHUB_REPO,
+				section,
+				token,
+				force,
 			);
 
-			return json(result);
+			return json(items);
 		} catch (e) {
 			return json({ error: e.message }, 500);
 		}
@@ -168,9 +168,17 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 	if (method === "GET" && urlPath === "/api/logo") {
 		if (!qp.url) return notFound();
 
+		const cached = getLogo(qp.url, LOGO_TTL);
+		if (cached) return binary(cached.body, cached.contentType);
+
 		try {
 			const r = await httpsGet(qp.url);
-			return binary(r.body, r.headers["content-type"] || "image/png");
+			if (r.statusCode !== 200) return notFound();
+
+			const contentType = r.headers["content-type"] || "image/png";
+			setLogo(qp.url, r.body, contentType);
+
+			return binary(r.body, contentType);
 		} catch {
 			return notFound();
 		}
@@ -264,7 +272,7 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				const hasCachedRelease = !!releaseCache[releaseCacheKey];
 
 				try {
-					nmRelease = await getLatestNmRelease(subOwner, subRepo, token);
+					nmRelease = await getLatestNmRelease(subOwner, subRepo, token, true);
 				} catch {
 					apiAvailable = false;
 				}
@@ -288,9 +296,14 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				} else {
 					// API works but no nm.tar.gz release (never had one, or author removed it)
 					fs.mkdirSync(dest, { recursive: true });
-					await downloadSourceZip(subOwner, subRepo, dest);
+					await downloadSourceZip(subOwner, subRepo, dest, token);
 					try {
-						const sha = await getRemoteHeadCommit(subOwner, subRepo, token);
+						const sha = await getRemoteHeadCommit(
+							subOwner,
+							subRepo,
+							token,
+							true,
+						);
 						if (sha)
 							fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
 					} catch {}
@@ -307,7 +320,14 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 				});
 			} else {
 				const gm = await loadGitmodules(GITHUB_OWNER, GITHUB_REPO);
-				await downloadTree(folderPath, dest, GITHUB_OWNER, GITHUB_REPO, gm);
+				await downloadTree(
+					folderPath,
+					dest,
+					GITHUB_OWNER,
+					GITHUB_REPO,
+					gm,
+					token,
+				);
 			}
 
 			applyHandleEventsMerge(dest, oldHandleEvents);
@@ -332,22 +352,22 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			const [, owner, repo] = m;
 
 			const token = getConfig().github?.accessToken || undefined;
+			const force = qp.force === "1";
 
 			const localTag = getLocalReleaseTag(name);
 			if (localTag) {
-				const nmRelease = await getLatestNmRelease(owner, repo, token);
+				const nmRelease = await getLatestNmRelease(owner, repo, token, force);
 				if (!nmRelease) return json({ hasUpdate: false });
-				const hasUpdate = nmRelease.tag !== localTag;
 
 				return json({
-					hasUpdate,
+					hasUpdate: nmRelease.tag !== localTag,
 					remoteHash: nmRelease.tag,
 					localHash: localTag,
 				});
 			}
 
 			const [remoteHash, localHash] = await Promise.all([
-				getRemoteHeadCommit(owner, repo, token),
+				getRemoteHeadCommit(owner, repo, token, force),
 				Promise.resolve(getLocalCommitHash(name)),
 			]);
 

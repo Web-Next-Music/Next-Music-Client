@@ -61,6 +61,7 @@
 		"statusFailedLoad": "Не удалось загрузить {section}.",
 		"statusFailedLoadInstalled": "Не удалось загрузить установленные расширения.",
 		"statusRestartRequired": "Для применения изменений требуется перезапуск",
+		"statusRateLimited": "Лимит GitHub API исчерпан. Показаны кэшированные данные, сброс через {minutes} мин.",
 		"statusError": "Ошибка",
 		"statusSaved": "✓ Сохранено",
 		"statusSaveFailed": "Ошибка сохранения",

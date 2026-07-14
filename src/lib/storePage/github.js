@@ -1,7 +1,13 @@
 import https from "https";
+import { getEntry, isFresh, setEntry, touchEntry } from "./cache.js";
 
 export const GITHUB_OWNER = "Web-Next-Music";
 export const GITHUB_REPO = "Next-Music-Extensions";
+
+const HOUR = 60 * 60 * 1000;
+export const CONTENTS_TTL = 6 * HOUR;
+export const UPDATE_TTL = 1 * HOUR;
+export const META_TTL = 6 * HOUR;
 
 export function httpsGet(url, headers = {}, timeout = 15000) {
 	return new Promise((resolve, reject) => {
@@ -42,65 +48,162 @@ function authHeader(token) {
 	return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function ghContents(owner, repo, p, token) {
+export class RateLimitError extends Error {
+	constructor(resetAt) {
+		super("GitHub API rate limit exceeded");
+		this.name = "RateLimitError";
+		this.rateLimited = true;
+		this.resetAt = resetAt || 0;
+	}
+}
+
+const rateLimit = { remaining: null, resetAt: 0 };
+
+export function getRateLimitState() {
+	const limited = rateLimit.remaining === 0 && Date.now() < rateLimit.resetAt;
+	return { limited, resetAt: limited ? rateLimit.resetAt : 0 };
+}
+
+function noteRateLimit(headers) {
+	const remaining = headers["x-ratelimit-remaining"];
+	const reset = headers["x-ratelimit-reset"];
+
+	if (remaining !== undefined) rateLimit.remaining = Number(remaining);
+	if (reset !== undefined) rateLimit.resetAt = Number(reset) * 1000;
+}
+
+function isRateLimitResponse(r) {
+	if (r.statusCode !== 403 && r.statusCode !== 429) return false;
+	if (r.headers["x-ratelimit-remaining"] === "0") return true;
+	return /rate limit/i.test(r.body.toString());
+}
+
+const inflight = new Map();
+
+function cachedGet(url, opts = {}) {
+	const key = url + (opts.force ? "!" : "");
+	const pending = inflight.get(key);
+	if (pending) return pending;
+
+	const request = fetchWithCache(url, opts).finally(() => inflight.delete(key));
+
+	inflight.set(key, request);
+	return request;
+}
+
+async function fetchWithCache(
+	url,
+	{ token, ttl, force = false, api = true } = {},
+) {
+	const key = "req:" + url;
+	const entry = getEntry(key);
+
+	if (!force && isFresh(entry, ttl)) return entry.v;
+
+	if (api) {
+		const state = getRateLimitState();
+		if (state.limited) {
+			if (entry) return entry.v;
+			throw new RateLimitError(state.resetAt);
+		}
+	}
+
+	const headers = api ? authHeader(token) : {};
+	if (entry?.etag) headers["If-None-Match"] = entry.etag;
+
+	const r = await httpsGet(url, headers);
+	if (api) noteRateLimit(r.headers);
+
+	if (r.statusCode === 304 && entry) {
+		touchEntry(key);
+		return entry.v;
+	}
+
+	if (api && isRateLimitResponse(r)) {
+		rateLimit.remaining = 0;
+		if (entry) return entry.v;
+		throw new RateLimitError(rateLimit.resetAt);
+	}
+
+	const raw = r.body.toString();
+	let data = null;
+
+	if (raw) {
+		try {
+			data = JSON.parse(raw);
+		} catch {
+			data = raw;
+		}
+	}
+
+	const result = { status: r.statusCode, data };
+
+	if (r.statusCode === 200 || r.statusCode === 404)
+		setEntry(key, result, r.headers.etag);
+
+	return result;
+}
+
+export async function ghContents(owner, repo, p, token, force = false) {
 	const url = p
 		? `https://api.github.com/repos/${owner}/${repo}/contents/${p}`
 		: `https://api.github.com/repos/${owner}/${repo}/contents`;
 
-	const r = await httpsGet(url, authHeader(token));
-	const data = JSON.parse(r.body.toString());
+	const { status, data } = await cachedGet(url, {
+		token,
+		ttl: CONTENTS_TTL,
+		force,
+	});
 
-	if (r.statusCode !== 200)
-		throw new Error(`GitHub ${r.statusCode}: ${data.message || url}`);
+	if (status !== 200)
+		throw new Error(`GitHub ${status}: ${data?.message || url}`);
 
 	return data;
 }
 
 export async function resolveSubmoduleUrl(owner, repo, itemPath, token) {
 	try {
-		const r = await httpsGet(
+		const { data } = await cachedGet(
 			`https://api.github.com/repos/${owner}/${repo}/contents/${itemPath}`,
-			authHeader(token),
+			{ token, ttl: CONTENTS_TTL },
 		);
-		return JSON.parse(r.body.toString()).submodule_git_url || null;
+		return data?.submodule_git_url || null;
 	} catch {
 		return null;
 	}
 }
 
-export async function getRemoteHeadCommit(owner, repo, token) {
+export async function getRemoteHeadCommit(owner, repo, token, force = false) {
 	try {
-		const r = await httpsGet(
+		const { status, data } = await cachedGet(
 			`https://api.github.com/repos/${owner}/${repo}/commits/HEAD`,
-			authHeader(token),
+			{ token, ttl: UPDATE_TTL, force },
 		);
 
-		if (r.statusCode !== 200) return null;
-		return JSON.parse(r.body.toString()).sha || null;
+		if (status !== 200) return null;
+		return data?.sha || null;
 	} catch {
 		return null;
 	}
 }
 
-export async function getLatestNmRelease(owner, repo, token) {
+export async function getLatestNmRelease(owner, repo, token, force = false) {
 	// Throws on network/API errors → caller treats as "API unavailable"
 	// Returns null → API works, but no nm.tar.gz release exists
-	const r = await httpsGet(
+	const { status, data } = await cachedGet(
 		`https://api.github.com/repos/${owner}/${repo}/releases/latest`,
-		authHeader(token),
+		{ token, ttl: UPDATE_TTL, force },
 	);
 
-	if (r.statusCode === 404) return null;
-	if (r.statusCode !== 200)
-		throw new Error(`GitHub releases API: HTTP ${r.statusCode}`);
+	if (status === 404) return null;
+	if (status !== 200) throw new Error(`GitHub releases API: HTTP ${status}`);
 
-	const release = JSON.parse(r.body.toString());
 	const asset =
-		release.assets && release.assets.find((a) => a.name.endsWith("nm.tar.gz"));
+		data.assets && data.assets.find((a) => a.name.endsWith("nm.tar.gz"));
 
 	if (!asset) return null;
 
-	return { tag: release.tag_name, downloadUrl: asset.browser_download_url };
+	return { tag: data.tag_name, downloadUrl: asset.browser_download_url };
 }
 
 export function normalizeGitUrl(url) {
@@ -123,14 +226,18 @@ export function parseGitmodules(text) {
 	return map;
 }
 
-export async function loadGitmodules(owner, repo) {
+export async function loadGitmodules(owner, repo, force = false) {
 	for (const branch of ["main", "master", "HEAD"]) {
 		try {
 			const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/.gitmodules`;
-			const r = await httpsGet(url);
-			if (r.statusCode === 200 && r.body.length > 0) {
-				return parseGitmodules(r.body.toString());
-			}
+			const { status, data } = await cachedGet(url, {
+				ttl: CONTENTS_TTL,
+				force,
+				api: false,
+			});
+
+			if (status === 200 && typeof data === "string" && data.length > 0)
+				return parseGitmodules(data);
 		} catch {}
 	}
 	return {};
@@ -151,6 +258,62 @@ function pickImg(list) {
 		list.find((i) => i.type === "file" && isImg(i.name))?.download_url ||
 		null
 	);
+}
+
+function rawUrl(owner, repo, filePath) {
+	const encoded = filePath.split("/").map(encodeURIComponent).join("/");
+	return `https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${encoded}`;
+}
+
+// One recursive tree call returns the whole repo, replacing the per-directory
+// contents walk. Returns null when unusable (truncated on huge repos, errors),
+// so callers fall back to the contents API.
+async function repoTree(owner, repo, token, force = false) {
+	try {
+		const { status, data } = await cachedGet(
+			`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`,
+			{ token, ttl: CONTENTS_TTL, force },
+		);
+
+		if (status !== 200 || !Array.isArray(data?.tree) || data.truncated)
+			return null;
+
+		return data.tree.filter((n) => n.type === "blob").map((n) => n.path);
+	} catch {
+		return null;
+	}
+}
+
+function pickImgPath(paths) {
+	const named = paths.find(
+		(p) => /^(image|icon|logo|preview)\./i.test(p.split("/").pop()) && isImg(p),
+	);
+
+	return named || paths.find((p) => isImg(p)) || null;
+}
+
+function metaFromTree(owner, repo, paths, root) {
+	const prefix = root ? root + "/" : "";
+	const scoped = paths.filter((p) => p.startsWith(prefix));
+	const rel = (p) => p.slice(prefix.length);
+
+	const branding = scoped.filter((p) =>
+		rel(p)
+			.split("/")
+			.slice(0, -1)
+			.some((seg) => /^branding$/i.test(seg)),
+	);
+
+	const logo = pickImgPath(branding) || pickImgPath(scoped);
+
+	const readme = scoped.find(
+		(p) => !rel(p).includes("/") && /^readme\.md$/i.test(rel(p)),
+	);
+
+	return {
+		logo: logo ? rawUrl(owner, repo, logo) : null,
+		readme: readme ? rawUrl(owner, repo, readme) : null,
+	};
 }
 
 async function findLogoRecursive(owner, repo, dirPath, depth = 0, token) {
@@ -198,8 +361,6 @@ async function findBrandingDir(owner, repo, items, depth = 0, token) {
 	return null;
 }
 
-const metaCache = new Map();
-
 export async function pLimit(tasks, limit = 3) {
 	const results = [];
 	let i = 0;
@@ -217,8 +378,8 @@ export async function pLimit(tasks, limit = 3) {
 	return results;
 }
 
-export async function getSection(owner, repo, section, token) {
-	const gitmodules = await loadGitmodules(owner, repo);
+export async function getSection(owner, repo, section, token, force = false) {
+	const gitmodules = await loadGitmodules(owner, repo, force);
 	const prefix = section + "/";
 	const result = [];
 	const seenNames = new Set();
@@ -238,7 +399,7 @@ export async function getSection(owner, repo, section, token) {
 	}
 
 	try {
-		const items = await ghContents(owner, repo, section, token);
+		const items = await ghContents(owner, repo, section, token, force);
 
 		for (const item of items) {
 			if (item.type !== "dir") continue;
@@ -255,26 +416,36 @@ export async function getSection(owner, repo, section, token) {
 	return result;
 }
 
-export async function getFolderMeta(owner, repo, f, token) {
-	const cacheKey = f.submodule ? f.subUrl || f.name : f.path;
+export async function getFolderMeta(owner, repo, f, token, force = false) {
+	const cacheKey = "meta:" + (f.submodule ? f.subUrl || f.name : f.path);
+	const cached = getEntry(cacheKey);
+
+	if (!force && isFresh(cached, META_TTL)) return cached.v;
 
 	try {
 		let o = owner,
 			r = repo,
 			p = f.path;
 		if (f.submodule) {
-			if (!f.subUrl)
-				return metaCache.get(cacheKey) || { logo: null, readme: null };
+			if (!f.subUrl) return cached?.v || { logo: null, readme: null };
 			const m = normalizeGitUrl(f.subUrl).match(
 				/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
 			);
-			if (!m) return metaCache.get(cacheKey) || { logo: null, readme: null };
+			if (!m) return cached?.v || { logo: null, readme: null };
 			o = m[1];
 			r = m[2];
 			p = "";
 		}
 
-		const items = await ghContents(o, r, p, token);
+		const paths = await repoTree(o, r, token, force);
+
+		if (paths) {
+			const result = metaFromTree(o, r, paths, p);
+			setEntry(cacheKey, result);
+			return result;
+		}
+
+		const items = await ghContents(o, r, p, token, force);
 
 		const brandingPath = await findBrandingDir(o, r, items, 0, token);
 		let logo = brandingPath
@@ -310,23 +481,48 @@ export async function getFolderMeta(owner, repo, f, token) {
 			readme: rm ? rm.download_url : null,
 		};
 
-		metaCache.set(cacheKey, result);
+		setEntry(cacheKey, result);
 		return result;
 	} catch {
-		return metaCache.get(cacheKey) || { logo: null, readme: null };
+		return cached?.v || { logo: null, readme: null };
 	}
 }
 
-const readmeCache = new Map();
+export async function getCatalog(owner, repo, section, token, force = false) {
+	const items = await getSection(owner, repo, section, token, force);
+
+	return pLimit(
+		items.map((f) => async () => ({
+			...f,
+			...(await getFolderMeta(owner, repo, f, token, force)),
+		})),
+		3,
+	);
+}
 
 export async function fetchReadme(url) {
+	const key = "readme:" + url;
+	const cached = getEntry(key);
+
+	if (isFresh(cached, CONTENTS_TTL)) return cached.v;
+
 	try {
-		const r = await httpsGet(url);
+		const r = await httpsGet(
+			url,
+			cached?.etag ? { "If-None-Match": cached.etag } : {},
+		);
+
+		if (r.statusCode === 304 && cached) {
+			touchEntry(key);
+			return cached.v;
+		}
+
 		if (r.statusCode !== 200) throw new Error(`HTTP ${r.statusCode}`);
+
 		const md = r.body.toString();
-		readmeCache.set(url, md);
+		setEntry(key, md, r.headers.etag);
 		return md;
 	} catch {
-		return readmeCache.get(url) || "";
+		return cached?.v || "";
 	}
 }

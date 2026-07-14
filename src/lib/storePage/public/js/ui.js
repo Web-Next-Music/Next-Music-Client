@@ -29,6 +29,31 @@ function showRestartBanner() {
 	requestAnimationFrame(() => banner.classList.add("visible"));
 }
 
+async function showRateLimitBanner() {
+	if (document.getElementById("ratelimit-banner")) return;
+
+	let state;
+	try {
+		state = await fetch("/api/rate-limit").then((r) => r.json());
+	} catch {
+		return;
+	}
+
+	if (!state || !state.limited) return;
+
+	const minutes = Math.max(1, Math.ceil((state.resetAt - Date.now()) / 60000));
+
+	const banner = document.createElement("div");
+
+	banner.id = "ratelimit-banner";
+	banner.innerHTML = `
+        <span class="restart-icon">${ICONS.warning}</span>
+        <span class="restart-text">${t("store.statusRateLimited", { minutes })}</span>`;
+
+	document.body.appendChild(banner);
+	requestAnimationFrame(() => banner.classList.add("visible"));
+}
+
 async function doReload() {
 	try {
 		await fetch("/api/reload", { method: "POST" });
