@@ -1,4 +1,4 @@
-<img width="1478" height="989" alt="image" src="https://github.com/Web-Next-Music/Next-Music-Client/blob/main/doc/preview.png?raw=true" />
+<img width="1478" height="989" alt="image" src=".github/assets/preview.png" />
 
 # Next Music
 
@@ -140,4 +140,4 @@ https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
 
 # Discord Server - Click on the image below
 
-[![Discord](https://github.com/Web-Next-Music/Next-Music-Client/blob/main/doc/discord.png?raw=true)](https://discord.gg/ky6bcdy7KA)
+[![Discord](.github/assets/discord.png)](https://discord.gg/ky6bcdy7KA)

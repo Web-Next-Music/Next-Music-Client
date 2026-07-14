@@ -18,7 +18,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         id: cliff
         with:
-          config: cliff.toml
+          config: .github/cliff.toml
           args: --latest --tag-pattern "v?[0-9]+\.[0-9]+.*" --strip all
 
       - name: Set release notes

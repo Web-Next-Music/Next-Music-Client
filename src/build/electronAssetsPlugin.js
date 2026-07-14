@@ -13,7 +13,7 @@ import { minify as htmlMinify } from "html-minifier-terser";
 import * as lightningcss from "lightningcss";
 import * as sass from "sass";
 import * as esbuild from "esbuild";
-import { API_FUNCTIONS_ORDER } from "../src/lib/api/order.js";
+import { API_FUNCTIONS_ORDER } from "../lib/api/order.js";
 
 const SRC = "src";
 const DIST = "dist";
