@@ -3,31 +3,59 @@ window.nextmusicApi = {
 
 	getSettings(name) {
 		const port = window.__nextmusicApiAssetPort ?? 2007;
-		const listeners = [];
+		const listeners = new Set();
+		let currentSettings = {};
 		let lastJson = null;
 		let pollingTimer = null;
+
+		function pick(value, fallback) {
+			return value === undefined || value === null ? fallback : value;
+		}
+
+		function parseItem(item) {
+			switch (item.type) {
+				case "button": {
+					const def = item.defaultParameter ?? false;
+					return { value: pick(item.bool, def), default: def };
+				}
+				case "selector": {
+					const def = item.defaultParameter ?? null;
+					return { value: pick(item.selected, def), default: def };
+				}
+				case "slider": {
+					const def = item.defaultParameter ?? null;
+					return { value: pick(item.value, def), default: def };
+				}
+				case "color": {
+					const def = item.defaultParameter ?? "";
+					return { value: pick(item.input, def), default: def };
+				}
+				case "text": {
+					const button = Array.isArray(item.buttons)
+						? item.buttons[0]
+						: null;
+					const def = pick(
+						button?.defaultParameter ?? item.defaultParameter,
+						"",
+					);
+					return { value: pick(button?.text, def), default: def };
+				}
+				default: {
+					const def = item.defaultParameter ?? null;
+					return {
+						value: pick(item.value ?? item.input, def),
+						default: def,
+					};
+				}
+			}
+		}
 
 		function parseHandle(data) {
 			const result = {};
 			for (const section of data.sections ?? []) {
 				for (const item of section.items ?? []) {
 					if (!item.id) continue;
-					let value, def;
-					if (item.type === "button") {
-						def = item.defaultParameter ?? false;
-						value = item.bool ?? def;
-					} else if (
-						item.type === "text" &&
-						Array.isArray(item.buttons) &&
-						item.buttons[0]
-					) {
-						def = item.buttons[0].defaultParameter ?? "";
-						value = item.buttons[0].text ?? def;
-					} else {
-						def = item.defaultParameter ?? null;
-						value = def;
-					}
-					result[item.id] = { value, default: def };
+					result[item.id] = parseItem(item);
 				}
 			}
 			return result;
@@ -49,12 +77,28 @@ window.nextmusicApi = {
 		let pollDelay = 1000;
 		const MAX_POLL_DELAY = 30_000;
 
-		function notify(settings) {
+		function clone(value) {
+			try {
+				return structuredClone(value);
+			} catch {
+				return JSON.parse(JSON.stringify(value));
+			}
+		}
+
+		function notify() {
 			for (const cb of listeners) {
 				try {
-					cb(settings);
+					cb(clone(currentSettings));
 				} catch {}
 			}
+		}
+
+		function apply(settings) {
+			const json = JSON.stringify(settings);
+			if (json === lastJson) return false;
+			lastJson = json;
+			currentSettings = settings;
+			return true;
 		}
 
 		function scheduleNextPoll() {
@@ -63,11 +107,7 @@ window.nextmusicApi = {
 				const settings = await fetchSettings();
 				if (settings) {
 					pollDelay = 1000;
-					const cur = JSON.stringify(settings);
-					if (cur !== lastJson) {
-						lastJson = cur;
-						notify(settings);
-					}
+					if (apply(settings)) notify();
 				} else {
 					pollDelay = Math.min(pollDelay * 2, MAX_POLL_DELAY);
 				}
@@ -80,17 +120,27 @@ window.nextmusicApi = {
 			scheduleNextPoll();
 		}
 
+		startPolling();
+		fetchSettings().then((settings) => {
+			if (settings && apply(settings)) notify();
+		});
+
 		return {
+			getCurrent() {
+				return clone(currentSettings);
+			},
 			onChange(callback) {
-				listeners.push(callback);
+				if (typeof callback !== "function") return () => {};
+				listeners.add(callback);
 				startPolling();
-				fetchSettings().then((settings) => {
-					if (!settings) return;
-					lastJson = JSON.stringify(settings);
+
+				if (lastJson !== null) {
 					try {
-						callback(settings);
+						callback(clone(currentSettings));
 					} catch {}
-				});
+				}
+
+				return () => listeners.delete(callback);
 			},
 		};
 	},
