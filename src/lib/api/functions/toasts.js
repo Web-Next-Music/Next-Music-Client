@@ -51,65 +51,139 @@ const defaultToastOptions = {
 	},
 };
 
+function fnBody(fn) {
+	try {
+		return fn.toString();
+	} catch {
+		return "";
+	}
+}
+
+function firstDestructureKeys(src) {
+	const m = /(?:let|var|const)\s*\{([^}]*)\}\s*=/.exec(src);
+	return m ? m[1] : "";
+}
+
+function isNotifyFn(fn) {
+	if (typeof fn !== "function") return false;
+	const src = fnBody(fn);
+	const keys = firstDestructureKeys(src);
+	return (
+		/\bmessage\b/.test(keys) &&
+		/\boptions\b/.test(keys) &&
+		/toast/.test(src)
+	);
+}
+
+function isDismissFn(fn) {
+	if (typeof fn !== "function") return false;
+	const keys = firstDestructureKeys(fnBody(fn));
+	return /\bnotificationId\b/.test(keys) && /\bforceClose\b/.test(keys);
+}
+
+function isReactMod(m) {
+	return (
+		typeof m.createElement === "function" &&
+		typeof m.Children === "object" &&
+		typeof m.useEffect === "function" &&
+		typeof m.useState === "function"
+	);
+}
+
+function isToastMessageComponent(fn) {
+	if (typeof fn !== "function") return false;
+	const keys = firstDestructureKeys(fnBody(fn));
+	return (
+		/\bmessage\b/.test(keys) &&
+		/\bcover\b/.test(keys) &&
+		/\bcoverRadius\b/.test(keys)
+	);
+}
+
+function isErrorToastComponent(fn) {
+	if (typeof fn !== "function") return false;
+	const keys = firstDestructureKeys(fnBody(fn));
+	return /\berror\b/.test(keys) && /\bcloseToast\b/.test(keys);
+}
+
+function isNotificationCopyComponent(fn) {
+	if (typeof fn !== "function") return false;
+	const keys = firstDestructureKeys(fnBody(fn));
+	return (
+		/\bentityVariant\b/.test(keys) &&
+		/\bentityTitle\b/.test(keys) &&
+		/\bcloseToast\b/.test(keys) &&
+		!/\bisPinned\b/.test(keys) &&
+		!/\bcustomCover\b/.test(keys)
+	);
+}
+
 function findMods(require) {
 	const mods = require.m ?? {};
 	let notificationMod = null;
 	let reactMod = null;
-	let componentsMod = null;
-	let notificationCopyMod = null;
+	let toastMessageComponent = null;
+	let errorToastComponent = null;
+	let notificationCopyComponent = null;
 
 	for (const id of Object.keys(mods)) {
 		try {
 			const m = require(id);
 			if (!m) continue;
-			const keys = Object.keys(m);
 
-			if (
-				!notificationMod &&
-				keys.length === 3 &&
-				typeof m.Notification === "function" &&
-				typeof m.notification === "function" &&
-				typeof m.dismiss === "function"
-			) {
-				notificationMod = m;
-			}
-
-			if (
-				!reactMod &&
-				typeof m.createElement === "function" &&
-				typeof m.Children === "object" &&
-				keys.length === 40
-			) {
+			if (!reactMod && isReactMod(m)) {
 				reactMod = m;
 			}
 
-			if (
-				!componentsMod &&
-				typeof m.$W === "function" &&
-				typeof m.NX === "object" &&
-				keys.length === 99
-			) {
-				componentsMod = m;
+			if (!notificationMod) {
+				let notifyFn = null;
+				let dismissFn = null;
+				for (const k of Object.keys(m)) {
+					if (!notifyFn && isNotifyFn(m[k])) notifyFn = m[k];
+					if (!dismissFn && isDismissFn(m[k])) dismissFn = m[k];
+				}
+				if (notifyFn && dismissFn) {
+					notificationMod = {
+						notification: notifyFn,
+						dismiss: dismissFn,
+					};
+				}
 			}
 
-			if (
-				!notificationCopyMod &&
-				typeof m.NotificationCopy === "function"
-			) {
-				notificationCopyMod = m;
+			for (const k of Object.keys(m)) {
+				const fn = m[k];
+				if (!toastMessageComponent && isToastMessageComponent(fn)) {
+					toastMessageComponent = fn;
+				}
+				if (!errorToastComponent && isErrorToastComponent(fn)) {
+					errorToastComponent = fn;
+				}
+				if (
+					!notificationCopyComponent &&
+					isNotificationCopyComponent(fn)
+				) {
+					notificationCopyComponent = fn;
+				}
 			}
 
 			if (
 				notificationMod &&
 				reactMod &&
-				componentsMod &&
-				notificationCopyMod
+				toastMessageComponent &&
+				errorToastComponent &&
+				notificationCopyComponent
 			)
 				break;
 		} catch {}
 	}
 
-	return { notificationMod, reactMod, componentsMod, notificationCopyMod };
+	return {
+		notificationMod,
+		reactMod,
+		toastMessageComponent,
+		errorToastComponent,
+		notificationCopyComponent,
+	};
 }
 
 function notify(message, containerId, extra, cover) {
@@ -120,10 +194,10 @@ function notify(message, containerId, extra, cover) {
 		[Math.random()],
 		{},
 		(require) => {
-			const { notificationMod, reactMod, componentsMod } =
+			const { notificationMod, reactMod, toastMessageComponent } =
 				findMods(require);
 
-			if (!notificationMod || !reactMod || !componentsMod) {
+			if (!notificationMod || !reactMod || !toastMessageComponent) {
 				console.warn("[nextmusicApi] toast modules not found");
 				return;
 			}
@@ -131,7 +205,7 @@ function notify(message, containerId, extra, cover) {
 			const resolvedMessage =
 				typeof message === "function" ? message(reactMod) : message;
 
-			const toastEl = reactMod.createElement(componentsMod.$W, {
+			const toastEl = reactMod.createElement(toastMessageComponent, {
 				message: resolvedMessage,
 				...(cover
 					? {
@@ -165,21 +239,18 @@ function notifyCopy(entityTitle, entityVariant, containerId, extra) {
 		[Math.random()],
 		{},
 		(require) => {
-			const { notificationMod, reactMod, notificationCopyMod } =
+			const { notificationMod, reactMod, notificationCopyComponent } =
 				findMods(require);
 
-			if (!notificationMod || !reactMod || !notificationCopyMod) {
+			if (!notificationMod || !reactMod || !notificationCopyComponent) {
 				console.warn("[nextmusicApi] notifyCopy modules not found");
 				return;
 			}
 
-			const toastEl = reactMod.createElement(
-				notificationCopyMod.NotificationCopy,
-				{
-					entityVariant: entityVariant || "track",
-					entityTitle,
-				},
-			);
+			const toastEl = reactMod.createElement(notificationCopyComponent, {
+				entityVariant: entityVariant || "track",
+				entityTitle,
+			});
 
 			notificationMod.notification({
 				message: toastEl,
@@ -201,15 +272,15 @@ function notifyError(errorText, containerId, extra) {
 		[Math.random()],
 		{},
 		(require) => {
-			const { notificationMod, reactMod, componentsMod } =
+			const { notificationMod, reactMod, errorToastComponent } =
 				findMods(require);
 
-			if (!notificationMod || !reactMod || !componentsMod) {
+			if (!notificationMod || !reactMod || !errorToastComponent) {
 				console.warn("[nextmusicApi] notifyError modules not found");
 				return;
 			}
 
-			const toastEl = reactMod.createElement(componentsMod.hT, {
+			const toastEl = reactMod.createElement(errorToastComponent, {
 				error: errorText,
 			});
 
