@@ -188,6 +188,28 @@
 	-webkit-user-select: none;
 }
 
+.pulsesync-notice {
+	margin-bottom: 6px;
+	padding: 10px 12px;
+	border-radius: $row-r;
+	background: color-mix(in srgb, var(--c-purple) 14%, transparent);
+	border: 1px solid color-mix(in srgb, var(--c-purple) 30%, transparent);
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--c-text);
+
+	strong {
+		color: var(--c-purple);
+	}
+
+	a {
+		color: var(--c-purple);
+		font-weight: 700;
+		text-decoration: underline;
+		cursor: pointer;
+	}
+}
+
 .star-project-btn {
 	width: 100%;
 	margin-bottom: 6px;

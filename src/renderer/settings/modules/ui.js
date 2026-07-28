@@ -100,6 +100,52 @@ export function buildSchema() {
 	return tabs;
 }
 
+function buildPulsesyncNotice() {
+	const notice = document.createElement("div");
+	notice.className = "pulsesync-notice";
+
+	const strong = document.createElement("strong");
+	strong.textContent = t("settings.pulsesyncNotice.title", "Important:");
+	notice.append(strong, document.createTextNode(" "));
+
+	const links = {
+		client: {
+			label: "PulseSync Client",
+			href: "https://github.com/PulseSync-LLC/PulseSync-client",
+		},
+		project: {
+			label: "PulseSync",
+			href: "https://pulsesync.dev/",
+		},
+	};
+
+	const template = t(
+		"settings.pulsesyncNotice.text",
+		"Some features are adapted from {client} to provide compatibility with themes and addons originally developed for {project}.",
+	);
+
+	template.split(/(\{[a-z]+\})/g).forEach((part) => {
+		const match = part.match(/^\{([a-z]+)\}$/);
+		const link = match && links[match[1]];
+		if (link) {
+			const a = document.createElement("a");
+			a.href = link.href;
+			a.textContent = link.label;
+			a.target = "_blank";
+			a.rel = "noopener noreferrer";
+			a.addEventListener("click", (e) => {
+				e.preventDefault();
+				window.electronAPI?.openExternal?.(link.href);
+			});
+			notice.append(a);
+		} else if (part) {
+			notice.append(document.createTextNode(part));
+		}
+	});
+
+	return notice;
+}
+
 function isStarGated(path) {
 	return STAR_GATED_PATHS.some(
 		(gated) => path === gated || path.startsWith(gated + "."),
@@ -188,6 +234,10 @@ export function renderNodes(nodes, container, depth) {
 
 					const bodyWrap = document.createElement("div");
 					bodyWrap.className = "sec-body-wrap";
+
+					if (node.key === "addons") {
+						bodyWrap.append(buildPulsesyncNotice());
+					}
 
 					const applyDisabled = () => {
 						const enabled = !!getPath(

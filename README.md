@@ -8,6 +8,8 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
 
 <details>
   <summary>Themes & addons</summary>
+
+  > <blockquote><strong>Important:</strong> Some features are adapted from <a href="https://github.com/PulseSync-LLC/PulseSync-client">PulseSync Client</a> to provide compatibility with themes and addons originally developed for <a href="https://pulsesync.dev/">PulseSync</a>.
   
   <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3b36ee6a-22a7-4beb-83ca-7411a0fdb619" />
 </details>
@@ -64,7 +66,7 @@ https://github.com/user-attachments/assets/73bf3536-d59c-4be5-a53c-0ff38f3844d1
 
 <details>
   <summary>Wide Player Panel</summary>
-  <blockquote><strong>Important:</strong> This mod has been adapted from PulseSync (formerly YandexMusicModClient).</blockquote>
+  <blockquote><strong>Important:</strong> This mod has been adapted from <a href="https://github.com/PulseSync-LLC/PulseSync-mod/">PulseSync Mod</a> (formerly <a href="...">YandexMusicModClient</a>).</blockquote>
 
 > Expands the Yandex Music player panel.
 
@@ -137,6 +139,10 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 ### [Yandex Music Downloader](https://greasyfork.org/en/scripts/558745-yandex-music-downloader)
 
 https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
+
+## Credits
+- **[PulseSync Mod](https://github.com/PulseSync-LLC/PulseSync-mod/)**
+- **[PulseSync Client](https://github.com/PulseSync-LLC/PulseSync-client/)**
 
 # Discord Server - Click on the image below
 
