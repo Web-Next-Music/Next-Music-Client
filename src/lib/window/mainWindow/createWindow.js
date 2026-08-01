@@ -72,7 +72,9 @@ export function createWindow(config) {
 			nodeIntegration: false,
 			contextIsolation: true,
 			spellcheck: false,
-			backgroundThrottling: true,
+			// Listen Along polls the player from the page, which stops
+			// working the moment the hidden window gets throttled.
+			backgroundThrottling: !config?.alpha?.listenAlong?.enable,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,

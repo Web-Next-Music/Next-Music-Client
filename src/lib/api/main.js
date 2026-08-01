@@ -210,13 +210,78 @@ window.nextmusicApi = {
 	getState,
 	getCurrentAverageColor,
 
-	setSpeed: (speed) => getMainPlayer()?.setSpeed(speed),
-	setProgress: (progress) => getMainPlayer()?.setProgress(progress),
-	setVolume: (volume) => getMainPlayer()?.setVolume(volume),
-	play: () => getMainPlayer()?.play(),
-	pause: () => getMainPlayer()?.pause(),
-	resume: () => getMainPlayer()?.resume(),
-	togglePause: () => getMainPlayer()?.togglePause(),
-	next: () => getMainPlayer()?.moveForward(),
-	prev: () => getMainPlayer()?.moveBackward(),
+	getPlayers,
+	getActivePlayerId: () => getActivePlayer()?.id ?? null,
+	pauseAll,
+
+	// Same transport surface as the top-level methods, but aimed at one
+	// specific playback instead of whichever one is active.
+	player: (id) => {
+		const get = () => getPlayerById(id);
+		return {
+			id,
+			exists: () => !!get(),
+			getState: () => {
+				const p = get();
+				const ps = p?.playbackState?.playerState;
+				if (!ps) return null;
+				return {
+					playerId: p.id,
+					status: ps.status?.value,
+					progress: ps.progress?.value,
+					volume: ps.volume?.value,
+				};
+			},
+			setProgress: (progress) => get()?.setProgress(progress),
+			setVolume: (volume) => get()?.setVolume(volume),
+			setSpeed: (speed) => get()?.setSpeed(speed),
+			play: () => get()?.play(),
+			pause: () => get()?.pause(),
+			resume: () => get()?.resume(),
+			togglePause: () => get()?.togglePause(),
+			next: () => get()?.moveForward(),
+			prev: () => get()?.moveBackward(),
+		};
+	},
+
+	onStatusChange: (listener) =>
+		observeActivePlayer(
+			(p) => p.playbackState?.playerState?.status,
+			listener,
+		),
+	onProgressChange: (listener) =>
+		observeActivePlayer(
+			(p) => p.playbackState?.playerState?.progress,
+			listener,
+		),
+	// Fires on every track change, on every page, with no player bar involved.
+	// currentEntity also fires when the entity is merely mutated (metadata
+	// arriving, queue reshuffles), so repeats of the same track are dropped.
+	onTrackChange: (listener) => {
+		let lastId;
+		return observeActivePlayer(
+			(p) => p.playbackState?.queueState?.currentEntity,
+			() => {
+				const track = getCurrentTrack();
+				const id = track?.id ?? null;
+				if (id === lastId) return;
+				lastId = id;
+				listener(track);
+			},
+		);
+	},
+	onActivePlayerChange: (listener) =>
+		getPlaybackController()?.activePlayback?.onChange?.((p) =>
+			listener(p?.id ?? null),
+		) ?? (() => {}),
+
+	setSpeed: (speed) => getActivePlayer()?.setSpeed(speed),
+	setProgress: (progress) => getActivePlayer()?.setProgress(progress),
+	setVolume: (volume) => getActivePlayer()?.setVolume(volume),
+	play: () => getActivePlayer()?.play(),
+	pause: () => getActivePlayer()?.pause(),
+	resume: () => getActivePlayer()?.resume(),
+	togglePause: () => getActivePlayer()?.togglePause(),
+	next: () => getActivePlayer()?.moveForward(),
+	prev: () => getActivePlayer()?.moveBackward(),
 };

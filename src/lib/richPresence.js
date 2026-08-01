@@ -2,6 +2,7 @@ import { Client } from "@xhayper/discord-rpc";
 import WebSocket, { WebSocketServer } from "ws";
 import { getConfig } from "./configManager.js";
 import { checkGitHubStar } from "./githubStarAuth.js";
+import { buildInviteUrl } from "./listenAlong/service.js";
 
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
@@ -161,7 +162,7 @@ function updateActivity(data) {
 	const startTimestamp = now - Math.floor(positionSec);
 	const endTimestamp = startTimestamp + Math.floor(durationSec);
 
-	const { trackButton, githubButton } =
+	const { trackButton, githubButton, listenAlongButton } =
 		config?.programSettings?.richPresence?.buttons ?? {};
 
 	const isUGCShareEnabled = config?.programSettings?.ugcShare;
@@ -190,11 +191,18 @@ function updateActivity(data) {
 	const detailsUrlField =
 		trackUrl && !isUGCTrack ? { detailsUrl: trackUrl } : {};
 
+	const listenAlongUrl = listenAlongButton ? buildInviteUrl() : null;
+
 	let showGithubButton;
 	if (!userHasStarred) {
 		showGithubButton = true;
 	} else {
 		showGithubButton = githubButton;
+	}
+
+	if (listenAlongUrl && showGithubButton) {
+		showGithubButton = false;
+		console.log("[RPC] GitHub button replaced by the Listen Along button");
 	}
 
 	if (githubButton && !userHasStarred) {
@@ -220,6 +228,9 @@ function updateActivity(data) {
 		buttons: [
 			...(trackButton && trackId && (!isUGCTrack || isUGCShareEnabled)
 				? [{ label: trackButtonLabel, url: trackButtonUrl }]
+				: []),
+			...(listenAlongUrl
+				? [{ label: "Listen Along", url: listenAlongUrl }]
 				: []),
 			...(showGithubButton
 				? [{ label: "Next Music Project", url: NM_WEBSITE_LINK }]

@@ -435,3 +435,27 @@ contextBridge.exposeInMainWorld("nmcConvert", {
 			ipcRenderer.removeListener("nmc:convert-progress", handler);
 	},
 });
+
+contextBridge.exposeInMainWorld("nmcListenAlong", {
+	getConfig: () => ipcRenderer.invoke("la:get-config"),
+	connect: () => ipcRenderer.invoke("la:connect"),
+	disconnect: () => ipcRenderer.invoke("la:disconnect"),
+	invite: () => ipcRenderer.invoke("la:invite"),
+	join: (code) => ipcRenderer.invoke("la:join", code),
+	send: (msg) => ipcRenderer.send("la:send", msg),
+	onMessage: (cb) => {
+		const handler = (_e, v) => cb(v);
+		ipcRenderer.on("la:message", handler);
+		return () => ipcRenderer.removeListener("la:message", handler);
+	},
+	onStatus: (cb) => {
+		const handler = (_e, v) => cb(v);
+		ipcRenderer.on("la:status", handler);
+		return () => ipcRenderer.removeListener("la:status", handler);
+	},
+	onJoinedByLink: (cb) => {
+		const handler = (_e, v) => cb(v);
+		ipcRenderer.on("la:joined-by-link", handler);
+		return () => ipcRenderer.removeListener("la:joined-by-link", handler);
+	},
+});

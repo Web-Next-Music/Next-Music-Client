@@ -10,7 +10,85 @@ function isPlayerLike(obj) {
 	);
 }
 
+function isPlaybackControllerLike(obj) {
+	return (
+		obj !== null &&
+		typeof obj === "object" &&
+		obj.playbacks instanceof Map &&
+		obj.activePlayback !== undefined &&
+		typeof obj.activePlayback?.onChange === "function"
+	);
+}
+
+// Yandex Music keeps several playbacks alive at once (MAIN, TRAILER, ADVERT,
+// CLIP) and swaps which one is active depending on the page - the home page
+// drives the same MAIN playback through a different player bar, but a video
+// clip or an ad takes over a different playback entirely. The controller is the
+// only place that knows which one is currently in charge.
+function findPlaybackController() {
+	const root = document.getElementById("__next") || document.body;
+	const fiberKey = Object.keys(root).find((k) =>
+		k.startsWith("__reactFiber"),
+	);
+	if (!fiberKey) return null;
+
+	const visited = new Set();
+	let controller = null;
+
+	function scan(obj, depth) {
+		if (
+			controller ||
+			!obj ||
+			typeof obj !== "object" ||
+			depth > 8 ||
+			visited.has(obj) ||
+			obj instanceof Window ||
+			obj instanceof Node
+		)
+			return;
+		visited.add(obj);
+		try {
+			if (isPlaybackControllerLike(obj)) {
+				controller = obj;
+				return;
+			}
+			for (const value of Object.values(obj)) scan(value, depth + 1);
+		} catch {}
+	}
+
+	function walk(fiber, depth) {
+		if (controller || !fiber || depth > 60) return;
+		scan(fiber.memoizedProps, 0);
+		let state = fiber.memoizedState;
+		while (state) {
+			scan(state.memoizedState, 0);
+			state = state.next;
+		}
+		walk(fiber.child, depth + 1);
+		walk(fiber.sibling, depth + 1);
+	}
+
+	walk(root[fiberKey], 0);
+
+	window._ymPlaybackController = controller;
+	return controller;
+}
+
+function getPlaybackController() {
+	const cached = window._ymPlaybackController;
+	if (isPlaybackControllerLike(cached) && cached.playbacks.size > 0)
+		return cached;
+
+	return findPlaybackController();
+}
+
 function refreshPlayers() {
+	const controller = getPlaybackController();
+	if (controller) {
+		window._ymPlayers = [...controller.playbacks.values()];
+		return window._ymPlayers;
+	}
+
 	const root = document.getElementById("__next") || document.body;
 	const fiberKey = Object.keys(root).find((k) =>
 		k.startsWith("__reactFiber"),
@@ -66,6 +144,147 @@ function getMainPlayer() {
 	return refreshPlayers().find((p) => p.id === "MAIN");
 }
 
+// Everything that acts on "what the user is hearing right now" should go
+// through this, not through getMainPlayer(). getMainPlayer() stays for the
+// music queue, which only ever lives on MAIN.
+function getActivePlayer() {
+	const active = getPlaybackController()?.activePlayback?.value;
+	if (isPlayerLike(active)) return active;
+
+	const players = window._ymPlayers?.length
+		? window._ymPlayers
+		: refreshPlayers();
+
+	return (
+		players.find(
+			(p) => p.playbackState?.playerState?.status?.value === "playing",
+		) ??
+		players.find(
+			(p) =>
+				(p.playbackState?.playerState?.progress?.value?.position ?? 0) >
+				0,
+		) ??
+		getMainPlayer()
+	);
+}
+
+// getPlayback() silently falls back to MAIN for an unknown id, which would turn
+// a typo into a command aimed at the wrong playback.
+function getPlayerById(id) {
+	const player = getPlaybackController()?.getPlayback?.(id);
+	if (player?.id === id) return player;
+
+	return refreshPlayers().find((p) => p.id === id) ?? null;
+}
+
+function getPlayers() {
+	const activeId = getActivePlayer()?.id ?? null;
+
+	return refreshPlayers().map((p) => ({
+		id: p.id,
+		status: p.playbackState?.playerState?.status?.value ?? null,
+		progress: p.playbackState?.playerState?.progress?.value ?? null,
+		active: p.id === activeId,
+	}));
+}
+
+// Runs a command against every playback at once - the point being that the
+// site can hand control to another playback (a clip, an ad) at any moment, and
+// "stop everything" has to mean everything.
+function forEachPlayer(run) {
+	const results = {};
+
+	for (const player of refreshPlayers()) {
+		try {
+			results[player.id] = run(player) ?? true;
+		} catch (err) {
+			results[player.id] = `error: ${err.message}`;
+		}
+	}
+
+	return results;
+}
+
+function pauseAll() {
+	return forEachPlayer((p) =>
+		p.playbackState?.playerState?.status?.value === "idle"
+			? "idle"
+			: (p.pause(), "paused"),
+	);
+}
+
+// Subscribes to one of the active player's observables and re-subscribes
+// whenever the active playback is swapped, so callers get a single stable
+// listener instead of having to track playback changes themselves.
+const OBSERVE_RETRY_MS = 500;
+
+function observeActivePlayer(pick, listener) {
+	let unsubscribeValue = null;
+	let unsubscribeActive = null;
+	let activeBound = false;
+	let binding = false;
+	let retryTimer = null;
+	let stopped = false;
+
+	// The controller may not exist yet either, so this is attempted on every
+	// bind rather than once up front.
+	function bindController() {
+		if (activeBound) return;
+
+		const observable = getPlaybackController()?.activePlayback;
+		if (typeof observable?.onChange !== "function") return;
+
+		// Set before subscribing, not after: onChange fires its listener
+		// synchronously, and that listener calls back into bind(). Guarding on
+		// the not-yet-assigned unsubscribe handle would recurse until the
+		// stack blew - taking the site's own subscription chain down with it.
+		activeBound = true;
+		unsubscribeActive = observable.onChange(() => bind()) ?? null;
+	}
+
+	function bind() {
+		if (stopped || binding) return;
+		binding = true;
+
+		try {
+			clearTimeout(retryTimer);
+			retryTimer = null;
+
+			bindController();
+
+			unsubscribeValue?.();
+			unsubscribeValue = null;
+
+			const player = getActivePlayer();
+			const observable = player ? pick(player) : null;
+
+			// Callers subscribe as soon as the page script runs, which is long
+			// before the site has mounted its player. Without this retry the
+			// listener would be silently dead for the rest of the session.
+			if (typeof observable?.onChange !== "function") {
+				retryTimer = setTimeout(bind, OBSERVE_RETRY_MS);
+				return;
+			}
+
+			unsubscribeValue = observable.onChange((value) =>
+				listener(value, player),
+			);
+		} finally {
+			binding = false;
+		}
+	}
+
+	bind();
+
+	return () => {
+		stopped = true;
+		clearTimeout(retryTimer);
+		retryTimer = null;
+		unsubscribeValue?.();
+		unsubscribeActive?.();
+	};
+}
+
 function getCurrentMeta() {
 	const player = getMainPlayer();
 	if (!player) return null;
@@ -110,36 +329,66 @@ function applyCustomTrackToQueue(id, queue) {
 	return -1;
 }
 
+// Returns false instead of throwing. queue.inject() raises
+// NoCurrentContextException whenever nothing has been played yet in this
+// session, and an exception here used to escape into callers mid-way through
+// their own state updates, leaving them wedged.
 function playTrackById(trackId) {
 	const player = getMainPlayer();
-	const queue = player.queueController;
-	const currentIndex = player.playbackState.queueState.index.value;
+	const queue = player?.queueController;
 
-	queue.inject({
-		entitiesData: [
-			{
-				type: "music",
-				meta: { id: String(trackId), realId: String(trackId) },
-				fromCurrentContext: false,
-				loadEntityMeta: true,
-			},
-		],
-		position: currentIndex + 1,
-		silent: false,
-	});
+	if (!queue) {
+		console.warn("[nextmusicApi] No player queue for track:", trackId);
+		return false;
+	}
+
+	const currentIndex = player.playbackState?.queueState?.index?.value ?? -1;
+
+	try {
+		queue.inject({
+			entitiesData: [
+				{
+					type: "music",
+					meta: { id: String(trackId), realId: String(trackId) },
+					fromCurrentContext: false,
+					loadEntityMeta: true,
+				},
+			],
+			position: currentIndex + 1,
+			silent: false,
+		});
+	} catch (err) {
+		// Most often "No current context": the queue has never been set up,
+		// so there is nothing to inject into.
+		console.warn(
+			`[nextmusicApi] Cannot queue track ${trackId}: ${err.message}`,
+		);
+		return false;
+	}
 
 	setTimeout(() => {
-		const entityList = queue.playerQueue.queueState.entityList.value;
-		const idx = entityList.findIndex(
-			(e) => e?.entity?.entityData?.meta?.id === String(trackId),
-		);
-		if (idx !== -1) {
-			player.setEntityByIndex(idx);
-			player.play();
-		} else {
-			console.warn("[nextmusicApi] Track not found in queue:", trackId);
+		try {
+			const entityList = queue.playerQueue.queueState.entityList.value;
+			const idx = entityList.findIndex(
+				(e) => e?.entity?.entityData?.meta?.id === String(trackId),
+			);
+			if (idx !== -1) {
+				player.setEntityByIndex(idx);
+				player.play();
+			} else {
+				console.warn(
+					"[nextmusicApi] Track not found in queue:",
+					trackId,
+				);
+			}
+		} catch (err) {
+			console.warn(
+				`[nextmusicApi] Cannot start track ${trackId}: ${err.message}`,
+			);
 		}
 	}, 100);
+
+	return true;
 }
 
 function getCurrentTrack() {
@@ -182,10 +431,11 @@ function getCurrentTrack() {
 }
 
 function getState() {
-	const player = getMainPlayer();
+	const player = getActivePlayer();
 	if (!player) return null;
 	const ps = player.playbackState;
 	return {
+		playerId: player.id,
 		status: ps?.playerState?.status?.value,
 		progress: ps?.playerState?.progress?.value,
 		volume: ps?.playerState?.volume?.value,

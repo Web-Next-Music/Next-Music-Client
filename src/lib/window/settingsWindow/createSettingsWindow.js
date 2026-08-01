@@ -11,6 +11,7 @@ import {
 	getBuiltinExperimentState,
 } from "../../experiments/builtinExperiments.js";
 import { configChangeNeedsRestart } from "../../internalConfig.js";
+import { refreshListenAlong } from "../../listenAlong/service.js";
 import { getPaths } from "../../../config.js";
 import { loadRendererPage } from "../../paths.js";
 import { fileURLToPath } from "url";
@@ -187,6 +188,8 @@ if (!ipcMain.listenerCount("settings:save-config")) {
 		if (!needRestart && experimentsChanged) {
 			applyExperimentsLive(normalizedConfig);
 		}
+
+		refreshListenAlong();
 
 		return { needRestart };
 	});

@@ -61,6 +61,7 @@ export const defaultConfig = {
 			buttons: {
 				trackButton: true,
 				githubButton: true,
+				listenAlongButton: false,
 			},
 		},
 		addons: {
@@ -88,7 +89,7 @@ export const defaultConfig = {
 			port: 7080,
 			roomId: "",
 			clientId: "",
-			avatarUrl: "",
+			hostToken: "",
 		},
 	},
 

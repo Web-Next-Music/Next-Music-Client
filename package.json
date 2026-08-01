@@ -55,12 +55,23 @@
 			"category": "Audio",
 			"maintainer": "Diramix <39developer@diram1x.ru>",
 			"icon": "src/assets/nm-icons/icon-256.png",
-			"executableName": "next-music"
+			"executableName": "next-music",
+			"desktop": {
+				"entry": {
+					"MimeType": "x-scheme-handler/nextmusic;"
+				}
+			}
 		},
 		"pacman": {
 			"depends": ["gtk3", "libnotify", "nss", "libxss", "glibc"],
 			"artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
-		}
+		},
+		"protocols": [
+			{
+				"name": "Next Music",
+				"schemes": ["nextmusic"]
+			}
+		]
 	},
 	"repository": {
 		"type": "git",

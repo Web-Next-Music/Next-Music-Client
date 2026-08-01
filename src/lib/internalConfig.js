@@ -26,7 +26,9 @@ function isEqualValue(prevValue, nextValue) {
 	return false;
 }
 
+// Most specific first: pathNeedsRestart takes the first prefix match.
 const restartRules = [
+	{ path: "alpha.listenAlong.hostToken", needRestart: false },
 	{ path: "programSettings.richPresence", needRestart: false },
 	{ path: "github", needRestart: false },
 ];
