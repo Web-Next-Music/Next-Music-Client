@@ -21,6 +21,8 @@ if (process.argv.includes("--nmc-titlebar")) {
 	});
 }
 
+const YNISON_DEVICE_NAME = "Next Music";
+
 const EXPERIMENTS_ARG_PREFIX = "--nmc-experiments=";
 
 function parseExperimentsArg() {
@@ -400,6 +402,79 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 	}
 }
 
+function ynisonDeviceNamePatcher(appName) {
+	const NativeWebSocket = window.WebSocket;
+
+	function patchProtocols(protocols) {
+		if (!Array.isArray(protocols)) return protocols;
+
+		return protocols.map((entry) => {
+			if (
+				typeof entry !== "string" ||
+				entry.indexOf("Ynison-Device-Info") === -1
+			)
+				return entry;
+
+			try {
+				const meta = JSON.parse(decodeURIComponent(entry));
+				const info = JSON.parse(meta["Ynison-Device-Info"]);
+				info.app_name = appName;
+				meta["Ynison-Device-Info"] = JSON.stringify(info);
+				return encodeURIComponent(JSON.stringify(meta));
+			} catch {
+				return entry;
+			}
+		});
+	}
+
+	function patchInfo(info) {
+		if (!info || typeof info !== "object") return;
+		info.app_name = appName;
+		info.title = appName;
+	}
+
+	function patchStateMessage(data) {
+		if (typeof data !== "string" || data.indexOf("device") === -1)
+			return data;
+
+		try {
+			const message = JSON.parse(data);
+			patchInfo(message?.update_full_state?.device?.info);
+			patchInfo(message?.update_volume?.device?.info);
+			return JSON.stringify(message);
+		} catch {
+			return data;
+		}
+	}
+
+	function PatchedWebSocket(url, protocols) {
+		const address = String(url);
+		const isYnison = address.indexOf("ynison") !== -1;
+
+		const socket =
+			protocols === undefined
+				? new NativeWebSocket(url)
+				: new NativeWebSocket(
+						url,
+						isYnison ? patchProtocols(protocols) : protocols,
+					);
+
+		if (isYnison && address.indexOf("PutYnisonState") !== -1) {
+			const nativeSend = socket.send.bind(socket);
+			socket.send = (data) => nativeSend(patchStateMessage(data));
+		}
+
+		return socket;
+	}
+
+	PatchedWebSocket.prototype = NativeWebSocket.prototype;
+	for (const key of ["CONNECTING", "OPEN", "CLOSING", "CLOSED"]) {
+		PatchedWebSocket[key] = NativeWebSocket[key];
+	}
+
+	window.WebSocket = PatchedWebSocket;
+}
+
 function injectIntoMainWorld(code) {
 	const inject = () => {
 		const script = document.createElement("script");
@@ -424,6 +499,10 @@ function injectIntoMainWorld(code) {
 
 injectIntoMainWorld(
 	`(${experimentPatcher.toString()})(${JSON.stringify(rscOverrides)}, ${JSON.stringify(storeOverrides)}, ${JSON.stringify(managedNames)});`,
+);
+
+injectIntoMainWorld(
+	`(${ynisonDeviceNamePatcher.toString()})(${JSON.stringify(YNISON_DEVICE_NAME)});`,
 );
 
 contextBridge.exposeInMainWorld("nmcConvert", {
