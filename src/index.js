@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, shell } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import { checkGitHubStar } from "./lib/githubStarAuth.js";
 import { joinByInvite, inviteCodeFromUrl } from "./lib/listenAlong/service.js";
 import { loadConfig } from "./lib/configManager.js";
@@ -20,7 +20,7 @@ import { initUpdater } from "./lib/update/updateController.js";
 import { presenceService, initWS } from "./lib/richPresence.js";
 import { createWindow } from "./lib/window/mainWindow/createWindow.js";
 import { setupSplashScreen } from "./lib/splashScreen.js";
-import { setupStorePage } from "./lib/storePage/storePage.js";
+import { setupStoreIpc } from "./lib/storePage/storeIpc.js";
 import { startServer } from "./lib/obsWidget/obsWidget.js";
 import { startListenAlong } from "./lib/listenAlong/service.js";
 
@@ -70,19 +70,6 @@ if (enabledFeatures.length) {
 	app.commandLine.appendSwitch("enable-features", enabledFeatures.join(","));
 }
 app.commandLine.appendSwitch("force-color-profile", "srgb");
-
-// Register custom protocol BEFORE ready
-protocol.registerSchemesAsPrivileged([
-	{
-		scheme: "nextstore",
-		privileges: {
-			standard: true,
-			secure: true,
-			supportFetchAPI: true,
-			corsEnabled: true,
-		},
-	},
-]);
 
 if (process.defaultApp) {
 	if (process.argv.length >= 2) {
@@ -193,7 +180,7 @@ app.whenReady().then(() => {
 
 	// Addons store page
 	if (config.programSettings?.addons?.enable) {
-		setupStorePage();
+		setupStoreIpc();
 	}
 
 	// IPC

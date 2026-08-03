@@ -50,6 +50,7 @@ export function getBuiltinExperiments() {
 const SILENT_DEFAULT_EXPERIMENTS = {
 	WebNextAIContentReductionSetting: "on",
 	WebNextYnisonActivityInterception: "on",
+	WebNextDisablePlus: "on",
 };
 
 export function resolveBuiltinExperiments(userExperiments = {}) {

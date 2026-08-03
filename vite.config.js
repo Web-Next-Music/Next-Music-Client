@@ -39,7 +39,6 @@ console.log(
 	ENCRYPTION_KEY_VALUE ? "✓ loaded" : "✗ NOT FOUND",
 );
 
-const STORE_PUBLIC = join("src", "lib", "storePage", "public");
 const RENDERER_DIR = join("src", "renderer");
 const BUILD_DIR = join("src", "build");
 
@@ -113,10 +112,10 @@ function walk(dir, out = [], jsOnly = true) {
 }
 
 const CM_SRC = join("node_modules", "codemirror");
-const CM_DEST = join("dist", "lib", "storePage", "public", "cm");
+const CM_DEST = join("dist", "lib", "storePage", "cm");
 const CM_FILES = [
-	["lib/codemirror.css", "codemirror.css"],
-	["lib/codemirror.js", "codemirror.js"],
+	["lib/codemirror.css", "lib/codemirror.css"],
+	["lib/codemirror.js", "lib/codemirror.js"],
 	["addon/lint/lint.css", "addon/lint/lint.css"],
 	["addon/fold/foldgutter.css", "addon/fold/foldgutter.css"],
 	["mode/javascript/javascript.js", "mode/javascript/javascript.js"],
@@ -129,11 +128,7 @@ const CM_FILES = [
 ];
 
 function isMainEntry(file) {
-	return (
-		!file.startsWith(RENDERER_DIR) &&
-		!file.startsWith(STORE_PUBLIC) &&
-		!file.startsWith(BUILD_DIR)
-	);
+	return !file.startsWith(RENDERER_DIR) && !file.startsWith(BUILD_DIR);
 }
 
 function copyCjsFiles() {
@@ -152,24 +147,29 @@ function copyCjsFiles() {
 	};
 }
 
-function copyStorePublic() {
+function copyCodeMirror() {
 	return {
-		name: "copy-store-public",
+		name: "copy-codemirror",
 		closeBundle() {
-			const files = walk(STORE_PUBLIC, [], false);
-			for (const src of files) {
-				const dest = src.replace(
-					STORE_PUBLIC,
-					join("dist", "lib", "storePage", "public"),
-				);
-				mkdirSync(dirname(dest), { recursive: true });
-				copyFileSync(src, dest);
-			}
-
 			for (const [from, to] of CM_FILES) {
 				const dest = join(CM_DEST, to);
 				mkdirSync(dirname(dest), { recursive: true });
 				copyFileSync(join(CM_SRC, from), dest);
+			}
+		},
+	};
+}
+
+function copyStoreAssets() {
+	return {
+		name: "copy-store-assets",
+		closeBundle() {
+			const from = join("src", "lib", "storePage", "assets");
+			const to = join("dist", "lib", "storePage", "assets");
+			if (!existsSync(from)) return;
+			mkdirSync(to, { recursive: true });
+			for (const file of readdirSync(from)) {
+				copyFileSync(join(from, file), join(to, file));
 			}
 		},
 	};
@@ -184,7 +184,7 @@ function mainConfig() {
 			"process.env.ENCRYPTION_KEY": JSON.stringify(ENCRYPTION_KEY_VALUE),
 		},
 
-		plugins: [copyCjsFiles(), copyStorePublic()],
+		plugins: [copyCjsFiles(), copyCodeMirror(), copyStoreAssets()],
 
 		build: {
 			outDir: "dist",

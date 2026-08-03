@@ -67,9 +67,9 @@
 		"statusSaveFailed": "Ошибка сохранения",
 		"statusInvalidJson": "⚠ Некорректный JSON: {message}",
 		"statusFailedReadme": "Не удалось загрузить README.",
-		"modalReadmeTitle": "{name} - README",
+		"modalReadmeTitle": "{name}",
 		"modalEditorBadge": "JSON",
-		"modalEditorTitle": "{name} - handleEvents.json",
+		"modalEditorTitle": "{name}",
 		"modalLoading": "Загрузка…"
 	},
 	"info": {

@@ -39,6 +39,7 @@
 		"btnEnable": "Enable",
 		"btnDisable": "Disable",
 		"btnDelete": "Delete",
+		"btnDeleteConfirm": "Confirm?",
 		"btnRestart": "Restart",
 		"btnCancel": "Cancel",
 		"btnSave": "Save",
@@ -67,9 +68,9 @@
 		"statusSaveFailed": "Save failed",
 		"statusInvalidJson": "⚠ Invalid JSON: {message}",
 		"statusFailedReadme": "Failed to load README.",
-		"modalReadmeTitle": "{name} - README",
+		"modalReadmeTitle": "{name}",
 		"modalEditorBadge": "JSON",
-		"modalEditorTitle": "{name} - handleEvents.json",
+		"modalEditorTitle": "{name}",
 		"modalLoading": "Loading…"
 	},
 	"info": {
