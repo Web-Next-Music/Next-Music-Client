@@ -1,18 +1,5 @@
 (function () {
-	const LINK_BTN_ID = "ugc-share-btn";
 	const LINK_ICON_SVG = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" aria-hidden="true" focusable="false" role="img" class="svg-icon"><use xlink:href="/icons/sprite.svg#chain_xxs"/></svg>`;
-	const LINK_BTN_STYLE = `
-#ugc-share-btn {
-	color: var(--ym-controls-color-secondary-text-enabled);
-	background: transparent;
-	border: 0 solid;
-	z-index: 1;
-}
-#ugc-share-btn:hover {
-	color: var(--ym-controls-color-secondary-on_default-hovered);
-	cursor: pointer;
-}
-`;
 
 	const ENCRYPTION_KEY = window.__NEXT_MUSIC_ENCRYPTION_KEY__ || "";
 
@@ -122,12 +109,6 @@
 		document.addEventListener("paste", handleTrackKeyPaste, true);
 	})();
 
-	(function injectStyles() {
-		const style = document.createElement("style");
-		style.textContent = LINK_BTN_STYLE;
-		document.head.appendChild(style);
-	})();
-
 	// XOR-cipher + base64url
 	function encodeTrackKey(data) {
 		const compact = { u: data.url };
@@ -169,74 +150,42 @@
 		return res.text();
 	}
 
-	function removeLinkButton() {
-		document.getElementById(LINK_BTN_ID)?.remove();
-		lastTrackId = null;
-	}
+	async function onShareClick() {
+		const api = getNMAPI();
+		const currentTrack = api?.getCurrentTrack?.();
+		if (!currentTrack) return;
 
-	let lastTrackId = null;
-
-	function injectLinkButton() {
-		const track = getNMAPI()?.getCurrentTrack?.();
-
-		if (!track) {
-			return;
-		}
-
-		if (!track.id?.includes("-")) {
-			removeLinkButton();
-			return;
-		}
-
-		const container = document.querySelector(
-			'[class*="PlayerBarDesktopWithBackgroundProgressBar_meta"]',
-		);
-		if (!container) {
-			// Let's log what containers we can find
-			const allContainers = document.querySelectorAll(
-				'[class*="PlayerBar"]',
+		const url = buildNmUrl(currentTrack);
+		if (!url) {
+			api.showErrorToast(
+				"Error: play the track first",
+				api.ContainerId.ERROR,
 			);
-
 			return;
 		}
 
-		if (lastTrackId === track.id && document.getElementById(LINK_BTN_ID))
-			return;
+		try {
+			const shortUrl = await shortenUrl(url);
+			await navigator.clipboard.writeText(shortUrl);
+		} catch {
+			await navigator.clipboard.writeText(url);
+		}
 
-		removeLinkButton();
-		lastTrackId = track.id;
-
-		const btn = document.createElement("button");
-		btn.id = LINK_BTN_ID;
-		btn.innerHTML = LINK_ICON_SVG;
-		btn.addEventListener("click", async () => {
-			const currentTrack = getNMAPI()?.getCurrentTrack?.();
-			if (!currentTrack) return;
-
-			const url = buildNmUrl(currentTrack);
-			if (!url) {
-				getNMAPI().showErrorToast(
-					"Error: play the track first",
-					getNMAPI().ContainerId.ERROR,
-				);
-				return;
-			}
-
-			try {
-				const shortUrl = await shortenUrl(url);
-				await navigator.clipboard.writeText(shortUrl);
-			} catch {
-				await navigator.clipboard.writeText(url);
-			}
-
-			getNMAPI().showCopyToast(currentTrack.title, "track");
-		});
-
-		container.insertBefore(btn, container.firstChild);
+		api.showCopyToast(currentTrack.title, "track");
 	}
 
-	const observer = new MutationObserver(() => {
-		injectLinkButton();
-	});
-	observer.observe(document.body, { childList: true, subtree: true });
+	function syncShareButton(track) {
+		const api = getNMAPI();
+		if (!api?.mountUgcShareButton) return;
+
+		if (!track?.id?.includes("-")) {
+			api.unmountUgcShareButton?.();
+			return;
+		}
+
+		api.mountUgcShareButton(LINK_ICON_SVG, onShareClick);
+	}
+
+	getNMAPI()?.onTrackChange?.(syncShareButton);
+	syncShareButton(getNMAPI()?.getCurrentTrack?.());
 })();

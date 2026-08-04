@@ -11,6 +11,7 @@ export const API_FUNCTIONS_ORDER = [
 	"storeReadme",
 	"nextStoreNav",
 	"nextStorePage",
+	"ugcShareButton",
 	"toasts",
 	"filePatch",
 	"player",

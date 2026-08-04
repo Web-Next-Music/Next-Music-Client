@@ -145,6 +145,9 @@ window.nextmusicApi = {
 		};
 	},
 
+	mountUgcShareButton,
+	unmountUgcShareButton,
+
 	getSiteComponents(options) {
 		const found = getSiteComponents(options);
 		return {
