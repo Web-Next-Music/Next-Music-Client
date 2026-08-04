@@ -1,4 +1,5 @@
 import https from "https";
+import crypto from "crypto";
 import { getEntry, isFresh, setEntry, touchEntry } from "./cache.js";
 
 export const GITHUB_OWNER = "Web-Next-Music";
@@ -41,6 +42,42 @@ export function httpsGet(url, headers = {}, timeout = 15000) {
 			req.destroy();
 			reject(new Error("Request timeout: " + url));
 		});
+	});
+}
+
+export function httpsPost(url, body, headers = {}, timeout = 15000) {
+	return new Promise((resolve, reject) => {
+		const payload = Buffer.from(body, "utf8");
+		const req = https.request(
+			url,
+			{
+				method: "POST",
+				headers: {
+					"User-Agent": "Next-Music-Store/1.0",
+					Accept: "application/vnd.github.v3+json",
+					"Content-Type": "application/json",
+					"Content-Length": payload.length,
+					...headers,
+				},
+			},
+			(res) => {
+				const c = [];
+				res.on("data", (d) => c.push(d));
+				res.on("end", () =>
+					resolve({
+						statusCode: res.statusCode,
+						body: Buffer.concat(c),
+						headers: res.headers,
+					}),
+				);
+			},
+		);
+		req.on("error", reject);
+		req.setTimeout(timeout, () => {
+			req.destroy();
+			reject(new Error("Request timeout: " + url));
+		});
+		req.end(payload);
 	});
 }
 
@@ -557,6 +594,59 @@ export async function getCatalog(owner, repo, section, token, force = false) {
 		})),
 		6,
 	);
+}
+
+function markdownContext(url) {
+	const m = String(url || "").match(
+		/^https?:\/\/(?:raw\.githubusercontent\.com|github\.com)\/([^/]+)\/([^/]+)/i,
+	);
+	return m ? `${m[1]}/${m[2]}` : "";
+}
+
+function resolveRelativeUrls(html, base) {
+	if (!base) return html;
+	return html.replace(/\b(src|href)="([^"]*)"/gi, (full, attr, value) => {
+		if (!value || /^(https?:|data:|mailto:|#|\/\/)/i.test(value))
+			return full;
+		try {
+			return `${attr}="${new URL(value, base).href}"`;
+		} catch {
+			return full;
+		}
+	});
+}
+
+export async function renderMarkdown(md, url, token) {
+	if (!md) return "";
+
+	const context = markdownContext(url);
+	const hash = crypto.createHash("sha1").update(md).digest("hex");
+	const key = `md:${context}:${hash}`;
+	const cached = getEntry(key);
+
+	if (isFresh(cached, CONTENTS_TTL)) return cached.v;
+
+	const base = url ? url.replace(/[^/]*$/, "") : "";
+
+	try {
+		const r = await httpsPost(
+			"https://api.github.com/markdown",
+			JSON.stringify({
+				text: md,
+				mode: context ? "gfm" : "markdown",
+				context: context || undefined,
+			}),
+			authHeader(token),
+		);
+
+		if (r.statusCode !== 200) throw new Error(`HTTP ${r.statusCode}`);
+
+		const html = resolveRelativeUrls(r.body.toString(), base);
+		setEntry(key, html);
+		return html;
+	} catch {
+		return cached?.v || "";
+	}
 }
 
 export async function fetchReadme(url) {

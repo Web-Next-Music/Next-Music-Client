@@ -21,6 +21,17 @@ if (process.argv.includes("--nmc-titlebar")) {
 	});
 }
 
+const STORE_ROUTE = "/next-store";
+
+let storeOpenOnBoot = false;
+
+try {
+	if (location.pathname === STORE_ROUTE) {
+		storeOpenOnBoot = true;
+		history.replaceState({}, "", "/");
+	}
+} catch {}
+
 const YNISON_DEVICE_NAME = "Next Music";
 
 const EXPERIMENTS_ARG_PREFIX = "--nmc-experiments=";
@@ -505,14 +516,12 @@ injectIntoMainWorld(
 	`(${ynisonDeviceNamePatcher.toString()})(${JSON.stringify(YNISON_DEVICE_NAME)});`,
 );
 
-contextBridge.exposeInMainWorld("nmcConvert", {
-	mp3: (buf) => ipcRenderer.invoke("nmc:convert-mp3", buf),
-	onProgress: (cb) => {
-		const handler = (_e, v) => cb(v);
-		ipcRenderer.on("nmc:convert-progress", handler);
-		return () =>
-			ipcRenderer.removeListener("nmc:convert-progress", handler);
-	},
+contextBridge.exposeInMainWorld("nmcStore", {
+	openOnBoot: storeOpenOnBoot,
+	route: STORE_ROUTE,
+	request: (method, urlPath, qp, body) =>
+		ipcRenderer.invoke("nmc:store-request", { method, urlPath, qp, body }),
+	loadEditor: () => ipcRenderer.invoke("nmc:store-load-editor"),
 });
 
 contextBridge.exposeInMainWorld("nmcListenAlong", {

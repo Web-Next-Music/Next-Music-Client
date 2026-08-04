@@ -133,6 +133,12 @@ export function fsToggle(name) {
 
 export function fsDelete(name) {
 	const found = findEntry(name);
+	console.log(
+		"[Addons] Deleting:",
+		JSON.stringify(name),
+		"->",
+		JSON.stringify(found),
+	);
 	if (found)
 		fs.rmSync(path.join(addonsDirectory, found), {
 			recursive: true,
@@ -232,7 +238,7 @@ export function getCustomEntries(knownNames) {
 					const rootImg = pickImgFile(files);
 
 					if (rootImg)
-						logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rootImg)}`;
+						logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rootImg)}`;
 
 					if (!logo) {
 						const brandingPath = findBrandingDir(fullPath);
@@ -241,7 +247,7 @@ export function getCustomEntries(knownNames) {
 							const logoAbs = findLogoInDir(brandingPath);
 
 							if (logoAbs)
-								logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.relative(fullPath, logoAbs))}`;
+								logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.relative(fullPath, logoAbs))}`;
 						}
 					}
 
@@ -260,7 +266,7 @@ export function getCustomEntries(knownNames) {
 								) {
 									const found = pickImgFile(subFiles);
 									if (found) {
-										logo = `nextstore://app/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;
+										logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;
 										break;
 									}
 								}
@@ -270,7 +276,7 @@ export function getCustomEntries(knownNames) {
 
 					const rmFile = files.find((f) => /^readme\.md$/i.test(f));
 					if (rmFile)
-						readme = `nextstore://app/api/local-readme?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rmFile)}`;
+						readme = `/api/local-readme?name=${encodeURIComponent(n)}&file=${encodeURIComponent(rmFile)}`;
 				}
 
 				return { name: clean, raw: n, enabled, isDir, logo, readme };

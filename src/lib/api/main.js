@@ -145,6 +145,14 @@ window.nextmusicApi = {
 		};
 	},
 
+	getSiteComponents(options) {
+		const found = getSiteComponents(options);
+		return {
+			components: found,
+			missing: getMissingSiteComponents(),
+		};
+	},
+
 	showToast: notify,
 	showCopyToast: notifyCopy,
 	showErrorToast: notifyError,
@@ -285,3 +293,35 @@ window.nextmusicApi = {
 	next: () => getActivePlayer()?.moveForward(),
 	prev: () => getActivePlayer()?.moveBackward(),
 };
+
+(() => {
+	if (window.__nmcStoreNavStarted) return;
+	window.__nmcStoreNavStarted = true;
+
+	const open = () => openNextStore();
+
+	if (window.nmcStore?.openOnBoot) {
+		let openAttempts = 0;
+		const tryOpen = () => {
+			if (open()) return;
+			if (openAttempts++ > 100) return;
+			setTimeout(tryOpen, 100);
+		};
+		tryOpen();
+	}
+
+	let attempts = 0;
+	const tryMount = () => {
+		let mounted = false;
+		try {
+			mounted = mountNextStoreNavItem("Next Store", open);
+		} catch {}
+
+		if (mounted) return;
+
+		if (attempts++ > 100) return;
+		setTimeout(tryMount, 300);
+	};
+
+	tryMount();
+})();

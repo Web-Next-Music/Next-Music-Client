@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { BrowserWindow, shell } from "electron";
 
 import {
@@ -12,6 +13,7 @@ import {
 	getRemoteHeadCommit,
 	getLatestNmRelease,
 	fetchReadme,
+	renderMarkdown,
 	getRateLimitState,
 	pLimit,
 } from "./github.js";
@@ -41,14 +43,6 @@ import {
 import { getPaths } from "../../config.js";
 import { getCurrentLangCode } from "../langManager.js";
 import { getConfig } from "../configManager.js";
-function skelCard() {
-	return `<div class="card"><div class="card-top"><div class="skel" style="width:44px;height:44px;border-radius:9px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-top:2px"><div class="skel" style="width:62%"></div><div class="skel" style="width:36%;height:10px"></div></div></div><div class="skel" style="height:33px;border-radius:8px"></div></div>`;
-}
-
-function skels(n) {
-	return Array.from({ length: n }, skelCard).join("");
-}
-
 const json = (d, status = 200) => ({
 	status,
 	headers: { "Content-Type": "application/json" },
@@ -76,9 +70,27 @@ const notFound = () => ({
 	body: Buffer.alloc(0),
 });
 
+function findMainWindow() {
+	const wins = BrowserWindow.getAllWindows();
+
+	return (
+		wins.find((w) => w.webContents.getURL().includes("music.yandex")) ||
+		wins.find((w) => {
+			const u = w.webContents.getURL();
+			return !u.startsWith("file://");
+		}) ||
+		null
+	);
+}
+
 const LOGO_TTL = 7 * 24 * 60 * 60 * 1000;
 const LOGO_CACHE_CONTROL = "public, max-age=604800";
-const STATIC_CACHE_CONTROL = "public, max-age=86400";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function markdownCssPath() {
+	return path.join(__dirname, "assets", "github-markdown.css");
+}
 
 const staticCache = new Map();
 
@@ -148,58 +160,7 @@ async function checkUpdate(name, subUrl, token, force) {
 	}
 }
 
-export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
-	if (method === "GET" && (urlPath === "/" || urlPath === "")) {
-		const htmlPath = path.join(PUBLIC_DIR, "index.html");
-		const html = readStatic(htmlPath)
-			.toString("utf8")
-			.replace("SKELS_ADDONS", skels(6))
-			.replace("SKELS_THEMES", skels(6));
-		return text(html, "text/html; charset=utf-8");
-	}
-
-	const MIME = {
-		".html": "text/html; charset=utf-8",
-		".css": "text/css",
-		".js": "application/javascript",
-		".ttf": "font/ttf",
-	};
-
-	if (method === "GET" && urlPath.startsWith("/assets/fonts/")) {
-		const fontsDir = path.resolve(PUBLIC_DIR, "../../../assets/fonts");
-		const filePath = path.join(
-			fontsDir,
-			urlPath.slice("/assets/fonts/".length),
-		);
-
-		const buf = readStatic(filePath);
-		if (!buf) return notFound();
-
-		const ext = path.extname(filePath).toLowerCase();
-		return binary(
-			buf,
-			MIME[ext] || "application/octet-stream",
-			STATIC_CACHE_CONTROL,
-		);
-	}
-
-	if (method === "GET" && urlPath.startsWith("/public/")) {
-		const filePath = path.join(
-			PUBLIC_DIR,
-			urlPath.slice("/public/".length),
-		);
-
-		const buf = readStatic(filePath);
-		if (!buf) return notFound();
-
-		const ext = path.extname(filePath).toLowerCase();
-		return binary(
-			buf,
-			MIME[ext] || "application/octet-stream",
-			STATIC_CACHE_CONTROL,
-		);
-	}
-
+export async function handleRequest(method, urlPath, qp, getBody) {
 	if (method === "GET" && urlPath === "/api/installed")
 		return json(installedEntries());
 
@@ -299,6 +260,25 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 			return text(md);
 		} catch {
 			return notFound();
+		}
+	}
+
+	if (method === "GET" && urlPath === "/api/markdown-css") {
+		try {
+			return text(fs.readFileSync(markdownCssPath(), "utf8"), "text/css");
+		} catch {
+			return notFound();
+		}
+	}
+
+	if (method === "POST" && urlPath === "/api/render-markdown") {
+		try {
+			const { text: md, url } = JSON.parse(await getBody());
+			const token = getConfig().github?.accessToken || undefined;
+
+			return json({ html: await renderMarkdown(md, url, token) });
+		} catch {
+			return json({ html: "" });
 		}
 	}
 
@@ -490,50 +470,6 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 		}
 	}
 
-	if (method === "GET" && urlPath === "/api/theme-vars") {
-		try {
-			const wins = BrowserWindow.getAllWindows();
-
-			const mainWin =
-				wins.find((w) => {
-					const url = w.webContents.getURL();
-					return (
-						url.includes("music.yandex") ||
-						url.includes("music.yandex.ru")
-					);
-				}) ||
-				wins.find((w) => {
-					const url = w.webContents.getURL();
-					return (
-						!url.includes("nextstore://") &&
-						!url.startsWith("file://")
-					);
-				}) ||
-				null;
-
-			if (!mainWin) return json({});
-
-			const vars = await mainWin.webContents.executeJavaScript(`
-            (() => {
-                const tmp = document.createElement('div');
-                const parentStyles = getComputedStyle(document.body);
-                const vars = {};
-                for (const prop of parentStyles) {
-                    if (prop.startsWith('--ym-')) {
-                        tmp.style.color = \`var(\${prop})\`;
-                        document.body.appendChild(tmp);
-                        vars[prop] = getComputedStyle(tmp).color;
-                        document.body.removeChild(tmp);
-                    }
-                }
-                return vars;
-            })()`);
-			return json(vars);
-		} catch {
-			return json({});
-		}
-	}
-
 	if (method === "POST" && urlPath === "/api/open-url") {
 		try {
 			const { url } = JSON.parse(await getBody());
@@ -548,20 +484,8 @@ export async function handleRequest(method, urlPath, qp, getBody, PUBLIC_DIR) {
 
 	if (method === "POST" && urlPath === "/api/reload") {
 		try {
-			const wins = BrowserWindow.getAllWindows();
-
 			const mainWin =
-				wins.find((w) =>
-					w.webContents.getURL().includes("music.yandex"),
-				) ||
-				wins.find((w) => {
-					const u = w.webContents.getURL();
-					return (
-						!u.startsWith("nextstore://") &&
-						!u.startsWith("file://")
-					);
-				}) ||
-				wins[0];
+				findMainWindow() || BrowserWindow.getAllWindows()[0];
 
 			if (mainWin) mainWin.webContents.reload();
 

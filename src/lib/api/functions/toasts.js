@@ -51,19 +51,6 @@ const defaultToastOptions = {
 	},
 };
 
-function fnBody(fn) {
-	try {
-		return fn.toString();
-	} catch {
-		return "";
-	}
-}
-
-function firstDestructureKeys(src) {
-	const m = /(?:let|var|const)\s*\{([^}]*)\}\s*=/.exec(src);
-	return m ? m[1] : "";
-}
-
 function isNotifyFn(fn) {
 	if (typeof fn !== "function") return false;
 	const src = fnBody(fn);
@@ -79,15 +66,6 @@ function isDismissFn(fn) {
 	if (typeof fn !== "function") return false;
 	const keys = firstDestructureKeys(fnBody(fn));
 	return /\bnotificationId\b/.test(keys) && /\bforceClose\b/.test(keys);
-}
-
-function isReactMod(m) {
-	return (
-		typeof m.createElement === "function" &&
-		typeof m.Children === "object" &&
-		typeof m.useEffect === "function" &&
-		typeof m.useState === "function"
-	);
 }
 
 function isToastMessageComponent(fn) {

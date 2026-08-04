@@ -33,10 +33,6 @@ export const injectList = [
 		condition: (config) => config?.programSettings?.lrclib,
 	},
 	{
-		file: "nextStore.js",
-		condition: (config) => config?.programSettings?.addons?.enable,
-	},
-	{
 		file: "nextTitle.js",
 		condition: (config) => config?.windowSettings?.nextTitle,
 	},

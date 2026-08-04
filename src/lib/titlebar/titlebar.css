@@ -11,7 +11,7 @@
 	--nm-btn-color: var(--ym-controls-color-primary-text-enabled_variant);
 	--nm-btn-hover-bg: var(--ym-controls-color-secondary-default-hovered);
 	--nm-btn-close-hover-bg: #f23f42;
-	--next-text-color: var(--text-enabled-color);
+	--next-text-color: var(--ym-controls-color-primary-text-enabled_variant);
 }
 
 [class*="CommonLayout_root"] {
