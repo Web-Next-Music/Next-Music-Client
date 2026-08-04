@@ -2,19 +2,18 @@
 	"use strict";
 
 	const WS_URL = "ws://localhost:4091";
-	let ws = null;
+	let conn = null;
 	let lastPayload = "";
 
 	function connect() {
-		ws = new WebSocket(WS_URL);
-		ws.onclose = () => setTimeout(connect, 2000);
-		ws.onerror = (e) => console.error("[OBS Widget] WebSocket error", e);
+		conn = window.nextmusicApi.wsReconnect(WS_URL, {
+			reconnectDelay: 2000,
+			onError: (e) => console.error("[OBS Widget] WebSocket error", e),
+		});
 	}
 
-	connect();
-
 	function collectAndSend() {
-		if (!ws || ws.readyState !== WebSocket.OPEN) return;
+		if (conn?.getSocket()?.readyState !== WebSocket.OPEN) return;
 
 		const api = window.nextmusicApi;
 		const track = api?.getCurrentTrack();
@@ -34,12 +33,16 @@
 
 		if (payload === lastPayload) return;
 		lastPayload = payload;
-		ws.send(payload);
+		conn.send(payload);
 	}
 
 	function waitForApi() {
-		if (window.nextmusicApi) setInterval(collectAndSend, 500);
-		else setTimeout(waitForApi, 500);
+		if (window.nextmusicApi) {
+			connect();
+			setInterval(collectAndSend, 500);
+		} else {
+			setTimeout(waitForApi, 500);
+		}
 	}
 
 	waitForApi();

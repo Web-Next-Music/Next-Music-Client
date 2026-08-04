@@ -1,73 +1,5 @@
 (function () {
-	const DL_BTN_ID = "nm-download-btn";
 	const COVER_SIZE = 1000;
-	window.nextmusicApi;
-
-	const DL_ICON_SVG = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24"
-  aria-hidden="true" focusable="false" role="img" class="svg-icon">
-  <use xlink:href="/icons/sprite.svg#download_xxs"/>
-</svg>`;
-
-	const DL_SPINNER_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-  aria-hidden="true" focusable="false" class="nm-dl-spinner">
-  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.2"
-    stroke-linecap="round" stroke-dasharray="42 14" />
-</svg>`;
-
-	const DL_BTN_STYLE = `
-#nm-download-btn {
-  color: var(--ym-controls-color-secondary-text-enabled);
-  background: transparent;
-  border: 0 solid;
-  z-index: 1;
-  position: relative;
-  overflow: visible;
-}
-#nm-download-btn:hover {
-  color: var(--ym-controls-color-secondary-on_default-hovered);
-  cursor: pointer;
-}
-#nm-download-btn:disabled {
-  opacity: 1;
-  cursor: default;
-}
-@keyframes nm-spin {
-  to { transform: rotate(360deg); }
-}
-.nm-dl-spinner {
-  display: block;
-  animation: nm-spin 0.9s linear infinite;
-  transform-origin: center;
-}
-#nm-dl-progress-track {
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: currentColor;
-  opacity: 0.2;
-  border-radius: 1px;
-}
-#nm-dl-progress-fill {
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 0%;
-  height: 2px;
-  background: currentColor;
-  border-radius: 1px;
-  transition: width 0.12s ease;
-}
-`;
-
-	(function injectStyles() {
-		const s = document.createElement("style");
-		s.textContent = DL_BTN_STYLE;
-		document.head.appendChild(s);
-	})();
-
-	let lastTrackId = null;
 
 	// Utilities
 	const _utf8 = (s) => new TextEncoder().encode(s);
@@ -668,79 +600,58 @@
 	}
 
 	// Button Injection
-	function removeDownloadButton() {
-		document.getElementById(DL_BTN_ID)?.remove();
-		lastTrackId = null;
-	}
+	let isDownloading = false;
 
-	function injectDownloadButton() {
-		if (document.getElementById("nm-download-btn")) return;
+	async function onDownloadClick() {
+		if (isDownloading) return;
 
-		const settingsBtn = document.querySelector(
-			'[class*="PlayerBarDesktopWithBackgroundProgressBar_settingsButton"]',
-		);
-		if (!settingsBtn) {
-			removeDownloadButton();
+		const currentTrack = window.nextmusicApi?.getCurrentTrack?.();
+		if (!currentTrack) {
+			showError("Play a track first");
 			return;
 		}
 
-		const container = settingsBtn.parentElement;
-		if (!container) return;
-
-		const track = window.nextmusicApi?.getCurrentTrack?.();
-		const trackId = track?.id ?? null;
-
-		if (lastTrackId === trackId && document.getElementById(DL_BTN_ID))
-			return;
-		removeDownloadButton();
-		lastTrackId = trackId;
-
-		const btn = document.createElement("button");
-		btn.id = DL_BTN_ID;
-		btn.innerHTML = DL_ICON_SVG;
-
-		btn.addEventListener("click", async () => {
-			const currentTrack = window.nextmusicApi?.getCurrentTrack?.();
-			if (!currentTrack) {
-				showError("Play a track first");
-				return;
-			}
-
-			btn.disabled = true;
-			btn.innerHTML =
-				DL_SPINNER_SVG +
-				'<div id="nm-dl-progress-track"></div>' +
-				'<div id="nm-dl-progress-fill"></div>';
-			const fill = btn.querySelector("#nm-dl-progress-fill");
-
-			try {
-				await downloadTrack(currentTrack, (phase, ratio) => {
-					if (phase === "convert" && ratio === 0) {
-						fill.style.transition = "none";
-						fill.style.width = "0%";
-						fill.getBoundingClientRect();
-						fill.style.transition = "width 0.12s ease";
-					}
-					fill.style.width = `${Math.min(ratio * 100, 100)}%`;
-				});
-				fill.style.width = "100%";
-				await new Promise((r) => setTimeout(r, 180));
-			} catch (err) {
-				showError(`Error: ${err.message}`);
-			} finally {
-				btn.disabled = false;
-				btn.innerHTML = DL_ICON_SVG;
-			}
+		isDownloading = true;
+		window.nextmusicApi.updateDownloadButtonState({
+			phase: "downloading",
+			progress: 0,
 		});
 
-		container.insertBefore(btn, settingsBtn);
+		try {
+			await downloadTrack(currentTrack, (phase, ratio) => {
+				window.nextmusicApi.updateDownloadButtonState({
+					phase: phase === "convert" ? "converting" : "downloading",
+					progress: ratio,
+				});
+			});
+		} catch (err) {
+			showError(`Error: ${err.message}`);
+		} finally {
+			isDownloading = false;
+			window.nextmusicApi.updateDownloadButtonState({ phase: "idle" });
+		}
 	}
 
-	const nmDownloaderObserver = new MutationObserver(() =>
-		injectDownloadButton(),
-	);
-	nmDownloaderObserver.observe(document.body, {
-		childList: true,
-		subtree: true,
-	});
+	function startDownloadButton() {
+		window.nextmusicApi.mountDownloadButton(
+			{ phase: "idle" },
+			onDownloadClick,
+		);
+		window.nextmusicApi.onTrackChange(() => {
+			window.nextmusicApi.mountDownloadButton(
+				{ phase: "idle" },
+				onDownloadClick,
+			);
+		});
+	}
+
+	function waitForApi() {
+		if (window.nextmusicApi) {
+			startDownloadButton();
+		} else {
+			setTimeout(waitForApi, 500);
+		}
+	}
+
+	waitForApi();
 })();

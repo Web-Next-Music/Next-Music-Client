@@ -19,10 +19,18 @@
 		}
 `;
 
-	const styleEl = document.createElement("style");
-	styleEl.id = "liquid-ass-style";
-	styleEl.textContent = css;
-	(document.head || document.documentElement).appendChild(styleEl);
+	function applyStyle() {
+		if (window.nextmusicApi?.injectStyleTag) {
+			window.nextmusicApi.injectStyleTag("liquid-ass-style", css);
+			return;
+		}
+		const styleEl = document.createElement("style");
+		styleEl.id = "liquid-ass-style";
+		styleEl.textContent = css;
+		(document.head || document.documentElement).appendChild(styleEl);
+	}
+
+	applyStyle();
 
 	const body = document.body;
 

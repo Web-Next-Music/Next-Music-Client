@@ -14,36 +14,7 @@
 	const PLAY_COOLDOWN_MS = 500; // Prevent spam from repeated paste events
 
 	function decodeTrackKey(encodedKey) {
-		try {
-			// Reverse base64url to base64
-			let b64 = encodedKey.replace(/-/g, "+").replace(/_/g, "/");
-			// Add padding if needed
-			b64 += "=".repeat((4 - (b64.length % 4)) % 4);
-
-			// Decode base64
-			const binaryString = atob(b64);
-			const keyBytes = new TextEncoder().encode(ENCRYPTION_KEY);
-			const out = new Uint8Array(binaryString.length);
-
-			for (let i = 0; i < binaryString.length; i++) {
-				out[i] =
-					binaryString.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
-			}
-
-			// Decode to string and parse JSON
-			const jsonString = new TextDecoder().decode(out);
-			const data = JSON.parse(jsonString);
-
-			return {
-				url: data.u,
-				title: data.t,
-				artist: data.a,
-				cover: data.c,
-			};
-		} catch (e) {
-			console.warn("[ugcShare] Failed to decode track key:", e.message);
-			return null;
-		}
+		return window.nextmusicApi.decodeTrackKey(encodedKey, ENCRYPTION_KEY);
 	}
 
 	function extractTrackKeyFromText(text) {
@@ -109,23 +80,8 @@
 		document.addEventListener("paste", handleTrackKeyPaste, true);
 	})();
 
-	// XOR-cipher + base64url
 	function encodeTrackKey(data) {
-		const compact = { u: data.url };
-		if (data.title) compact.t = data.title;
-		if (data.artist) compact.a = data.artist;
-		if (data.cover) compact.c = data.cover;
-
-		const jsonBytes = new TextEncoder().encode(JSON.stringify(compact));
-		const keyBytes = new TextEncoder().encode(ENCRYPTION_KEY);
-		const out = new Uint8Array(jsonBytes.length);
-		for (let i = 0; i < jsonBytes.length; i++) {
-			out[i] = jsonBytes[i] ^ keyBytes[i % keyBytes.length];
-		}
-		return btoa(String.fromCharCode(...out))
-			.replace(/\+/g, "-")
-			.replace(/\//g, "_")
-			.replace(/=/g, "");
+		return window.nextmusicApi.encodeTrackKey(data, ENCRYPTION_KEY);
 	}
 
 	function buildNmUrl(track) {

@@ -352,6 +352,13 @@
 		document.head.appendChild(s);
 	})();
 
+	// Cached DOM refs, populated once buildIsland() runs
+	let __li_island__ = null;
+	let __li_inner__ = null;
+	let __li_status__ = null;
+	let __li_dot_wrap__ = null;
+	let __li_avatars__ = null;
+
 	// Build island DOM
 	function buildIsland() {
 		if (document.getElementById("__li_island__")) return;
@@ -385,6 +392,12 @@
 		island.style.cursor = "pointer";
 		island.title = "Click to copy an invite to this room";
 		island.addEventListener("click", copyInvite);
+
+		__li_island__ = island;
+		__li_inner__ = inner;
+		__li_status__ = status;
+		__li_dot_wrap__ = dotWrap;
+		__li_avatars__ = avatarRow;
 	}
 
 	async function copyInvite() {
@@ -458,7 +471,7 @@
 	buildIsland();
 
 	document.addEventListener("click", (e) => {
-		const wrap = document.getElementById("__li_dot_wrap__");
+		const wrap = __li_dot_wrap__;
 		if (!wrap || (!wrap.contains(e.target) && e.target !== wrap)) return;
 		if (wrap.classList.contains("unavailable")) return;
 
@@ -476,7 +489,7 @@
 	let _islandVisible = false;
 
 	function showIsland() {
-		const island = document.getElementById("__li_island__");
+		const island = __li_island__;
 
 		if (!island) return;
 		if (_islandVisible && !island.classList.contains("island-hiding"))
@@ -489,7 +502,7 @@
 	}
 
 	function hideIsland() {
-		const island = document.getElementById("__li_island__");
+		const island = __li_island__;
 
 		if (!island || !_islandVisible) return;
 
@@ -500,7 +513,7 @@
 	}
 
 	function animateInnerWidth(changeFn) {
-		const inner = document.getElementById("__li_inner__");
+		const inner = __li_inner__;
 
 		if (!inner) {
 			changeFn();
@@ -513,7 +526,7 @@
 
 		changeFn();
 
-		const avRow = document.getElementById("__li_avatars__");
+		const avRow = __li_avatars__;
 		if (avRow && avRow.classList.contains("visible")) {
 			avRow.style.transition = "none";
 			avRow.style.maxWidth = "none";
@@ -608,7 +621,7 @@
 		resetCollapse();
 		if (!wasCollapsed) return;
 
-		const status = document.getElementById("__li_status__");
+		const status = __li_status__;
 		if (status) animateInnerWidth(() => status.classList.remove("hidden"));
 	}
 
@@ -618,7 +631,7 @@
 		_labelCollapseTimer = setTimeout(() => {
 			_labelCollapseTimer = null;
 
-			const status = document.getElementById("__li_status__");
+			const status = __li_status__;
 			if (!status) return;
 
 			_labelCollapsed = true;
@@ -627,9 +640,9 @@
 	}
 
 	function renderIsland() {
-		const wrap = document.getElementById("__li_dot_wrap__");
-		const status = document.getElementById("__li_status__");
-		const avRow = document.getElementById("__li_avatars__");
+		const wrap = __li_dot_wrap__;
+		const status = __li_status__;
+		const avRow = __li_avatars__;
 		const view = islandState();
 
 		if (view.hidden) {
@@ -676,7 +689,7 @@
 	const islandAvatars = new Map();
 
 	function sortAvatars() {
-		const avRow = document.getElementById("__li_avatars__");
+		const avRow = __li_avatars__;
 		if (!avRow) return;
 
 		const hostId = connection.hostId;
@@ -701,7 +714,7 @@
 	}
 
 	function upsertAvatar(clientId, base64Data, mime) {
-		const avRow = document.getElementById("__li_avatars__");
+		const avRow = __li_avatars__;
 		if (!avRow) return;
 
 		animateInnerWidth(() => {
@@ -1347,6 +1360,8 @@
 		}, 800);
 	}
 
+	let playStateTimer = null;
+
 	function startPlayStateObserver() {
 		if (_playStateObserverStarted) return;
 		_playStateObserverStarted = true;
@@ -1364,10 +1379,12 @@
 
 		window.nextmusicApi?.onStatusChange?.(() => check());
 
-		setInterval(check, 1000);
+		playStateTimer = setInterval(check, 1000);
 	}
 
 	// Timeline sync
+	let timelinePollTimer = null;
+
 	function startTimelineObserver() {
 		if (_timelineObserverStarted) return;
 		_timelineObserverStarted = true;
@@ -1417,7 +1434,7 @@
 			onPosition(progress.position);
 		});
 
-		setInterval(() => {
+		timelinePollTimer = setInterval(() => {
 			if (Date.now() - lastObservableAt < 2000) return;
 			const pos = getPosition();
 			if (pos !== null) onPosition(pos);
@@ -1548,6 +1565,8 @@
 		console.log(`⏸️ ${reason} - sync paused`);
 	}
 
+	let trackObserverTimer = null;
+
 	function startObserver() {
 		if (observerStarted) return;
 		observerStarted = true;
@@ -1590,6 +1609,31 @@
 			);
 		}
 
-		setInterval(onTrack, 1000);
+		trackObserverTimer = setInterval(onTrack, 1000);
 	}
+
+	function stopListenAlong() {
+		if (avatarWatchTimer) {
+			clearInterval(avatarWatchTimer);
+			avatarWatchTimer = null;
+		}
+		if (driftTimer) {
+			clearInterval(driftTimer);
+			driftTimer = null;
+		}
+		if (playStateTimer) {
+			clearInterval(playStateTimer);
+			playStateTimer = null;
+		}
+		if (timelinePollTimer) {
+			clearInterval(timelinePollTimer);
+			timelinePollTimer = null;
+		}
+		if (trackObserverTimer) {
+			clearInterval(trackObserverTimer);
+			trackObserverTimer = null;
+		}
+	}
+
+	window.stopListenAlong = stopListenAlong;
 })();

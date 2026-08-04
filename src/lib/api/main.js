@@ -148,6 +148,17 @@ window.nextmusicApi = {
 	mountUgcShareButton,
 	unmountUgcShareButton,
 
+	mountDownloadButton,
+	unmountDownloadButton,
+	updateDownloadButtonState,
+
+	waitForApi: waitForNextmusicApi,
+	wsReconnect: connectWithReconnect,
+	injectStyleTag,
+	removeStyleTag,
+	encodeTrackKey,
+	decodeTrackKey,
+
 	getSiteComponents(options) {
 		const found = getSiteComponents(options);
 		return {

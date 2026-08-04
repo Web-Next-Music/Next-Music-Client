@@ -89,7 +89,10 @@ function renderShareButton(iconSvg, onClick) {
 	_shareAnchor = anchor;
 	_shareRoot = ReactDOMClient.createRoot(_shareHost);
 	_shareRoot.render(
-		ReactDOMPortal.createPortal(React.createElement(UgcShareButton), anchor),
+		ReactDOMPortal.createPortal(
+			React.createElement(UgcShareButton),
+			anchor,
+		),
 	);
 
 	return true;
