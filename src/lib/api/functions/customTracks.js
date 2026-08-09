@@ -17,7 +17,7 @@ function watchEntityForCustomTrack(entity, trackId) {
 				codec: custom.codec ?? "mp3",
 				quality: custom.quality ?? "high",
 				bitrate: custom.bitrate ?? 320,
-				transport: "raw", // "raw" for unencrypted URLs
+				transport: "raw",
 				gain: false,
 				size: 0,
 			},
@@ -72,23 +72,31 @@ function updateCustomTrackDuration(trackId, durationMs) {
 	}
 }
 
-/**
- * Play a custom track with arbitrary audio URL.
- *
- * @param {object} trackData
- * @param {string}   trackData.id          - unique ID (e.g., "custom_1")
- * @param {string}   trackData.url         - direct link to audio file (mp3/aac/flac)
- * @param {string}   [trackData.title]     - track title
- * @param {{id, name}[]} [trackData.artists] - list of artists
- * @param {string|number} [trackData.albumId] - album ID
- * @param {string}   [trackData.coverUri]  - cover: "avatars.yandex.net/.../%%" or full https://
- * @param {string}   [trackData.cover]     - alternatively: direct link to cover image
- * @param {number}   [trackData.durationMs] - duration in milliseconds
- * @param {string}   [trackData.key]       - AES decryption key, usually ""
- * @param {string}   [trackData.codec]     - "mp3" by default
- * @param {number}   [trackData.bitrate]   - 320 by default
- * @param {string}   [trackData.quality]   - "high" by default
- */
+function ugcTrackId(url) {
+	let h = 0x811c9dc5;
+	for (let i = 0; i < url.length; i++) {
+		h ^= url.charCodeAt(i);
+		h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+	}
+	return "ugc:" + h.toString(36);
+}
+
+function playUgcTrack(payload) {
+	if (!payload?.url) return;
+
+	const id = ugcTrackId(payload.url);
+
+	playCustomTrack({
+		id,
+		url: payload.url,
+		title: payload.title || "Shared Track",
+		artists: payload.artist ? [{ id: 0, name: payload.artist }] : [],
+		cover: payload.cover,
+	});
+
+	return id;
+}
+
 function playCustomTrack(trackData) {
 	const id = String(trackData.id);
 	const durationMs = Math.max(

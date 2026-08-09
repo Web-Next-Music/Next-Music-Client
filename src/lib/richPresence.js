@@ -2,7 +2,11 @@ import { Client } from "@xhayper/discord-rpc";
 import WebSocket, { WebSocketServer } from "ws";
 import { getConfig } from "./configManager.js";
 import { checkGitHubStar } from "./githubStarAuth.js";
-import { buildInviteUrl } from "./listenAlong/service.js";
+import {
+	buildInviteUrl,
+	getListenAlongStatus,
+	onListenAlongStatus,
+} from "./listenAlong/service.js";
 
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
@@ -15,13 +19,16 @@ let isReady = false;
 let lastActivity = null;
 let lastPlayerState = null;
 
-// Star flag
 let userHasStarred = false;
 let lastStarCheckAt = 0;
 let lastStarCheckToken = null;
 let starCheckPromise = null;
 
 let lastRawData = null;
+
+onListenAlongStatus(() => {
+	if (lastRawData) updateActivity(lastRawData);
+});
 
 function initRPC() {
 	rpc = new Client({ clientId: CLIENT_ID, transport: { type: "ipc" } });
@@ -148,7 +155,6 @@ function updateActivity(data) {
 	const img = data.img || "icon";
 	const trackUrl = `https://music.yandex.ru/track/${trackId}` || "";
 	const artistUrl = data.artistUrl || "";
-	// mp3Url: from siteRPCServer.js
 	const mp3Url = data.mp3Url || data.trackUrl || "";
 
 	const isUGCTrack = trackId.includes("-");
@@ -193,6 +199,20 @@ function updateActivity(data) {
 
 	const listenAlongUrl = listenAlongButton ? buildInviteUrl() : null;
 
+	const laStatus = getListenAlongStatus();
+	const partySize = laStatus.connected
+		? 1 + (laStatus.peers?.length ?? 0)
+		: 0;
+	const partyField =
+		laStatus.connected && partySize > 0
+			? {
+					party: {
+						id: laStatus.serverLabel || "listen-along",
+						size: [partySize, partySize],
+					},
+				}
+			: {};
+
 	let showGithubButton;
 	if (!userHasStarred) {
 		showGithubButton = true;
@@ -225,6 +245,7 @@ function updateActivity(data) {
 		...detailsUrlField,
 		...(artistUrl ? { stateUrl: artistUrl } : {}),
 		...(hasTimestamps ? { startTimestamp, endTimestamp } : {}),
+		...partyField,
 		buttons: [
 			...(trackButton && trackId && (!isUGCTrack || isUGCShareEnabled)
 				? [{ label: trackButtonLabel, url: trackButtonUrl }]
@@ -250,6 +271,7 @@ function updateActivity(data) {
 		lastActivity.details !== activityObject.details ||
 		lastActivity.state !== activityObject.state ||
 		lastActivity.largeImageKey !== activityObject.largeImageKey ||
+		lastActivity.party?.size?.[0] !== activityObject.party?.size?.[0] ||
 		lastPlayerState !== "play";
 
 	const timestampDiff =

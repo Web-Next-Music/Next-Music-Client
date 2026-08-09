@@ -11,7 +11,16 @@ import {
 	getBuiltinExperimentState,
 } from "../../experiments/builtinExperiments.js";
 import { configChangeNeedsRestart } from "../../internalConfig.js";
-import { refreshListenAlong } from "../../listenAlong/service.js";
+import {
+	refreshListenAlong,
+	refreshDiscordIdentity,
+} from "../../listenAlong/service.js";
+import {
+	hasDiscordIdentity,
+	getDiscordUsername,
+	connectDiscordIdentity,
+	disconnectDiscordIdentity,
+} from "../../listenAlong/discordIdentity.js";
 import { getPaths } from "../../../config.js";
 import { loadRendererPage } from "../../paths.js";
 import { fileURLToPath } from "url";
@@ -24,7 +33,6 @@ import {
 	getAllStrings,
 } from "../../langManager.js";
 
-// ESM __dirname fix
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -65,10 +73,15 @@ export function setTrayRebuilder(fn) {
 	_rebuildTray = fn;
 }
 
-// Window factory
-export function createSettingsWindow() {
+export function createSettingsWindow(options = {}) {
 	if (settingsWindow && !settingsWindow.isDestroyed()) {
 		settingsWindow.focus();
+		if (options.tab) {
+			settingsWindow.webContents.send(
+				"settings:activate-tab",
+				options.tab,
+			);
+		}
 		return;
 	}
 
@@ -98,7 +111,10 @@ export function createSettingsWindow() {
 			nodeIntegration: false,
 			sandbox: true,
 			backgroundThrottling: false,
-			additionalArguments: condemned ? ["--nmc-condemned"] : [],
+			additionalArguments: [
+				...(condemned ? ["--nmc-condemned"] : []),
+				...(options.tab ? [`--nmc-tab=${options.tab}`] : []),
+			],
 		},
 	});
 
@@ -116,6 +132,38 @@ export function createSettingsWindow() {
 
 	settingsWindow.on("closed", () => {
 		settingsWindow = null;
+	});
+}
+
+if (!ipcMain.listenerCount("settings:open-window")) {
+	ipcMain.handle("settings:open-window", (_event, tab) => {
+		createSettingsWindow({ tab });
+	});
+}
+
+if (!ipcMain.listenerCount("discord:has-token")) {
+	ipcMain.handle("discord:has-token", () => ({
+		hasToken: hasDiscordIdentity(),
+		username: getDiscordUsername(),
+	}));
+}
+
+if (!ipcMain.listenerCount("discord:connect")) {
+	ipcMain.handle("discord:connect", async () => {
+		try {
+			const result = await connectDiscordIdentity();
+			refreshDiscordIdentity();
+			return result;
+		} catch (err) {
+			return { ok: false, error: err.message };
+		}
+	});
+}
+
+if (!ipcMain.listenerCount("discord:disconnect")) {
+	ipcMain.handle("discord:disconnect", () => {
+		disconnectDiscordIdentity();
+		refreshDiscordIdentity();
 	});
 }
 

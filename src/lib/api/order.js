@@ -13,6 +13,7 @@ export const API_FUNCTIONS_ORDER = [
 	"nextStorePage",
 	"ugcShareButton",
 	"downloadButton",
+	"listenAlongPanel",
 	"toasts",
 	"filePatch",
 	"player",

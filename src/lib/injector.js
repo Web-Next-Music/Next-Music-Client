@@ -3,12 +3,10 @@ import { app } from "electron";
 import path from "path";
 import fs from "fs";
 
-// ESM __dirname fix
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load encryption key
 const ENCRYPTION_KEY =
 	process.env.ENCRYPTION_KEY ||
 	(() => {
@@ -35,6 +33,15 @@ function injectCssFile(injectedPath) {
 	link.href = `file://${injectedPath}`;
 	link.dataset.injected = injectedPath;
 	document.head.appendChild(link);
+}
+
+function injectScopedCssText(cssText, styleId) {
+	if (document.querySelector(`style[data-injected="${styleId}"]`)) return;
+
+	const style = document.createElement("style");
+	style.dataset.injected = styleId;
+	style.textContent = cssText;
+	document.head.appendChild(style);
 }
 
 function injectJsFile(injectedPath, encryptionKey) {
@@ -102,6 +109,24 @@ export default function injector(mainWindow, config) {
 				`try{${injectScript}}catch(e){console.error(${JSON.stringify(`[Injector] inject error: ${file}`)},e);}`,
 			);
 			injected.push(file);
+		}
+
+		if (config?.alpha?.listenAlong?.enable) {
+			const noAutoZoomPath = path
+				.join(injectDir, "noAutoZoom.css")
+				.replace(/\\/g, "/");
+
+			if (fs.existsSync(noAutoZoomPath)) {
+				const scopedCss = fs
+					.readFileSync(noAutoZoomPath, "utf8")
+					.replace(":root {", "#nm-la-panel-host {");
+				const styleId = "listenAlongNoAutoZoom";
+
+				fragments.push(
+					`try{${serializeInvocation(injectScopedCssText, scopedCss, styleId)}}catch(e){console.error(${JSON.stringify(`[Injector] inject error: ${styleId}`)},e);}`,
+				);
+				injected.push(`${styleId} (scoped)`);
+			}
 		}
 
 		mainWindow.webContents

@@ -8,7 +8,6 @@ import "mdui/components/button-icon.js";
 import { state } from "./modules/state.js";
 import { refresh } from "./modules/ui.js";
 
-// Titlebar - maximize / restore
 const ICON_EXPAND = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="0.5" y="0.5" width="9" height="9" rx="0.5" stroke="currentColor" stroke-width="1"/>
 </svg>`;
@@ -36,6 +35,7 @@ async function init() {
 		builtinExps,
 		starResult,
 		tokenResult,
+		discordResult,
 	] = await Promise.all([
 		window.electronAPI?.loadConfig().catch(() => ({})),
 		window.electronAPI?.loadLangStrings?.().catch(() => null),
@@ -47,6 +47,9 @@ async function init() {
 			.catch(() => ({ hasStarred: false })),
 		window.electronAPI
 			?.getGitHubHasToken?.()
+			.catch(() => ({ hasToken: false })),
+		window.electronAPI
+			?.getDiscordHasToken?.()
 			.catch(() => ({ hasToken: false })),
 	]);
 
@@ -65,10 +68,22 @@ async function init() {
 		? "__has_token__"
 		: null;
 
+	state.DISCORD_HAS_TOKEN = discordResult?.hasToken ?? false;
+	state.DISCORD_USERNAME = discordResult?.username ?? null;
+
+	if (window.electronAPI?.initialTab) {
+		state.activeTab = window.electronAPI.initialTab;
+	}
+
 	refresh();
 
 	window.electronAPI?.onLanguageChange?.((newStrings) => {
 		state.STRINGS = newStrings || {};
+		refresh();
+	});
+
+	window.electronAPI?.onActivateTab?.((tab) => {
+		state.activeTab = tab;
 		refresh();
 	});
 
@@ -88,7 +103,6 @@ async function init() {
 		.catch(() => {});
 }
 
-// Expose to HTML onclick attributes
 window.toggleMaximize = toggleMaximize;
 
 init();

@@ -16,26 +16,23 @@
 	const UUID_RE =
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-	const scriptSrc = document.currentScript?.src || "";
-	const fontBaseUrl = scriptSrc
-		? new URL("../assets/fonts/", scriptSrc).href
-		: "";
-	const nunito600Url = `${fontBaseUrl}nunito/XRXI3I6Li01BKofiOc5wtlZ2di8HDGUmRTM.ttf`;
-	const nunito700Url = `${fontBaseUrl}nunito/XRXI3I6Li01BKofiOc5wtlZ2di8HDFwmRTM.ttf`;
-
 	const initial = await LA.getConfig();
 
-	const blackIsland = initial?.blackIsland ?? false;
 	const ROOM_ID = initial?.roomId || null;
-	let CLIENT_ID = initial?.clientId || null;
+	let SELF_DISCORD_ID = initial?.discordUserId || null;
 
 	let connection = {
 		connected: false,
 		connecting: false,
 		serverName: null,
+		serverVersion: null,
 		serverLabel: "",
+		roomId: null,
+		roomName: null,
 		isHost: false,
 		hostId: null,
+		isCreator: false,
+		roomList: [],
 		fatal: null,
 	};
 
@@ -58,6 +55,7 @@
 	let _suppressSend = null;
 
 	let deviatedFromHost = false;
+	let isNavSettling = false;
 
 	const ugcByTrackId = new Map();
 
@@ -83,321 +81,6 @@
 			const p = getTrackId();
 			if (p) lastSentPath = p;
 		}
-
-		console.log("Initialization complete - lastSentPath:", lastSentPath);
-	}
-
-	const isBlackIsland = blackIsland === true || blackIsland === "true";
-
-	let islandBg, islandBlur;
-
-	if (isBlackIsland) {
-		islandBg = `#000`;
-		islandBlur = `0`;
-	} else {
-		islandBg = `#0005`;
-		islandBlur = `30px`;
-	}
-
-	(function injectStyles() {
-		if (document.getElementById("__li_styles__")) return;
-
-		const s = document.createElement("style");
-		s.id = "__li_styles__";
-		s.textContent = `
-        @font-face {
-            font-family: "Nunito";
-            font-style: normal;
-            font-weight: 600;
-            font-display: swap;
-            src: url("${nunito600Url}") format("truetype");
-        }
-
-        @font-face {
-            font-family: "Nunito";
-            font-style: normal;
-            font-weight: 700;
-            font-display: swap;
-            src: url("${nunito700Url}") format("truetype");
-        }
-
-        #__li_island__ {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transform-origin: center top;
-            z-index: 9999;
-            pointer-events: none;
-            transform: translateX(-50%) translateY(-140%);
-            opacity: 0;
-            background: ${islandBg};
-            backdrop-filter: blur(${islandBlur});
-            border-radius: 1000px;
-            border: solid 1px #fff3;
-            -webkit-app-region: no-drag;
-        }
-
-        #__li_island__.island-visible {
-            animation: liIslandSlideIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            pointer-events: auto;
-        }
-
-        #__li_island__.island-hiding {
-            animation: liIslandSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-            pointer-events: none;
-        }
-
-        @keyframes liIslandSlideIn {
-            0%   { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
-            100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-        }
-
-        @keyframes liIslandSlideOut {
-            0%   { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateX(-50%) translateY(-130%) scale(0.9); opacity: 0; }
-        }
-
-        #__li_inner__ {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 4px 6px 4px 12px;
-            font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            font-size: 14px;
-            font-weight: 800;
-            color: #fff;
-            user-select: none;
-            white-space: nowrap;
-            cursor: default;
-            overflow: hidden;
-            transform-origin: center center;
-            box-sizing: border-box;
-            will-change: transform, opacity;
-        }
-
-        #__li_inner__.li-content-fade-out {
-            opacity: 0;
-            transform: translateY(4px) scale(0.98);
-            transition: opacity 0.18s ease, transform 0.18s ease;
-        }
-
-        #__li_inner__.li-content-fade-in {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-            transition: opacity 0.22s ease, transform 0.22s ease;
-        }
-
-        #__li_island__.island-hiding #__li_inner__ {
-            animation: liInnerShrink 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        #__li_island__.island-visible #__li_inner__ {
-            animation: liInnerExpand 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
-        }
-
-        @keyframes liInnerShrink {
-            0%   { transform: scaleX(1); }
-            100% { transform: scaleX(0.1); }
-        }
-
-        @keyframes liInnerExpand {
-            0%   { transform: scaleX(0.1); }
-            35%  { transform: scaleX(0.1); }
-            100% { transform: scaleX(1); }
-        }
-
-        #__li_dot_wrap__ {
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 6px;
-            height: 6px;
-        }
-
-        #__li_dot__ {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            pointer-events: none;
-            transition: background 0.55s cubic-bezier(0.4, 0, 0.2, 1),
-                        opacity 0.4s ease;
-        }
-
-        #__li_dot_wrap__.disconnected { cursor: pointer; }
-        #__li_dot_wrap__.connecting   { cursor: pointer; }
-        #__li_dot_wrap__.connected    { cursor: pointer; }
-        #__li_dot_wrap__.sync-paused  { cursor: pointer; }
-        #__li_dot_wrap__.unavailable  { cursor: default; }
-
-        #__li_dot_wrap__.disconnected #__li_dot__,
-        #__li_dot_wrap__.unavailable #__li_dot__ {
-            background: #555;
-            opacity: 1;
-        }
-
-        #__li_dot_wrap__.connecting #__li_dot__ {
-            background: #888;
-            opacity: 1;
-            animation: liPulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        #__li_dot_wrap__.connected #__li_dot__ {
-            background: #1db954;
-            opacity: 1;
-            animation: liPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        #__li_dot_wrap__.sync-paused #__li_dot__ {
-            background: #f5a623;
-            opacity: 1;
-        }
-
-        #__li_status__ {
-            font-size: 12px;
-            letter-spacing: 0.02em;
-            white-space: nowrap;
-            overflow: hidden;
-            max-width: calc(100vw - 200px);
-            /* max-width deliberately has no transition: animateInnerWidth
-               measures the collapsed label right after .hidden is applied, and
-               a transition here would hand it the old width and pin the island
-               open. The pill's own width animation carries the motion. */
-            transition:
-                opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                color 0.4s ease;
-        }
-
-        #__li_status__.hidden {
-            opacity: 0;
-            max-width: 0;
-            transform: translateY(3px);
-        }
-
-        #__li_avatars__ {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            transition:
-                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-                max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-            max-width: 0;
-            opacity: 0;
-        }
-
-        #__li_avatars__.visible {
-            max-width: 400px;
-            opacity: 1;
-        }
-
-        .li-av-wrap {
-            position: relative;
-            flex-shrink: 0;
-            animation: liAvatarIn 0.35s both;
-        }
-
-        .li-av-wrap.removing {
-            animation: liAvatarOut 0.2s forwards;
-        }
-
-        .li-av-img,
-        .li-av-placeholder {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.18);
-            object-fit: cover;
-            display: block;
-        }
-
-        .li-av-placeholder {
-            background: rgba(255,255,255,0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 600;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .li-av-wrap.host .li-av-img,
-        .li-av-wrap.host .li-av-placeholder {
-            border-color: #1db954;
-        }
-
-        @keyframes liPulse {
-            0%, 100% { opacity: 1; }
-            50%      { opacity: 0.3; }
-        }
-
-        @keyframes liAvatarIn {
-            from { transform: scale(0) rotate(-12deg); opacity: 0; }
-            to   { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-
-        @keyframes liAvatarOut {
-            from { transform: scale(1); opacity: 1; max-width: 32px; }
-            to   { transform: scale(0); opacity: 0; max-width: 0; }
-        }
-    `;
-
-		document.head.appendChild(s);
-	})();
-
-	// Cached DOM refs, populated once buildIsland() runs
-	let __li_island__ = null;
-	let __li_inner__ = null;
-	let __li_status__ = null;
-	let __li_dot_wrap__ = null;
-	let __li_avatars__ = null;
-
-	// Build island DOM
-	function buildIsland() {
-		if (document.getElementById("__li_island__")) return;
-
-		const island = document.createElement("div");
-		island.id = "__li_island__";
-
-		const inner = document.createElement("div");
-		inner.id = "__li_inner__";
-
-		const dotWrap = document.createElement("span");
-		dotWrap.id = "__li_dot_wrap__";
-		dotWrap.className = "disconnected";
-
-		const dot = document.createElement("span");
-		dot.id = "__li_dot__";
-
-		const status = document.createElement("span");
-		status.id = "__li_status__";
-
-		const avatarRow = document.createElement("div");
-		avatarRow.id = "__li_avatars__";
-
-		dotWrap.appendChild(dot);
-		inner.appendChild(dotWrap);
-		inner.appendChild(status);
-		inner.appendChild(avatarRow);
-		island.appendChild(inner);
-		document.body.appendChild(island);
-
-		island.style.cursor = "pointer";
-		island.title = "Click to copy an invite to this room";
-		island.addEventListener("click", copyInvite);
-
-		__li_island__ = island;
-		__li_inner__ = inner;
-		__li_status__ = status;
-		__li_dot_wrap__ = dotWrap;
-		__li_avatars__ = avatarRow;
 	}
 
 	async function copyInvite() {
@@ -411,7 +94,7 @@
 			await navigator.clipboard.writeText(code);
 			toast("Invite copied - paste it to a friend");
 		} catch {
-			console.log("Listen Along invite:", code);
+			console.warn("Listen Along invite:", code);
 			toast("Invite is in the console");
 		}
 	}
@@ -421,7 +104,6 @@
 		try {
 			api?.showErrorToast?.(message, api?.ContainerId?.INFO);
 		} catch {}
-		console.log(`Listen Along: ${message}`);
 	}
 
 	const INVITE_PREFIX = "NMJ-";
@@ -468,95 +150,6 @@
 		});
 	}
 
-	buildIsland();
-
-	document.addEventListener("click", (e) => {
-		const wrap = __li_dot_wrap__;
-		if (!wrap || (!wrap.contains(e.target) && e.target !== wrap)) return;
-		if (wrap.classList.contains("unavailable")) return;
-
-		if (connection.connected || connection.connecting) {
-			console.log("Listen Along: disconnecting by user");
-			LA.disconnect();
-		} else {
-			console.log("Listen Along: reconnecting by user");
-			LA.connect();
-		}
-	});
-
-	// Island show / hide
-
-	let _islandVisible = false;
-
-	function showIsland() {
-		const island = __li_island__;
-
-		if (!island) return;
-		if (_islandVisible && !island.classList.contains("island-hiding"))
-			return;
-
-		_islandVisible = true;
-		island.classList.remove("island-hiding");
-		void island.offsetWidth;
-		island.classList.add("island-visible");
-	}
-
-	function hideIsland() {
-		const island = __li_island__;
-
-		if (!island || !_islandVisible) return;
-
-		_islandVisible = false;
-		island.classList.remove("island-visible");
-		void island.offsetWidth;
-		island.classList.add("island-hiding");
-	}
-
-	function animateInnerWidth(changeFn) {
-		const inner = __li_inner__;
-
-		if (!inner) {
-			changeFn();
-			return;
-		}
-
-		const fromW = inner.getBoundingClientRect().width;
-		inner.style.width = fromW + "px";
-		inner.style.transition = "none";
-
-		changeFn();
-
-		const avRow = __li_avatars__;
-		if (avRow && avRow.classList.contains("visible")) {
-			avRow.style.transition = "none";
-			avRow.style.maxWidth = "none";
-			avRow.style.opacity = "1";
-		}
-
-		inner.style.width = "";
-		const toW = inner.getBoundingClientRect().width;
-		inner.style.width = fromW + "px";
-		void inner.offsetWidth;
-
-		inner.style.transition = "width 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-		inner.style.width = toW + "px";
-
-		inner.addEventListener("transitionend", function handler(e) {
-			if (e.propertyName !== "width") return;
-
-			inner.style.transition = "";
-			inner.style.width = "";
-
-			if (avRow) {
-				avRow.style.transition = "";
-				avRow.style.maxWidth = "";
-				avRow.style.opacity = "";
-			}
-
-			inner.removeEventListener("transitionend", handler);
-		});
-	}
-
 	function serverDisplayName() {
 		return connection.serverName || connection.serverLabel || "server";
 	}
@@ -584,9 +177,8 @@
 
 			return {
 				dot: "connected",
-				text: `Connected to ${serverDisplayName()}`,
+				text: "",
 				color: "#1db954",
-				collapse: true,
 			};
 		}
 
@@ -605,213 +197,253 @@
 		};
 	}
 
-	const LABEL_COLLAPSE_MS = 2000;
-
-	let _labelCollapseTimer = null;
-	let _labelCollapsed = false;
-
-	function resetCollapse() {
-		clearTimeout(_labelCollapseTimer);
-		_labelCollapseTimer = null;
-		_labelCollapsed = false;
+	function panelHandlers() {
+		return {
+			onClose: closePanel,
+			onSend: sendChatMessage,
+			onToggleConnect: () => {
+				if (connection.connected || connection.connecting) {
+					LA.disconnect();
+				} else {
+					LA.connect();
+				}
+			},
+			onInvite: copyInvite,
+			onPlayTrack: (trackId) => {
+				if (!isHost() || !trackId) return;
+				const api = window.nextmusicApi;
+				const current = api?.getCurrentTrack?.();
+				if (current?.id === trackId) {
+					api?.togglePause?.();
+				} else {
+					api?.playTrackById?.(trackId);
+				}
+			},
+			onMakeHost: (targetId) => {
+				if (!isHost() || !targetId || targetId === SELF_DISCORD_ID)
+					return;
+				LA.transferHost?.(targetId);
+			},
+			onCopyUserId: async (discordId) => {
+				if (!discordId) {
+					toast("This user hasn't signed in with Discord yet");
+					return;
+				}
+				try {
+					await navigator.clipboard.writeText(discordId);
+					toast("Discord user ID copied");
+				} catch {
+					console.warn("Listen Along user ID:", discordId);
+					toast("User ID is in the console");
+				}
+			},
+			onKick: (discordId) => {
+				if (!connection.isCreator || !discordId) return;
+				LA.kick?.(discordId);
+			},
+			onBan: (discordId) => {
+				if (!connection.isCreator || !discordId) return;
+				LA.ban?.(discordId);
+			},
+			onOpenSettings: () => LA.openSettings?.("programSettings"),
+			onCreateRoom: async (name) => {
+				const res = await LA.createRoom?.(name);
+				if (!res?.ok) {
+					toast(res?.reason || "Could not create a room");
+				}
+				return res;
+			},
+			onLeaveRoom: async () => {
+				const res = await LA.leaveRoom?.();
+				if (!res?.ok) toast("Could not leave the room");
+				return res;
+			},
+			onSetRoomName: (name) => {
+				if (!connection.isCreator) return;
+				LA.setRoomName?.(name);
+			},
+			onJoinRoom: async (roomId) => {
+				const res = await LA.joinRoom?.(roomId);
+				if (!res?.ok) toast(res?.reason || "Could not join the room");
+				return res;
+			},
+		};
 	}
 
-	function expandLabel() {
-		const wasCollapsed = _labelCollapsed;
-		resetCollapse();
-		if (!wasCollapsed) return;
-
-		const status = __li_status__;
-		if (status) animateInnerWidth(() => status.classList.remove("hidden"));
+	function hostColorFromId(id) {
+		return id ? "#1db954" : "#888";
 	}
 
-	function scheduleLabelCollapse() {
-		if (_labelCollapsed || _labelCollapseTimer) return;
-
-		_labelCollapseTimer = setTimeout(() => {
-			_labelCollapseTimer = null;
-
-			const status = __li_status__;
-			if (!status) return;
-
-			_labelCollapsed = true;
-			animateInnerWidth(() => status.classList.add("hidden"));
-		}, LABEL_COLLAPSE_MS);
-	}
-
-	function renderIsland() {
-		const wrap = __li_dot_wrap__;
-		const status = __li_status__;
-		const avRow = __li_avatars__;
+	function panelState() {
 		const view = islandState();
-
-		if (view.hidden) {
-			expandLabel();
-			hideIsland();
-			return;
-		}
-
-		if (wrap) {
-			wrap.className = view.dot;
-			wrap.title = connection.connected
-				? "Click to disconnect"
-				: "Click to connect";
-		}
-
-		if (avRow) {
-			avRow.classList.toggle("visible", connection.connected);
-
-			if (!connection.connected) {
-				avRow.style.transition = "";
-				avRow.style.maxWidth = "";
-				avRow.style.opacity = "";
-			}
-		}
-
-		if (status && status.textContent !== view.text) {
-			resetCollapse();
-			animateInnerWidth(() => {
-				status.classList.remove("hidden");
-				status.style.color = view.color;
-				status.textContent = view.text;
-			});
-		} else {
-			if (!view.collapse) expandLabel();
-			if (status) status.style.color = view.color;
-		}
-
-		if (view.collapse) scheduleLabelCollapse();
-
-		showIsland();
+		const notConfigured = view.hidden;
+		const currentTrack = window.nextmusicApi?.getCurrentTrack?.();
+		return {
+			dot: notConfigured ? "disconnected" : view.dot,
+			color: notConfigured ? "#888" : view.color,
+			text: notConfigured
+				? "Not connected"
+				: view.text || serverDisplayName(),
+			serverVersion: notConfigured ? null : connection.serverVersion,
+			connected: connection.connected,
+			connecting: connection.connecting,
+			isHost: isHost(),
+			isCreator: connection.isCreator,
+			roomId: connection.roomId,
+			roomName: connection.roomName,
+			roomList: connection.roomList,
+			discordLinked: !!connection.discordLinked,
+			avatars: buildAvatarList(),
+			chat: chatMessages,
+			hostColor: hostColorFromId(connection.hostId),
+			nowPlaying: {
+				id: currentTrack?.id ?? null,
+				playing: isPlayingNow() === true,
+			},
+		};
 	}
 
-	// Avatar map
+	let _panelOpen = false;
+
+	function renderPanel() {
+		if (!_panelOpen) return;
+		window.nextmusicApi?.updateListenAlongPanel?.(panelState());
+	}
+
+	function openPanel() {
+		_panelOpen = true;
+		window.nextmusicApi?.mountListenAlongPanel?.(
+			panelState(),
+			panelHandlers(),
+		);
+	}
+
+	function closePanel() {
+		_panelOpen = false;
+		window.nextmusicApi?.unmountListenAlongPanel?.();
+	}
+
+	function togglePanel() {
+		if (_panelOpen) closePanel();
+		else openPanel();
+	}
+
+	function isTypingTarget(el) {
+		if (!el) return false;
+		const tag = el.tagName;
+		return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+	}
+
+	function onPanelHotkey(event) {
+		if (event.ctrlKey || event.altKey || event.metaKey) return;
+		if (event.code !== "KeyZ") return;
+		if (isTypingTarget(document.activeElement)) return;
+
+		event.preventDefault();
+		togglePanel();
+	}
+
+	document.addEventListener("keydown", onPanelHotkey);
+
+	let chatMessages = initial?.chatHistory ?? [];
+	const CHAT_HISTORY_CAP = 50;
+
+	const CHAT_TEXT_MAX_LEN = 2000;
+
+	function sendChatMessage(text) {
+		const trimmed = (text || "").trim();
+		if (!trimmed || trimmed.length > CHAT_TEXT_MAX_LEN) return;
+		LA.sendChatMessage?.(trimmed);
+	}
+
+	LA.onChatHistory?.((msg) => {
+		chatMessages = (msg?.messages ?? []).slice(-CHAT_HISTORY_CAP);
+		renderPanel();
+	});
+
+	LA.onChatMessage?.((msg) => {
+		if (!msg) return;
+		chatMessages = [...chatMessages, msg].slice(-CHAT_HISTORY_CAP);
+		renderPanel();
+		notifyChatMessage(msg);
+	});
+
+	let chatNotifySound = null;
+
+	function playChatNotifySound() {
+		try {
+			const port = window.__nextmusicApiAssetPort ?? 2007;
+			if (!chatNotifySound) {
+				chatNotifySound = new Audio(
+					`http://127.0.0.1:${port}/app_asset/sounds/combobreak.mp3`,
+				);
+			}
+			chatNotifySound.currentTime = 0;
+			chatNotifySound.play().catch(() => {});
+		} catch {}
+	}
+
+	function notifyChatMessage(msg) {
+		if (!msg || msg.discordUserId === SELF_DISCORD_ID) return;
+		if (_panelOpen) return;
+
+		const api = window.nextmusicApi;
+		const text = (msg.text || "").slice(0, 120);
+		const author = islandAvatars.get(msg.discordUserId);
+		const avatarUrl = author?.url || null;
+		const name = author?.name || msg.discordUserId;
+
+		api?.showToast?.(
+			`${name}: ${text}`,
+			api?.ContainerId?.INFO,
+			{ position: "top-center" },
+			avatarUrl,
+		);
+
+		playChatNotifySound();
+	}
+
 	const islandAvatars = new Map();
 
-	function sortAvatars() {
-		const avRow = __li_avatars__;
-		if (!avRow) return;
-
+	function buildAvatarList() {
 		const hostId = connection.hostId;
-		const ordered = [...islandAvatars.entries()].sort(([a], [b]) => {
-			if (a === hostId) return -1;
-			if (b === hostId) return 1;
-			return a < b ? -1 : a > b ? 1 : 0;
+		return [...islandAvatars.entries()]
+			.sort(([a], [b]) => {
+				if (a === hostId) return -1;
+				if (b === hostId) return 1;
+				return a < b ? -1 : a > b ? 1 : 0;
+			})
+			.map(([id, avatar]) => ({
+				id,
+				url: avatar.url,
+				name: avatar.name || id,
+				isHost: !!hostId && id === hostId,
+				isSelf: id === SELF_DISCORD_ID,
+			}));
+	}
+
+	function upsertAvatar(discordUserId, avatarUrl, name) {
+		const prev = islandAvatars.get(discordUserId);
+		islandAvatars.set(discordUserId, {
+			url: avatarUrl || prev?.url || null,
+			name: name || prev?.name || null,
 		});
-
-		for (const [, wrap] of ordered) avRow.appendChild(wrap);
+		renderPanel();
 	}
 
-	function applyHostBadge() {
-		for (const [id, wrap] of islandAvatars) {
-			wrap.classList.toggle(
-				"host",
-				!!connection.hostId && id === connection.hostId,
-			);
-		}
-
-		sortAvatars();
-	}
-
-	function upsertAvatar(clientId, base64Data, mime) {
-		const avRow = __li_avatars__;
-		if (!avRow) return;
-
-		animateInnerWidth(() => {
-			let wrap = islandAvatars.get(clientId);
-			if (!wrap) {
-				wrap = document.createElement("div");
-				wrap.className = "li-av-wrap";
-				avRow.appendChild(wrap);
-				islandAvatars.set(clientId, wrap);
-			}
-
-			const old = wrap.querySelector(".li-av-img, .li-av-placeholder");
-			if (old) old.remove();
-
-			if (base64Data) {
-				const img = document.createElement("img");
-				img.className = "li-av-img";
-				img.src = `data:${mime || "image/webp"};base64,${base64Data}`;
-				img.title = clientId;
-				img.onerror = () => {
-					img.replaceWith(makePlaceholder(clientId));
-				};
-				wrap.appendChild(img);
-			} else {
-				wrap.appendChild(makePlaceholder(clientId));
-			}
-		});
-
-		applyHostBadge();
-	}
-
-	function makePlaceholder(clientId) {
-		const el = document.createElement("div");
-		el.className = "li-av-placeholder";
-		el.textContent = (clientId?.[0] || "?").toUpperCase();
-		el.title = clientId;
-		return el;
-	}
-
-	function removeAvatar(clientId) {
-		const wrap = islandAvatars.get(clientId);
-		if (!wrap) return;
-		wrap.classList.add("removing");
-		setTimeout(() => {
-			animateInnerWidth(() => {
-				wrap.remove();
-				islandAvatars.delete(clientId);
-			});
-		}, 230);
+	function removeAvatar(discordUserId) {
+		islandAvatars.delete(discordUserId);
+		renderPanel();
 	}
 
 	function clearAvatars() {
-		for (const [, wrap] of islandAvatars) wrap.remove();
 		islandAvatars.clear();
 	}
 
-	const AVATAR_SEL = 'img[class*="UserID-Avatar-Image"]';
+	let playStateTimer = null;
+	let timelinePollTimer = null;
+	let trackObserverTimer = null;
 
-	let lastSentAvatarUrl = null;
-	let avatarWatchTimer = null;
-
-	function currentAvatarUrl() {
-		const img = document.querySelector(AVATAR_SEL);
-		const src = img?.currentSrc || img?.src || "";
-		if (!src) return null;
-
-		try {
-			return new URL(src, location.href).href;
-		} catch {
-			return null;
-		}
-	}
-
-	function pushAvatar() {
-		if (!isConnected()) return;
-
-		const url = currentAvatarUrl();
-		if (!url || url === lastSentAvatarUrl) return;
-
-		lastSentAvatarUrl = url;
-		LA.send({ type: "avatar_url", url });
-		console.log("Listen Along: avatar sent");
-	}
-
-	function startAvatarWatch() {
-		pushAvatar();
-		if (avatarWatchTimer) return;
-		avatarWatchTimer = setInterval(pushAvatar, 5000);
-	}
-
-	function stopAvatarWatch() {
-		clearInterval(avatarWatchTimer);
-		avatarWatchTimer = null;
-		lastSentAvatarUrl = null;
-	}
-
-	// Play/Pause helpers
 	function playerStatus() {
 		return window.nextmusicApi?.getState?.()?.status ?? null;
 	}
@@ -852,8 +484,6 @@
 		Promise.resolve(api.setProgress(seconds)).catch((err) => {
 			console.warn("Listen Along: seek failed", err);
 		});
-
-		console.log(`⏱️ Seek → ${seconds.toFixed(1)}s`);
 	}
 
 	let syncTarget = null;
@@ -911,6 +541,7 @@
 			isInitializing ||
 			isSyncPaused ||
 			isNavigating ||
+			isNavSettling ||
 			isSeekingTimeline ||
 			deviatedFromHost ||
 			!syncTarget ||
@@ -972,6 +603,8 @@
 	window.addEventListener("beforeunload", resetRate);
 
 	function applySyncState(msg, force = false, forceSeek = force) {
+		if (isHost()) return;
+
 		const targetPath = msg.trackId ?? null;
 		const targetPlaying = msg.playing;
 		const targetPosition = msg.position;
@@ -998,14 +631,6 @@
 			pendingPath = targetPath;
 
 			processNext();
-		} else if (force && targetPath && targetPath === currentPath) {
-			if (!isApplyingState) {
-				applyPlayState(targetPlaying);
-			}
-		}
-
-		if (!needNav && !isNavigating && !isApplyingState) {
-			applyPlayState(targetPlaying);
 		}
 
 		syncTarget = {
@@ -1015,21 +640,29 @@
 			playing: !!targetPlaying,
 		};
 
-		if (!isSeekingTimeline && !isNavigating) {
+		if (needNav || isNavigating) return;
+
+		let willHardSeek = false;
+		let targetPos = null;
+
+		if (!isSeekingTimeline) {
 			const current = getPosition();
-			const targetPos = hostPositionNow();
+			targetPos = hostPositionNow();
 
 			if (current !== null && targetPos !== null) {
 				const diff = Math.abs(current - targetPos);
-
-				if (forceSeek || diff > HARD_SEEK_SEC) {
-					console.log(
-						`Sync: diff=${diff.toFixed(1)}s → ${targetPos.toFixed(1)}s`,
-					);
-
-					hardSeekTo(targetPos);
-				}
+				willHardSeek = forceSeek || diff > HARD_SEEK_SEC;
 			}
+		}
+
+		if (willHardSeek) {
+			hardSeekTo(targetPos);
+			setTimeout(() => {
+				if (isNavigating || isApplyingState) return;
+				applyPlayState(targetPlaying);
+			}, 1250);
+		} else if (!isApplyingState) {
+			applyPlayState(targetPlaying);
 		}
 	}
 
@@ -1050,7 +683,10 @@
 
 		const fromHost = !!connection.hostId && msg.by === connection.hostId;
 		const fromServer =
-			msg.by === "server" || msg.by === "server-admin" || !msg.by;
+			msg.by === "server" ||
+			msg.by === "server-admin" ||
+			msg.by === "heartbeat" ||
+			!msg.by;
 
 		if (fromHost || fromServer) {
 			deviatedFromHost = false;
@@ -1059,11 +695,14 @@
 		}
 
 		if (isSyncPaused) {
-			console.log("⏸️ Sync paused - playback not applied");
-			return;
+			if (!msg.trackId) {
+				return;
+			}
+			isSyncPaused = false;
+			renderPanel();
 		}
 
-		applySyncState(msg, fromHost, false);
+		applySyncState(msg, fromHost, fromHost || isInitializing);
 	}
 
 	function handleMessage(msg) {
@@ -1072,23 +711,52 @@
 		switch (msg.type) {
 			case "server_info":
 				connection.serverName = msg.name || connection.serverName;
+				connection.serverVersion =
+					msg.version || connection.serverVersion;
+				connection.roomId = msg.roomId || null;
+				connection.roomName = msg.roomName || null;
 				connection.hostId = msg.hostId || null;
-				applyHostBadge();
-				renderIsland();
+				if (msg.discordUserId) SELF_DISCORD_ID = msg.discordUserId;
+				if (SELF_DISCORD_ID && connection.roomId) {
+					upsertAvatar(SELF_DISCORD_ID, null, null);
+				}
+				renderPanel();
+				break;
+
+			case "room_renamed":
+				connection.roomName = msg.roomName || null;
+				renderPanel();
+				break;
+
+			case "room_list":
+				connection.roomList = msg.rooms || [];
+				renderPanel();
+				break;
+
+			case "room_left":
+				connection.roomId = null;
+				connection.roomName = null;
+				connection.hostId = null;
+				connection.isHost = false;
+				connection.isCreator = false;
+				clearAvatars();
+				renderPanel();
+				LA.listRooms?.().then((res) => {
+					connection.roomList = res?.rooms || [];
+					renderPanel();
+				});
 				break;
 
 			case "auth_result":
 				if (!msg.ok) {
-					console.warn("Listen Along: host token rejected");
+					console.warn("Listen Along: auth token rejected");
 				} else if (msg.isHost) {
-					console.log("Listen Along: you are the host of this room");
 				}
 				break;
 
 			case "host_changed":
 				connection.hostId = msg.hostId || null;
-				applyHostBadge();
-				renderIsland();
+				renderPanel();
 				break;
 
 			case "state_sync":
@@ -1096,15 +764,23 @@
 				break;
 
 			case "client_joined":
-				upsertAvatar(msg.clientId, msg.avatar || null, msg.mime);
+				upsertAvatar(
+					msg.discordUserId,
+					msg.avatarUrl || null,
+					msg.name || null,
+				);
 				break;
 
 			case "client_left":
-				removeAvatar(msg.clientId);
+				removeAvatar(msg.discordUserId);
 				break;
 
 			case "avatar":
-				upsertAvatar(msg.clientId, msg.data, msg.mime);
+				upsertAvatar(
+					msg.discordUserId,
+					msg.avatarUrl || null,
+					msg.name || null,
+				);
 				break;
 
 			case "error":
@@ -1117,25 +793,36 @@
 		const wasConnected = connection.connected;
 
 		connection = { ...connection, ...next };
-		if (next.clientId) CLIENT_ID = next.clientId;
+		if (next.discordUserId) SELF_DISCORD_ID = next.discordUserId;
 
 		if (connection.connected && !wasConnected) {
-			console.log(`Listen Along: connected to room [${ROOM_ID}]`);
 			deviatedFromHost = false;
 
 			for (const peer of next.peers ?? []) {
-				upsertAvatar(peer.clientId, peer.avatar, peer.mime);
+				upsertAvatar(
+					peer.discordUserId,
+					peer.avatarUrl,
+					peer.name || null,
+				);
 			}
 
-			if (CLIENT_ID && !islandAvatars.has(CLIENT_ID)) {
-				upsertAvatar(CLIENT_ID, null);
+			if (
+				SELF_DISCORD_ID &&
+				connection.roomId &&
+				!islandAvatars.has(SELF_DISCORD_ID)
+			) {
+				upsertAvatar(SELF_DISCORD_ID, null);
 			}
+
+			LA.listRooms?.().then((res) => {
+				connection.roomList = res?.rooms || [];
+				renderPanel();
+			});
 
 			startObserver();
 			startPlayStateObserver();
 			startTimelineObserver();
 			startDriftControl();
-			startAvatarWatch();
 
 			clearTimeout(initTimeout);
 			initTimeout = setTimeout(liftInitializing, 5000);
@@ -1147,22 +834,24 @@
 			serverState = null;
 			syncTarget = null;
 			resetRate();
-			stopAvatarWatch();
 			clearAvatars();
+			connection.roomList = [];
 		}
 
-		applyHostBadge();
-		renderIsland();
+		renderPanel();
 	}
 
 	LA.onMessage(handleMessage);
 	LA.onStatus(handleStatus);
 
+	window.nextmusicApi?.onStatusChange?.(() => renderPanel());
+	window.nextmusicApi?.onTrackChange?.(() => renderPanel());
+
+	renderPanel();
 	startInviteWatch();
 
 	handleStatus(initial ?? {});
 
-	// Navigation
 	function processNext() {
 		if (!pendingPath) return;
 		const p = pendingPath;
@@ -1172,9 +861,6 @@
 
 	function navigateAndPlay(p) {
 		if (_navigatingToPath === p) {
-			console.log(
-				`⏭️ Already navigating to trackId "${p}", skip duplicate`,
-			);
 			return;
 		}
 
@@ -1188,11 +874,10 @@
 
 		const currentId = getTrackId();
 		if (currentId === p) {
-			console.log(`Already on trackId "${p}", skip navigation`);
 			_suppressSend = p;
 			lastSentPath = p;
 			if (serverState) {
-				setTimeout(() => applySyncState(serverState, true), 200);
+				setTimeout(() => applySyncState(serverState, true), 50);
 			}
 			return;
 		}
@@ -1211,7 +896,6 @@
 
 			_navigatingToPath = p;
 			isNavigating = true;
-			console.log("▶️ playCustomTrack:", p, ugc.t || "");
 
 			if (
 				!tryPlay(() =>
@@ -1228,7 +912,6 @@
 		} else {
 			_navigatingToPath = p;
 			isNavigating = true;
-			console.log("▶️ playTrackById:", p);
 
 			if (!tryPlay(() => window.nextmusicApi.playTrackById(p))) return;
 		}
@@ -1257,10 +940,19 @@
 		_navigatingToPath = null;
 		isNavigating = false;
 		processNext();
-		if (_pendingSyncAfterNav && serverState) {
+		if (serverState && !isHost()) {
+			const wasPendingResume = _pendingSyncAfterNav;
 			_pendingSyncAfterNav = false;
-			console.log("Applying deferred server state after navigation");
-			setTimeout(() => applySyncState(serverState, true), 300);
+			isNavSettling = true;
+			setTimeout(
+				() => {
+					applySyncState(serverState, true);
+					setTimeout(() => {
+						isNavSettling = false;
+					}, 500);
+				},
+				wasPendingResume ? 120 : 150,
+			);
 		}
 	}
 
@@ -1297,27 +989,23 @@
 
 			if (currentId === expectedId) {
 				clearInterval(wait);
-				console.log(
-					`✔ Track "${expectedId}" is now active (playing=${isPlaying})`,
-				);
-				setTimeout(() => finishNavigation(), 400);
+				setTimeout(() => finishNavigation(), 150);
 				return;
 			}
 
-			if (++attempts >= 40) {
+			if (++attempts >= 130) {
 				clearInterval(wait);
 				console.warn(
 					`⚠️ Timed out waiting for trackId "${expectedId}" (got "${currentId}")`,
 				);
 				finishNavigation();
 			}
-		}, 500);
+		}, 150);
 	}
 
 	function markDeviated(what) {
 		if (isHost() || deviatedFromHost) return;
 		deviatedFromHost = true;
-		console.log(`Listening independently after a local ${what} change`);
 	}
 
 	function sendPlayState(playing) {
@@ -1336,11 +1024,11 @@
 		if (!isConnected()) return;
 
 		LA.send({ type: "playstate", playing, roomId: ROOM_ID });
-
-		console.log("playstate →server (instant):", playing);
 	}
 
 	function applyPlayState(wantPlay) {
+		if (isHost()) return;
+
 		const api = window.nextmusicApi;
 		const currentlyPlaying = isPlayingNow();
 
@@ -1360,8 +1048,6 @@
 		}, 800);
 	}
 
-	let playStateTimer = null;
-
 	function startPlayStateObserver() {
 		if (_playStateObserverStarted) return;
 		_playStateObserverStarted = true;
@@ -1369,7 +1055,13 @@
 		let lastPlaying = null;
 
 		function check() {
-			if (isApplyingState || isNavigating || isSyncPaused) return;
+			if (
+				isApplyingState ||
+				isNavigating ||
+				isNavSettling ||
+				isSyncPaused
+			)
+				return;
 			if (!getAlbumPath()) return;
 			const playing = isPlayingNow();
 			if (playing === null || playing === lastPlaying) return;
@@ -1381,9 +1073,6 @@
 
 		playStateTimer = setInterval(check, 1000);
 	}
-
-	// Timeline sync
-	let timelinePollTimer = null;
 
 	function startTimelineObserver() {
 		if (_timelineObserverStarted) return;
@@ -1421,7 +1110,6 @@
 			const val = Math.round(position);
 			if (!isNaN(val) && isConnected()) {
 				LA.send({ type: "seek", position: val, roomId: ROOM_ID });
-				console.log("seek →server (instant):", val);
 			}
 		}
 
@@ -1440,8 +1128,6 @@
 			if (pos !== null) onPosition(pos);
 		}, 500);
 	}
-
-	// Track ID helpers (via nextmusicApi)
 
 	function fnv1a(str) {
 		let h = 0x811c9dc5;
@@ -1464,25 +1150,27 @@
 
 		const id = String(track.id);
 
-		if (id.startsWith(UGC_PREFIX)) {
-			const ugc = ugcByTrackId.get(id);
-			return ugc ? { trackId: id, ugc } : { trackId: id };
+		if (id.startsWith(UGC_PREFIX) || UUID_RE.test(id)) {
+			const cached = ugcByTrackId.get(id);
+			if (cached) return { trackId: id, ugc: cached };
+
+			const url = api.getCurrentMp3Url?.();
+			if (!url) return { trackId: id };
+
+			const ugc = { u: url };
+			if (track.title) ugc.t = track.title;
+			if (track.artistNames?.[0]) ugc.a = track.artistNames[0];
+			if (track.coverUrl) ugc.c = track.coverUrl;
+
+			const trackId = id.startsWith(UGC_PREFIX)
+				? id
+				: UGC_PREFIX + fnv1a(url);
+			ugcByTrackId.set(trackId, ugc);
+
+			return { trackId, ugc };
 		}
 
-		if (!UUID_RE.test(id)) return { trackId: id };
-
-		const url = api.getCurrentMp3Url?.();
-		if (!url) return null;
-
-		const ugc = { u: url };
-		if (track.title) ugc.t = track.title;
-		if (track.artistNames?.[0]) ugc.a = track.artistNames[0];
-		if (track.coverUrl) ugc.c = track.coverUrl;
-
-		const trackId = UGC_PREFIX + fnv1a(url);
-		ugcByTrackId.set(trackId, ugc);
-
-		return { trackId, ugc };
+		return { trackId: id };
 	}
 
 	function getTrackId() {
@@ -1493,7 +1181,6 @@
 		return getTrackId();
 	}
 
-	// Send debounce
 	const SEND_DELAY_MS = 1000;
 	let _navigateTimer = null;
 
@@ -1509,7 +1196,6 @@
 			if (p.startsWith(UGC_PREFIX) && ugc) message.ugc = ugc;
 
 			LA.send(message);
-			console.log("navigate →server (debounced) trackId:", p);
 		}, SEND_DELAY_MS);
 	}
 
@@ -1540,9 +1226,10 @@
 		if (!isSyncPaused) return;
 
 		isSyncPaused = false;
-		console.log("▶️ Track available - sync resumed");
 
-		renderIsland();
+		renderPanel();
+
+		if (isHost()) return;
 
 		if (serverState) {
 			const currentId = getTrackId();
@@ -1561,11 +1248,8 @@
 		if (isSyncPaused) return;
 		isSyncPaused = true;
 		_pendingSyncAfterNav = false;
-		renderIsland();
-		console.log(`⏸️ ${reason} - sync paused`);
+		renderPanel();
 	}
-
-	let trackObserverTimer = null;
 
 	function startObserver() {
 		if (observerStarted) return;
@@ -1589,8 +1273,6 @@
 
 			if (isSyncPaused && !isNavigating) {
 				resumeSync();
-				lastPolledPath = p;
-				return;
 			}
 
 			if (isInitializing || isNavigating || isSyncPaused) return;
@@ -1613,10 +1295,6 @@
 	}
 
 	function stopListenAlong() {
-		if (avatarWatchTimer) {
-			clearInterval(avatarWatchTimer);
-			avatarWatchTimer = null;
-		}
 		if (driftTimer) {
 			clearInterval(driftTimer);
 			driftTimer = null;
@@ -1633,6 +1311,8 @@
 			clearInterval(trackObserverTimer);
 			trackObserverTimer = null;
 		}
+		document.removeEventListener("keydown", onPanelHotkey);
+		window.nextmusicApi?.unmountListenAlongPanel?.();
 	}
 
 	window.stopListenAlong = stopListenAlong;

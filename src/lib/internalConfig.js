@@ -26,9 +26,7 @@ function isEqualValue(prevValue, nextValue) {
 	return false;
 }
 
-// Most specific first: pathNeedsRestart takes the first prefix match.
 const restartRules = [
-	{ path: "alpha.listenAlong.hostToken", needRestart: false },
 	{ path: "programSettings.richPresence", needRestart: false },
 	{ path: "github", needRestart: false },
 ];
@@ -95,8 +93,6 @@ export function configChangeNeedsRestart(
 
 		if (experimentName !== null) {
 			experimentsChanged = true;
-			// Regular experiments are applied live in the running window; only
-			// built-in Next Music experiments require a restart.
 			if (builtinSet.has(experimentName)) needRestart = true;
 			continue;
 		}

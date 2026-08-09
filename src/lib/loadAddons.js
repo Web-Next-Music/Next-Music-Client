@@ -5,6 +5,23 @@ import fs from "fs";
 import path from "path";
 import http from "http";
 
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const APP_ASSETS_DIR = path.join(__dirname, "..", "assets");
+
+const APP_ASSET_MIME = {
+	".mp3": "audio/mpeg",
+	".wav": "audio/wav",
+	".ogg": "audio/ogg",
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".webp": "image/webp",
+	".webm": "video/webm",
+};
+
 const { addonsDirectory } = getPaths();
 
 const ADDON_DIRS = new Map();
@@ -42,10 +59,6 @@ function safeResolve(root, ...segments) {
 	return resolved;
 }
 
-// Resolve a dirent's type. `withFileTypes` already tells us whether a real
-// entry is a file or directory for free, so we only pay a stat() syscall when
-// the entry is an actual symlink (which we still want to follow). Returns null
-// for broken/inaccessible symlinks.
 function statDirent(dir, entry) {
 	const fullPath = path.join(dir, entry.name);
 
@@ -177,7 +190,36 @@ function startAssetServer(port = 2007) {
 			const pathname = parsed.pathname;
 			const name = safeDecodeURI(parsed.searchParams.get("name"));
 
-			// GET /assets/<filename>?name=<addon>
+			if (pathname.startsWith("/app_asset/")) {
+				const rawFile = pathname.slice("/app_asset/".length);
+				const relFile = safeDecodeURI(rawFile);
+
+				if (!relFile) return send(400, "Bad filename encoding");
+
+				const filePath = safeResolve(
+					APP_ASSETS_DIR,
+					...relFile.split("/"),
+				);
+
+				if (!filePath) return send(400, "Invalid path");
+				if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+					return send(404, "Asset not found");
+
+				const mime =
+					APP_ASSET_MIME[path.extname(filePath).toLowerCase()] ||
+					"application/octet-stream";
+
+				const stream = fs.createReadStream(filePath);
+				stream.on("error", (err) => {
+					console.error("[Assets] app_asset stream error:", err);
+					if (!res.headersSent) send(500, "Read error");
+				});
+
+				res.writeHead(200, { "Content-Type": mime });
+				stream.pipe(res);
+				return;
+			}
+
 			if (pathname.startsWith("/assets/")) {
 				const rawFile = pathname.slice("/assets/".length);
 				const fileName = safeDecodeURI(rawFile);
@@ -319,7 +361,6 @@ function startAssetServer(port = 2007) {
 				return;
 			}
 
-			// GET /get_handle?name=<addon>
 			if (pathname === "/get_handle") {
 				if (!name) return send(400, "Missing name parameter");
 
@@ -394,7 +435,7 @@ function startAssetServer(port = 2007) {
 			console.log(`[Assets] Server running on http://127.0.0.1:${port}`);
 			resolve(port);
 		});
-	}); // end new Promise
+	});
 }
 
 function loadFilesFromDirectory(directory, extension, callback) {
@@ -543,10 +584,6 @@ function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
 	return result;
 }
 
-// Lightweight CSS scan used by the live-update poll: collects only
-// mtime/size signatures (no file reads), so an idle poll never touches
-// CSS file contents. Contents are read lazily in rescanAddonCss() only for
-// files whose signature changed.
 function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
 	let entries;
 
@@ -581,9 +618,7 @@ function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
 					signature: fileSignature(stat),
 					label: relativeAddonPath(info.fullPath),
 				});
-			} catch {
-				// Unreadable now -> treat as absent; removal grace logic handles it.
-			}
+			} catch {}
 		}
 	}
 
@@ -688,7 +723,6 @@ async function rescanAddonCss() {
 				pendingCssRemovals.delete(filePath);
 			}
 
-			// Unchanged on disk and already injected -> skip without reading.
 			if (
 				addonCssMeta.get(filePath) === signature &&
 				addonCssCache.has(filePath)
@@ -788,7 +822,6 @@ function startAddonCssLiveUpdates() {
 	console.log("[Addons] CSS live updates enabled.");
 }
 
-// Online addon loader
 const FETCH_TIMEOUT_MS = 10_000;
 const EXPERIMENTS_WAIT_TIMEOUT_MS = 20_000;
 const EXPERIMENTS_POLL_MS = 50;
@@ -817,9 +850,7 @@ async function waitForExperimentsApplied(webContents) {
 				)
 			)
 				return;
-		} catch {
-			// renderer is navigating or reloading — retry on next poll
-		}
+		} catch {}
 		await new Promise((r) => setTimeout(r, EXPERIMENTS_POLL_MS));
 	}
 
@@ -857,7 +888,6 @@ async function applyAddons(mainWindow) {
 		await execAddonScript(script, label);
 	}
 
-	// Enabled experiment addons: their CSS/JS loads only after experiments apply.
 	const experimentAddonNames = new Set(
 		getAddonExperimentOverrides().map((o) => o.addonName),
 	);
@@ -878,7 +908,6 @@ async function applyAddons(mainWindow) {
 		target.set(filePath, data);
 	}
 
-	// Collect JS files in one pass, split by addon type
 	const regularJs = [];
 	const experimentJs = [];
 
@@ -893,7 +922,6 @@ async function applyAddons(mainWindow) {
 		},
 	);
 
-	// Load regular addons immediately
 	await applyCssSnapshot(regularCss);
 
 	for (const { jsContent, filePath } of regularJs) {
@@ -902,9 +930,6 @@ async function applyAddons(mainWindow) {
 		execJS(jsContent, label);
 	}
 
-	// Load experiment-overriding addons only after their experiments are confirmed applied.
-	// Preload always gets fresh experiments via IPC, so storeOverrides is already
-	// correct — no need for a post-load correction call here.
 	if (experimentAddonNames.size > 0) {
 		await waitForExperimentsApplied(mainWindow.webContents);
 

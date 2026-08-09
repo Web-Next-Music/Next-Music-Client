@@ -152,6 +152,10 @@ window.nextmusicApi = {
 	unmountDownloadButton,
 	updateDownloadButtonState,
 
+	mountListenAlongPanel,
+	unmountListenAlongPanel,
+	updateListenAlongPanel,
+
 	waitForApi: waitForNextmusicApi,
 	wsReconnect: connectWithReconnect,
 	injectStyleTag,
@@ -228,6 +232,7 @@ window.nextmusicApi = {
 
 	playTrackById,
 	playCustomTrack,
+	playUgcTrack,
 	getCurrentTrack,
 	getState,
 	getCurrentAverageColor,
@@ -236,8 +241,6 @@ window.nextmusicApi = {
 	getActivePlayerId: () => getActivePlayer()?.id ?? null,
 	pauseAll,
 
-	// Same transport surface as the top-level methods, but aimed at one
-	// specific playback instead of whichever one is active.
 	player: (id) => {
 		const get = () => getPlayerById(id);
 		return {
@@ -276,9 +279,6 @@ window.nextmusicApi = {
 			(p) => p.playbackState?.playerState?.progress,
 			listener,
 		),
-	// Fires on every track change, on every page, with no player bar involved.
-	// currentEntity also fires when the entity is merely mutated (metadata
-	// arriving, queue reshuffles), so repeats of the same track are dropped.
 	onTrackChange: (listener) => {
 		let lastId;
 		return observeActivePlayer(

@@ -2,6 +2,8 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
+const initialTabArg = process.argv.find((a) => a.startsWith("--nmc-tab="));
+
 if (process.argv.includes("--nmc-condemned")) {
 	const applyClass = () =>
 		document.documentElement.classList.add("condemned");
@@ -20,18 +22,15 @@ if (process.argv.includes("--nmc-condemned")) {
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
-	// Versions & Config
 	getVersions: () => ipcRenderer.invoke("settings:get-versions"),
 	loadConfig: () => ipcRenderer.invoke("settings:load-config"),
 	saveConfig: (config) => ipcRenderer.invoke("settings:save-config", config),
 
-	// Addons & Experiments
 	getAddonExperiments: () =>
 		ipcRenderer.invoke("settings:get-addon-experiments"),
 	getBuiltinExperiments: () =>
 		ipcRenderer.invoke("settings:get-builtin-experiments"),
 
-	// Window controls
 	toggleMaximize: () => ipcRenderer.send("settings:toggle-maximize"),
 	onMaximizeChange: (cb) => {
 		ipcRenderer.removeAllListeners("settings:maximize-changed");
@@ -43,10 +42,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	closeWindow: () => ipcRenderer.send("settings:close"),
 	restartApp: () => ipcRenderer.send("settings:restart-app"),
 
-	// Addons folder
 	openAddonsFolder: () => ipcRenderer.send("settings:open-addons-folder"),
 
-	// Language
 	loadLangStrings: () => ipcRenderer.invoke("settings:load-lang-strings"),
 	getLangList: () => ipcRenderer.invoke("settings:get-lang-list"),
 	setLanguage: (langCode) =>
@@ -58,10 +55,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		);
 	},
 
-	// Shell
 	openExternal: (url) => ipcRenderer.invoke("settings:open-external", url),
 
-	// GitHub Device Flow
+	initialTab: initialTabArg ? initialTabArg.slice("--nmc-tab=".length) : null,
+	onActivateTab: (cb) => {
+		const handler = (_e, tab) => cb(tab);
+		ipcRenderer.on("settings:activate-tab", handler);
+		return () => ipcRenderer.off("settings:activate-tab", handler);
+	},
+
+	getDiscordHasToken: () => ipcRenderer.invoke("discord:has-token"),
+	connectDiscord: () => ipcRenderer.invoke("discord:connect"),
+	disconnectDiscord: () => ipcRenderer.invoke("discord:disconnect"),
+
 	getGitHubStarStatus: () => ipcRenderer.invoke("github:star-status"),
 	getGitHubHasToken: () => ipcRenderer.invoke("github:has-token"),
 	connectGitHub: () => ipcRenderer.invoke("github:connect"),

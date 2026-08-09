@@ -3,11 +3,11 @@ import { applyI18n, sectionName, tabName, t } from "./i18n.js";
 import { mkToggle, mkRow } from "./controls.js";
 import { renderExperimentsPanel } from "./experiments.js";
 import { buildGitHubStarBlock } from "./github.js";
+import { buildDiscordSignInBlock } from "./discord.js";
 import { getPath } from "./utils.js";
 
 const langSelects = [];
 
-// Material Symbols
 const NAV_ICONS = {
 	launchSettings:
 		"M14.69 2.21L4.33 11.49c-.64.58-.28 1.65.58 1.73L13 14l-4.85 6.76c-.22.31-.19.74.08 1.01.3.3.77.31 1.08.02l10.36-9.28c.64-.58.28-1.65-.58-1.73L11 10l4.85-6.76c.22-.31.19-.74-.08-1.01-.3-.3-.77-.31-1.08-.02z",
@@ -20,7 +20,6 @@ const NAV_ICONS = {
 		"M19.8 18.4L14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6z",
 };
 
-// Build a nav items inner content
 function setNavContent(nav, key) {
 	const path = NAV_ICONS[key];
 	if (path) {
@@ -53,6 +52,7 @@ export function buildSchema() {
 	for (const [tabKey, tabVal] of Object.entries(state.CONFIG)) {
 		if (tabKey === "experiments") continue;
 		if (tabKey === "github") continue;
+		if (tabKey === "discord") continue;
 		if (
 			typeof tabVal !== "object" ||
 			Array.isArray(tabVal) ||
@@ -388,7 +388,10 @@ export function buildUI() {
 		panel.id = "panel-" + tab.key;
 
 		if (tab.key === "programSettings") {
-			panel.append(buildGitHubStarBlock(refresh));
+			panel.append(
+				buildDiscordSignInBlock(refresh),
+				buildGitHubStarBlock(refresh),
+			);
 		}
 
 		renderNodes(tab.nodes, panel, 0);

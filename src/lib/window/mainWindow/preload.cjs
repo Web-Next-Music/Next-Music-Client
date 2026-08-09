@@ -51,9 +51,7 @@ function getExperimentsFromMain() {
 		const result = ipcRenderer.sendSync("nmc:get-experiments");
 		if (result && typeof result === "object" && result.experiments)
 			return result;
-	} catch {
-		/* fall through */
-	}
+	} catch {}
 	return { experiments: parseExperimentsArg(), managedNames: [] };
 }
 
@@ -184,9 +182,7 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 						? patchRscString(value)
 						: value;
 				};
-			} catch {
-				/* storage may be unavailable */
-			}
+			} catch {}
 		}
 	}
 
@@ -200,16 +196,12 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 				) {
 					node.textContent = patchRscString(node.textContent);
 				}
-			} catch {
-				/* ignore non-patchable nodes */
-			}
+			} catch {}
 		};
 
 		try {
 			document.querySelectorAll("script").forEach(patchNode);
-		} catch {
-			/* document not ready */
-		}
+		} catch {}
 
 		new MutationObserver((mutations) => {
 			for (const m of mutations) {
@@ -235,7 +227,6 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 	let containerKey = null;
 	let appliedKeys = [];
 
-	// Grab the webpack require by pushing an inert chunk that hands it to us
 	function getWebpackRequire() {
 		if (webpackRequire) return webpackRequire;
 
@@ -358,8 +349,6 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 		for (const name of appliedKeys) {
 			if (!(name in storeOverrides)) delete patched[name];
 		}
-		// Remove stale entries from now-disabled addons. appliedKeys only covers
-		// the current page session; managedNames ensures cross-session cleanup.
 		if (managedNames) {
 			for (const name of managedNames) {
 				if (!(name in storeOverrides)) delete patched[name];
@@ -531,6 +520,27 @@ contextBridge.exposeInMainWorld("nmcListenAlong", {
 	invite: () => ipcRenderer.invoke("la:invite"),
 	join: (code) => ipcRenderer.invoke("la:join", code),
 	send: (msg) => ipcRenderer.send("la:send", msg),
+	sendChatMessage: (text) =>
+		ipcRenderer.send("la:send", { type: "chat_message", text }),
+	transferHost: (targetId) =>
+		ipcRenderer.send("la:send", { type: "transfer_host", targetId }),
+	kick: (discordId) =>
+		ipcRenderer.send("la:send", {
+			type: "chat_message",
+			text: `!kick ${discordId}`,
+		}),
+	ban: (discordId) =>
+		ipcRenderer.send("la:send", {
+			type: "chat_message",
+			text: `!ban ${discordId}`,
+		}),
+	discordSignIn: () => ipcRenderer.invoke("la:discord-signin"),
+	createRoom: (name) => ipcRenderer.invoke("la:create-room", name),
+	leaveRoom: () => ipcRenderer.invoke("la:leave-room"),
+	setRoomName: (name) => ipcRenderer.send("la:set-room-name", name),
+	listRooms: () => ipcRenderer.invoke("la:list-rooms"),
+	joinRoom: (roomId) => ipcRenderer.invoke("la:join-room", roomId),
+	openSettings: (tab) => ipcRenderer.invoke("settings:open-window", tab),
 	onMessage: (cb) => {
 		const handler = (_e, v) => cb(v);
 		ipcRenderer.on("la:message", handler);
@@ -545,5 +555,15 @@ contextBridge.exposeInMainWorld("nmcListenAlong", {
 		const handler = (_e, v) => cb(v);
 		ipcRenderer.on("la:joined-by-link", handler);
 		return () => ipcRenderer.removeListener("la:joined-by-link", handler);
+	},
+	onChatMessage: (cb) => {
+		const handler = (_e, v) => cb(v);
+		ipcRenderer.on("la:chat-message", handler);
+		return () => ipcRenderer.removeListener("la:chat-message", handler);
+	},
+	onChatHistory: (cb) => {
+		const handler = (_e, v) => cb(v);
+		ipcRenderer.on("la:chat-history", handler);
+		return () => ipcRenderer.removeListener("la:chat-history", handler);
 	},
 });

@@ -8,10 +8,8 @@ export const isDev = !app.isPackaged;
 export const devUrl = "http://localhost:6788";
 export const APPNAME = `next-music`;
 
-// App name
 app.setName(APPNAME);
 
-// __dirname fix for ESM
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +28,6 @@ export function getTrayIconPath(userExperiments = {}) {
 		: path.join(__dirname, "assets/nm-icons/nm-tray.png");
 }
 
-// Default configuration
 export const defaultConfig = {
 	launchSettings: {
 		loaderWindow: true,
@@ -84,12 +81,8 @@ export const defaultConfig = {
 		volumeNormalization: false,
 		listenAlong: {
 			enable: false,
-			blackIsland: false,
 			host: "127.0.0.1",
 			port: 7080,
-			roomId: "",
-			clientId: "",
-			hostToken: "",
 		},
 	},
 
@@ -100,9 +93,16 @@ export const defaultConfig = {
 		refreshToken: null,
 		expiresAt: null,
 	},
+
+	discord: {
+		accessToken: null,
+		refreshToken: null,
+		expiresAt: null,
+		username: null,
+		avatarUrl: null,
+	},
 };
 
-// Paths
 export function getPaths() {
 	const userData = app.getPath("userData");
 
