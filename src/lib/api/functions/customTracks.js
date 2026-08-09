@@ -24,6 +24,13 @@ function watchEntityForCustomTrack(entity, trackId) {
 		};
 	}
 
+	function stillOwnsEntity() {
+		return (
+			entity._customTrackId === String(trackId) &&
+			String(entity.entityData?.meta?.id) === String(trackId)
+		);
+	}
+
 	entity.mediaSourceData = buildMediaSource();
 
 	let _msd = entity.mediaSourceData;
@@ -34,11 +41,17 @@ function watchEntityForCustomTrack(entity, trackId) {
 			return _msd;
 		},
 		set(v) {
+			if (!stillOwnsEntity()) {
+				delete entity.mediaSourceData;
+				entity.mediaSourceData = v;
+				return;
+			}
+
 			if (!guarded) {
 				guarded = true;
 				_msd = v;
 				setTimeout(() => {
-					_msd = buildMediaSource();
+					if (stillOwnsEntity()) _msd = buildMediaSource();
 				}, 0);
 			} else {
 				_msd = buildMediaSource();

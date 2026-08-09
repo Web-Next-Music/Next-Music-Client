@@ -715,13 +715,10 @@
 		}
 
 		const fromHost = !!connection.hostId && msg.by === connection.hostId;
-		const fromServer =
-			msg.by === "server" ||
-			msg.by === "server-admin" ||
-			msg.by === "heartbeat" ||
-			!msg.by;
+		const fromServerAdmin =
+			msg.by === "server" || msg.by === "server-admin";
 
-		if (fromHost || fromServer) {
+		if (fromHost || fromServerAdmin) {
 			deviatedFromHost = false;
 		} else if (deviatedFromHost) {
 			return;
