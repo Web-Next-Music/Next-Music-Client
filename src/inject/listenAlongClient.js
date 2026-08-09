@@ -11,6 +11,7 @@
 	const DRIFT_CLOSE_SEC = 8;
 	const MAX_RATE_DEVIATION = 0.05;
 	const DRIFT_TICK_MS = 250;
+	const AUDIO_TIMING_STALE_MS = 1500;
 
 	const UGC_PREFIX = "ugc:";
 	const UUID_RE =
@@ -460,7 +461,38 @@
 		else api?.play?.();
 	}
 
+	let _audioTiming = null;
+	let _audioBuffering = false;
+
+	function onAudioEvent(ev) {
+		if (ev.type === "waiting" || ev.type === "stalled") {
+			_audioBuffering = true;
+		} else if (
+			ev.type === "canplay" ||
+			ev.type === "playing" ||
+			ev.type === "timeupdate"
+		) {
+			_audioBuffering = false;
+		}
+
+		if (typeof ev.currentTime !== "number") return;
+		_audioTiming = {
+			currentTime: ev.currentTime,
+			playbackRate: ev.playbackRate,
+			at: Date.now(),
+		};
+	}
+
+	window.nextmusicApi?.onAudioEvent?.(onAudioEvent);
+
 	function getPosition() {
+		if (
+			_audioTiming &&
+			Date.now() - _audioTiming.at < AUDIO_TIMING_STALE_MS
+		) {
+			return _audioTiming.currentTime;
+		}
+
 		const pos = window.nextmusicApi?.getState?.()?.progress?.position;
 		return typeof pos === "number" ? pos : null;
 	}
@@ -544,6 +576,7 @@
 			isNavSettling ||
 			isSeekingTimeline ||
 			deviatedFromHost ||
+			_audioBuffering ||
 			!syncTarget ||
 			!syncTarget.playing ||
 			playerStatus() !== "playing" ||
@@ -1195,6 +1228,12 @@
 			const ugc = ugcByTrackId.get(p);
 			if (p.startsWith(UGC_PREFIX) && ugc) message.ugc = ugc;
 
+			// Read the position only once the debounce settles, not when the
+			// switch was first noticed - by send time this is the position
+			// on the track we're actually sending, not a stale earlier one.
+			const pos = getPosition();
+			if (typeof pos === "number") message.position = pos;
+
 			LA.send(message);
 		}, SEND_DELAY_MS);
 	}
@@ -1204,12 +1243,17 @@
 		if (p === _suppressSend) {
 			_suppressSend = null;
 			lastSentPath = p;
+			clearTimeout(_navigateTimer);
 			return;
 		}
 		const serverPath = serverState?.trackId ?? null;
-		if (p === lastSentPath) return;
+		if (p === lastSentPath) {
+			clearTimeout(_navigateTimer);
+			return;
+		}
 		if (p === serverPath) {
 			lastSentPath = p;
+			clearTimeout(_navigateTimer);
 			return;
 		}
 

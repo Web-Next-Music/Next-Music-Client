@@ -285,6 +285,84 @@ function observeActivePlayer(pick, listener) {
 	};
 }
 
+function pickMediaPlayer(player) {
+	const store = player?.mediaController?.mediaPlayersStore?.value;
+	if (!store || typeof store !== "object") return null;
+
+	for (const candidate of Object.values(store)) {
+		if (typeof candidate?.currentAudioElement?.onChange === "function") {
+			return candidate;
+		}
+	}
+
+	return null;
+}
+
+function getActiveAudioElement() {
+	const el = pickMediaPlayer(getActivePlayer())?.currentAudioElement?.value;
+	return el instanceof HTMLMediaElement ? el : null;
+}
+
+// Crossfade keeps two alternating <audio> elements alive and swaps which one
+// is "current" between tracks, so the element itself - not just the player -
+// has to be watched for changes. Built on observeActivePlayer, which already
+// re-binds on playback swaps and retries until the site has mounted a player;
+// this adds a second layer of re-binding for the element swap. If the site's
+// internal shape ever changes enough that pickMediaPlayer stops finding
+// anything, this simply never fires - callers must keep a fallback path.
+function observeAudioElement(listener) {
+	const NATIVE_EVENTS = [
+		"timeupdate",
+		"ratechange",
+		"waiting",
+		"stalled",
+		"canplay",
+		"playing",
+		"seeking",
+		"seeked",
+		"pause",
+	];
+
+	let currentEl = null;
+
+	function onNativeEvent(e) {
+		if (!currentEl) return;
+		listener({
+			type: e.type,
+			currentTime: currentEl.currentTime,
+			playbackRate: currentEl.playbackRate,
+			paused: currentEl.paused,
+			readyState: currentEl.readyState,
+		});
+	}
+
+	function detach() {
+		if (!currentEl) return;
+		for (const type of NATIVE_EVENTS)
+			currentEl.removeEventListener(type, onNativeEvent);
+		currentEl = null;
+	}
+
+	function attach(el) {
+		detach();
+		if (!(el instanceof HTMLMediaElement)) return;
+		currentEl = el;
+		for (const type of NATIVE_EVENTS)
+			currentEl.addEventListener(type, onNativeEvent);
+		onNativeEvent({ type: "attach" });
+	}
+
+	const unsubscribe = observeActivePlayer(
+		(player) => pickMediaPlayer(player)?.currentAudioElement ?? null,
+		(el) => attach(el),
+	);
+
+	return () => {
+		unsubscribe();
+		detach();
+	};
+}
+
 function getCurrentMeta() {
 	const player = getMainPlayer();
 	if (!player) return null;

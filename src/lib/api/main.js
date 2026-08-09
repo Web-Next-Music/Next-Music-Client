@@ -297,6 +297,9 @@ window.nextmusicApi = {
 			listener(p?.id ?? null),
 		) ?? (() => {}),
 
+	getAudioTime: () => getActiveAudioElement()?.currentTime ?? null,
+	onAudioEvent: (listener) => observeAudioElement(listener),
+
 	setSpeed: (speed) => getActivePlayer()?.setSpeed(speed),
 	setProgress: (progress) => getActivePlayer()?.setProgress(progress),
 	setVolume: (volume) => getActivePlayer()?.setVolume(volume),
