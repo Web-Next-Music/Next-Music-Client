@@ -13,7 +13,10 @@ import { minify as htmlMinify } from "html-minifier-terser";
 import * as lightningcss from "lightningcss";
 import * as sass from "sass";
 import * as esbuild from "esbuild";
-import { API_FUNCTIONS_ORDER } from "../lib/api/order.js";
+import {
+	API_FUNCTIONS_ORDER,
+	API_FUNCTION_SUBMODULES,
+} from "../lib/api/order.js";
 
 const SRC = "src";
 const DIST = "dist";
@@ -184,8 +187,32 @@ function bundleApiFiles() {
 
 	if (!existsSync(functionsDir) || !existsSync(mainFile)) return;
 
+	const inlineCssFiles = (source, baseDir) =>
+		source.replace(/__CSS_FILE__\(\s*["'](.+?)["']\s*\)/g, (_, rel) =>
+			JSON.stringify(readFileSync(join(baseDir, rel), "utf-8")),
+		);
+
+	const readApiFunctionSource = (name) => {
+		const submodules = API_FUNCTION_SUBMODULES[name];
+		if (submodules) {
+			const baseDir = join(functionsDir, name);
+			return submodules
+				.map((sub) =>
+					inlineCssFiles(
+						readFileSync(join(baseDir, `${sub}.js`), "utf-8"),
+						baseDir,
+					),
+				)
+				.join("\n");
+		}
+		return inlineCssFiles(
+			readFileSync(join(functionsDir, `${name}.js`), "utf-8"),
+			functionsDir,
+		);
+	};
+
 	const parts = API_FUNCTIONS_ORDER.map((name) =>
-		readFileSync(join(functionsDir, `${name}.js`), "utf-8"),
+		readApiFunctionSource(name),
 	);
 	parts.push(readFileSync(mainFile, "utf-8"));
 

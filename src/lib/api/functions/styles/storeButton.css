@@ -1,0 +1,142 @@
+#nmc-store-root .nmc-actions {
+	display: flex;
+	flex-direction: row;
+	gap: var(--ym-spacer-size-xxs);
+	width: 100%;
+	overflow: hidden;
+	align-items: center;
+}
+
+#nmc-store-root .btn {
+	padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-m);
+	height: var(--ym-icon-size-m);
+	border-radius: var(--ym-radius-size-xxxl);
+	border: 1px solid var(--ym-controls-color-secondary-outline-enabled_stroke);
+	font-family: inherit;
+	font-size: var(--ym-font-size-label-s);
+	line-height: var(--ym-font-line-height-label-s);
+	font-weight: var(--ym-font-weight-medium);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ym-spacer-size-xxs);
+	background: var(--nmc-ctl);
+	color: var(--nmc-txt);
+	position: relative;
+	overflow: hidden;
+	white-space: nowrap;
+	transition:
+		background var(--ym-duration-transition),
+		color var(--ym-duration-transition),
+		border-color var(--ym-duration-transition);
+}
+
+#nmc-store-root .btn:hover:not(:disabled) {
+	background: var(--nmc-ctl-hover);
+}
+
+#nmc-store-root .btn:active:not(:disabled) {
+	background: var(--nmc-ctl-pressed);
+}
+
+#nmc-store-root .btn:disabled {
+	opacity: 0.38;
+	cursor: not-allowed;
+}
+
+#nmc-store-root .btn-primary {
+	background: var(--nmc-accent);
+	color: var(--nmc-on-accent);
+	font-weight: var(--ym-font-weight-bold);
+}
+
+#nmc-store-root .btn-primary:hover:not(:disabled) {
+	background: var(--nmc-accent);
+	filter: brightness(1.08);
+}
+
+#nmc-store-root .btn-primary:active:not(:disabled) {
+	background: var(--nmc-accent);
+	filter: brightness(0.92);
+}
+
+#nmc-store-root .btn-danger {
+	color: var(--nmc-err);
+}
+
+#nmc-store-root .btn-danger:hover:not(:disabled) {
+	background: var(--nmc-ctl-hover);
+	border-color: var(--nmc-err);
+}
+
+#nmc-store-root .btn-on {
+	color: var(--nmc-ok);
+}
+
+#nmc-store-root .btn-off,
+#nmc-store-root .btn-settings {
+	color: var(--ym-controls-color-primary-text-enabled);
+}
+
+#nmc-store-root .btn-settings:hover:not(:disabled) {
+	color: var(--nmc-txt);
+}
+
+#nmc-store-root .nmc-actions .btn {
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: 100%;
+}
+
+#nmc-store-root .nmc-actions .btn-icon {
+	flex: 0 0 var(--ym-icon-size-m);
+	width: var(--ym-icon-size-m);
+	min-width: var(--ym-icon-size-m);
+	max-width: var(--ym-icon-size-m);
+	height: var(--ym-icon-size-m);
+	padding: 0;
+}
+
+#nmc-store-root .btn .nmc-icon {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+}
+
+#nmc-store-root .btn svg {
+	flex-shrink: 0;
+	width: var(--ym-icon-size-xxxs);
+	height: var(--ym-icon-size-xxxs);
+}
+
+#nmc-store-root .nmc-spin {
+	width: var(--ym-icon-size-xxs);
+	height: var(--ym-icon-size-xxs);
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: var(--ym-radius-size-round);
+	display: inline-block;
+	animation: nmc-spin 0.7s linear infinite;
+}
+
+@keyframes nmc-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+#nmc-store-root .nmc-sb {
+	padding: 0 var(--ym-spacer-size-s);
+	height: var(--ym-icon-size-m);
+	display: flex;
+	align-items: center;
+	border-radius: var(--ym-radius-size-xxxl);
+	background: var(--nmc-ctl);
+	font-size: var(--ym-font-size-label-s);
+	color: var(--nmc-err);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}

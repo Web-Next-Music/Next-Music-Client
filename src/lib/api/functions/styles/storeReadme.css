@@ -1,0 +1,23 @@
+#nmc-store-root .nmc-readme {
+	background: transparent;
+}
+
+#nmc-store-root .nmc-banner {
+	position: fixed;
+	left: 50%;
+	bottom: calc(var(--player-bar-height, 10rem) + var(--ym-spacer-size-xxxxl));
+	transform: translateX(-50%);
+	z-index: 2147482900;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ym-spacer-size-m);
+	padding: var(--ym-spacer-size-m);
+	border-radius: var(--ym-radius-size-xxxl);
+	background: var(--ym-background-color-primary-enabled-popover);
+}
+
+#nmc-store-root .nmc-banner .nmc-icon {
+	color: var(--nmc-accent);
+	display: inline-flex;
+}

@@ -20,3 +20,15 @@ export const API_FUNCTIONS_ORDER = [
 	"customTracks",
 	"playerColor",
 ];
+
+export const API_FUNCTION_SUBMODULES = {
+	listenAlongPanel: [
+		"icons",
+		"roster",
+		"trackWidget",
+		"chat",
+		"roomList",
+		"authGate",
+		"index",
+	],
+};

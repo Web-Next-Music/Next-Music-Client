@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, session, nativeTheme, app } from "electron";
 import { createLoaderWindow } from "../createLoaderWindow.js";
-import { applyAddons } from "../../loadAddons.js";
+import { applyAddons } from "../../addons/index.js";
 import {
 	mergeAddonExperiments,
 	getAllAddonExperimentNames,
@@ -9,7 +9,10 @@ import { resolveBuiltinExperiments } from "../../experiments/builtinExperiments.
 import { getConfig } from "../../configManager.js";
 import { getAppIcon } from "../../../config.js";
 import { loadRendererPage } from "../../paths.js";
-import { API_FUNCTIONS_ORDER } from "../../api/order.js";
+import {
+	API_FUNCTIONS_ORDER,
+	API_FUNCTION_SUBMODULES,
+} from "../../api/order.js";
 import { fileURLToPath } from "url";
 import path from "path";
 import injector from "../../injector.js";
@@ -22,6 +25,31 @@ const titlebarFolder = path.resolve(__dirname, "..", "..", "titlebar");
 const apiBundleFile = path.resolve(__dirname, "..", "..", "api", "bundle.js");
 const apiFunctionsDir = path.resolve(__dirname, "..", "..", "api", "functions");
 const apiMainFile = path.resolve(__dirname, "..", "..", "api", "main.js");
+
+function inlineCssFiles(source, baseDir) {
+	return source.replace(/__CSS_FILE__\(\s*["'](.+?)["']\s*\)/g, (_, rel) =>
+		JSON.stringify(fs.readFileSync(path.join(baseDir, rel), "utf-8")),
+	);
+}
+
+function readApiFunctionSource(name) {
+	const submodules = API_FUNCTION_SUBMODULES[name];
+	if (submodules) {
+		const baseDir = path.join(apiFunctionsDir, name);
+		return submodules
+			.map((sub) =>
+				inlineCssFiles(
+					fs.readFileSync(path.join(baseDir, `${sub}.js`), "utf-8"),
+					baseDir,
+				),
+			)
+			.join("\n");
+	}
+	return inlineCssFiles(
+		fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
+		apiFunctionsDir,
+	);
+}
 
 if (!ipcMain.listenerCount("nmc:get-experiments")) {
 	ipcMain.on("nmc:get-experiments", (event) => {
@@ -182,10 +210,7 @@ export function createWindow(config) {
 				cachedApiJs = fs.readFileSync(apiBundleFile, "utf-8");
 			} else {
 				const parts = API_FUNCTIONS_ORDER.map((name) =>
-					fs.readFileSync(
-						path.join(apiFunctionsDir, `${name}.js`),
-						"utf-8",
-					),
+					readApiFunctionSource(name),
 				);
 				const mainJs = fs.readFileSync(apiMainFile, "utf-8");
 				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;

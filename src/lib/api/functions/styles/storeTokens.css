@@ -1,0 +1,56 @@
+main.nmc-store-active > *:not(#nmc-store-root) {
+	display: none !important;
+}
+
+#nmc-store-root {
+	--nmc-accent: __STORE_ACCENT__;
+	--nmc-on-accent: #000;
+	--nmc-ctl: var(--ym-controls-color-secondary-default-enabled);
+	--nmc-ctl-hover: var(--ym-controls-color-secondary-default-hovered);
+	--nmc-ctl-pressed: var(--ym-controls-color-secondary-default-pressed);
+	--nmc-txt: var(--ym-controls-color-secondary-on_default-enabled);
+	--nmc-mut: var(--ym-controls-color-secondary-text-enabled);
+	--nmc-err: var(--ym-controls-color-danger-default-enabled, #ff5c5c);
+	--nmc-ok: var(--nmc-accent);
+
+	--ym-controls-color-primary-default-enabled: var(--nmc-accent);
+	--ym-controls-color-primary-default-hovered: var(--nmc-accent);
+	--ym-controls-color-primary-default-pressed: var(--nmc-accent);
+	--ym-controls-color-primary-on_default-enabled: #000;
+	--ym-controls-color-secondary-outline-selected_stroke: var(--nmc-accent);
+	--ym-controls-color-secondary-text-selected: var(--nmc-accent);
+
+	display: block;
+	padding: var(--ym-spacer-size-xxl);
+	height: 100vh;
+	box-sizing: border-box;
+	overflow-y: auto;
+	scrollbar-gutter: stable;
+	transition: scrollbar-color 0.2s ease-in-out;
+}
+
+#nmc-store-root::-webkit-scrollbar {
+	width: var(--ym-spacer-size-xxl);
+}
+
+#nmc-store-root::-webkit-scrollbar-thumb {
+	background-clip: content-box;
+	background-color: var(--ym-controls-color-primary-default-disabled);
+	border: 0.5rem solid transparent;
+	border-radius: var(--ym-radius-size-l);
+	min-height: 3.125rem;
+}
+
+#nmc-store-root::-webkit-scrollbar-thumb:hover {
+	background-color: var(--ym-surface-color-primary-enabled-entity);
+}
+
+@media only screen and (max-width: 1024px) {
+	#nmc-store-root::-webkit-scrollbar {
+		width: var(--ym-spacer-size-m);
+	}
+
+	#nmc-store-root::-webkit-scrollbar-thumb {
+		border: 0.1875rem solid transparent;
+	}
+}

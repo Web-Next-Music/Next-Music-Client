@@ -1,0 +1,57 @@
+#nmc-store-root .nmc-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ym-spacer-size-xxs);
+	margin-top: var(--ym-spacer-size-l);
+}
+
+#nmc-store-root .nmc-tab {
+	padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-l);
+	height: var(--ym-icon-size-m);
+	border-radius: var(--ym-radius-size-xxxl);
+	border: 1px solid transparent;
+	background: var(--nmc-ctl);
+	color: var(--ym-controls-color-primary-text-enabled);
+	cursor: pointer;
+	font-family: inherit;
+	font-size: var(--ym-font-size-label-s);
+	font-weight: var(--ym-font-weight-medium);
+	white-space: nowrap;
+	transition: background var(--ym-duration-transition);
+}
+
+#nmc-store-root .nmc-tab:hover {
+	background: var(--nmc-ctl-hover);
+}
+
+#nmc-store-root .nmc-tab.active {
+	background: var(--ym-controls-color-secondary-outline-selected);
+	border-color: var(--nmc-accent);
+	color: var(--nmc-accent);
+}
+
+#nmc-store-root .nmc-search {
+	flex: 0 1 22rem;
+	min-width: 12rem;
+	background: var(--nmc-ctl);
+	border: 1px solid transparent;
+	border-radius: var(--ym-radius-size-xxxl);
+	padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-l);
+	color: var(--nmc-txt);
+	font-family: inherit;
+	font-size: var(--ym-font-size-label-m);
+	outline: none;
+	transition: background var(--ym-duration-transition);
+}
+
+#nmc-store-root .nmc-search:hover {
+	background: var(--nmc-ctl-hover);
+}
+
+#nmc-store-root .nmc-search:focus {
+	border-color: var(--nmc-accent);
+}
+
+#nmc-store-root .nmc-search::placeholder {
+	color: var(--ym-controls-color-primary-text-enabled);
+}

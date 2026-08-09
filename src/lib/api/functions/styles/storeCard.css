@@ -1,0 +1,108 @@
+#nmc-store-root .nmc-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+	gap: var(--ym-spacer-size-m);
+	margin-top: var(--ym-spacer-size-xl);
+}
+
+#nmc-store-root .nmc-card {
+	background: var(--ym-background-color-primary-enabled-popover);
+	border: 1px solid var(--ym-controls-color-secondary-outline-enabled_stroke);
+	border-radius: var(--ym-radius-size-xl);
+	padding: var(--ym-spacer-size-l);
+	display: flex;
+	flex-direction: column;
+	gap: var(--ym-spacer-size-m);
+	transition: background var(--ym-duration-transition);
+}
+
+#nmc-store-root .nmc-card:hover {
+	background: var(--ym-controls-color-secondary-default-hovered);
+}
+
+#nmc-store-root .nmc-card.disabled {
+	opacity: 0.62;
+}
+
+#nmc-store-root .nmc-card-top {
+	display: flex;
+	gap: var(--ym-spacer-size-s);
+	align-items: flex-start;
+}
+
+#nmc-store-root .nmc-logo,
+#nmc-store-root .nmc-logo-ph {
+	width: var(--ym-icon-size-xl);
+	height: var(--ym-icon-size-xl);
+	border-radius: var(--ym-radius-size-m);
+	object-fit: cover;
+	flex-shrink: 0;
+	background: var(--nmc-ctl);
+}
+
+#nmc-store-root .nmc-logo-ph {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ym-controls-color-primary-text-enabled);
+}
+
+#nmc-store-root .nmc-logo-ph svg {
+	width: var(--ym-icon-size-xxs);
+	height: var(--ym-icon-size-xxs);
+}
+
+#nmc-store-root .nmc-logo-ph.local {
+	color: var(--nmc-accent);
+}
+
+#nmc-store-root .nmc-meta {
+	min-width: 0;
+	flex: 1 1 0;
+}
+
+#nmc-store-root .nmc-name {
+	display: flex;
+	align-items: center;
+	gap: var(--ym-spacer-size-xxs);
+	font-size: var(--ym-font-size-label-l);
+	line-height: var(--ym-font-line-height-label-l);
+	font-weight: var(--ym-font-weight-medium);
+	color: var(--nmc-txt);
+	overflow: hidden;
+}
+
+#nmc-store-root .nmc-name-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#nmc-store-root .nmc-readme-icon {
+	color: var(--ym-controls-color-primary-text-enabled);
+	cursor: pointer;
+	display: inline-flex;
+	flex-shrink: 0;
+}
+
+#nmc-store-root .nmc-readme-icon:hover {
+	color: var(--nmc-accent);
+}
+
+#nmc-store-root .nmc-sub {
+	font-size: var(--ym-font-size-label-s);
+	line-height: var(--ym-font-line-height-label-s);
+	color: var(--ym-controls-color-primary-text-enabled);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#nmc-store-root a.nmc-sub {
+	cursor: pointer;
+	display: block;
+}
+
+#nmc-store-root a.nmc-sub:hover {
+	color: var(--nmc-accent);
+}

@@ -1,0 +1,32 @@
+#nmc-store-root .nmc-head {
+	display: flex;
+	align-items: center;
+	gap: var(--ym-spacer-size-m);
+	margin-bottom: var(--ym-spacer-size-xl);
+}
+
+#nmc-store-root .nmc-title {
+	font-family: var(--ym-font-heading);
+	font-size: var(--ym-font-size-headline-xl);
+	line-height: var(--ym-font-line-height-headline-xl);
+	font-weight: var(--ym-font-weight-bold);
+	color: var(--ym-controls-color-primary-text-enabled_variant);
+}
+
+#nmc-store-root .nmc-title span {
+	color: var(--nmc-accent);
+}
+
+#nmc-store-root .nmc-toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--ym-spacer-size-l);
+	margin-top: var(--ym-spacer-size-l);
+	flex-wrap: wrap;
+}
+
+#nmc-store-root .nmc-empty {
+	padding: var(--ym-spacer-size-xxxxl) 0;
+	text-align: center;
+	color: var(--ym-controls-color-primary-text-enabled);
+}

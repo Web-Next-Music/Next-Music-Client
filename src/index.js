@@ -16,7 +16,7 @@ const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
 
 // Services
 import { createTray } from "./lib/tray.js";
-import { initUpdater } from "./lib/update/updateController.js";
+import { initUpdater } from "./lib/update/index.js";
 import { presenceService, initWS } from "./lib/richPresence.js";
 import { createWindow } from "./lib/window/mainWindow/createWindow.js";
 import { setupSplashScreen } from "./lib/splashScreen.js";

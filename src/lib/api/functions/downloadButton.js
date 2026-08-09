@@ -19,39 +19,7 @@ const DL_SPINNER_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="no
     stroke-linecap="round" stroke-dasharray="42 14" />
 </svg>`;
 
-const DL_SPINNER_CSS = `
-@keyframes nm-spin {
-  to { transform: rotate(360deg); }
-}
-.nm-dl-spinner {
-  display: block;
-  animation: nm-spin 0.9s linear infinite;
-  transform-origin: center;
-}
-#nm-download-btn {
-  position: relative;
-  overflow: visible;
-}
-#nm-dl-progress-track {
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: currentColor;
-  opacity: 0.2;
-  border-radius: 1px;
-}
-#nm-dl-progress-fill {
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  height: 2px;
-  background: currentColor;
-  border-radius: 1px;
-  transition: width 0.12s ease;
-}
-`;
+const DL_SPINNER_CSS = __CSS_FILE__("./styles/downloadSpinner.css");
 
 function findSettingsButtonContainer() {
 	const settingsBtn = document.querySelector(

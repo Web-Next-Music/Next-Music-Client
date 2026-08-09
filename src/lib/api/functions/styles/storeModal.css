@@ -1,0 +1,250 @@
+#nmc-store-root .nmc-modal .nmc-readme > *:first-child {
+	margin-top: 0;
+}
+
+.nmc-modal-bg {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.55);
+	padding: var(--ym-spacer-size-xl);
+}
+
+.nmc-modal {
+	display: flex;
+	flex-direction: column;
+	width: min(52rem, 100%);
+	max-height: 85vh;
+	border-radius: var(--ym-radius-size-xl);
+	border: 0.0625rem solid var(--ym-outline-color-primary-disabled);
+	overflow: hidden;
+	background: var(--ym-background-color-primary-enabled-popover);
+	color: var(--ym-controls-color-secondary-on_default-enabled);
+	box-shadow: 0 1rem 3rem var(--ym-shadow-menu);
+}
+
+.nmc-modal-head {
+	display: flex;
+	align-items: center;
+	gap: var(--ym-spacer-size-m);
+	padding: var(--ym-spacer-size-l);
+	border-bottom: 1px solid
+		var(--ym-controls-color-secondary-outline-enabled_stroke);
+}
+
+.nmc-modal-title {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--ym-font-size-label-l);
+	font-weight: var(--ym-font-weight-medium);
+}
+
+.nmc-modal-badge {
+	padding: 0 var(--ym-spacer-size-s);
+	border-radius: var(--ym-radius-size-xxxl);
+	background: var(--ym-controls-color-secondary-default-enabled);
+	font-size: var(--ym-font-size-label-s);
+}
+
+.nmc-modal-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	padding: var(--ym-spacer-size-l);
+}
+
+.nmc-modal-body.flush {
+	padding: 0;
+}
+
+.nmc-scroll {
+	scrollbar-gutter: stable;
+	transition: scrollbar-color 0.2s ease-in-out;
+}
+
+.nmc-scroll::-webkit-scrollbar {
+	width: var(--ym-spacer-size-xxl);
+}
+
+.nmc-scroll::-webkit-scrollbar-thumb {
+	background-clip: content-box;
+	background-color: var(--ym-controls-color-primary-default-disabled);
+	border: 0.5rem solid transparent;
+	border-radius: var(--ym-radius-size-l);
+	min-height: 3.125rem;
+}
+
+.nmc-scroll::-webkit-scrollbar-thumb:hover {
+	background-color: var(--ym-surface-color-primary-enabled-entity);
+}
+
+@media only screen and (max-width: 1024px) {
+	.nmc-scroll::-webkit-scrollbar {
+		width: var(--ym-spacer-size-m);
+	}
+
+	.nmc-scroll::-webkit-scrollbar-thumb {
+		border: 0.1875rem solid transparent;
+	}
+}
+
+#nmc-store-root .CodeMirror-vscrollbar,
+#nmc-store-root .CodeMirror-hscrollbar {
+	scrollbar-gutter: stable;
+	transition: scrollbar-color 0.2s ease-in-out;
+}
+
+#nmc-store-root .CodeMirror-vscrollbar::-webkit-scrollbar,
+#nmc-store-root .CodeMirror-hscrollbar::-webkit-scrollbar {
+	width: var(--ym-spacer-size-xxl);
+	height: var(--ym-spacer-size-xxl);
+}
+
+#nmc-store-root .CodeMirror-vscrollbar::-webkit-scrollbar-thumb,
+#nmc-store-root .CodeMirror-hscrollbar::-webkit-scrollbar-thumb {
+	background-clip: content-box;
+	background-color: var(--ym-controls-color-primary-default-disabled);
+	border: 0.5rem solid transparent;
+	border-radius: var(--ym-radius-size-l);
+	min-height: 3.125rem;
+}
+
+#nmc-store-root .CodeMirror-vscrollbar::-webkit-scrollbar-thumb:hover,
+#nmc-store-root .CodeMirror-hscrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: var(--ym-surface-color-primary-enabled-entity);
+}
+
+.nmc-modal-foot {
+	display: flex;
+	align-items: center;
+	gap: var(--ym-spacer-size-m);
+	padding: var(--ym-spacer-size-l);
+	border-top: 1px solid
+		var(--ym-controls-color-secondary-outline-enabled_stroke);
+}
+
+.nmc-modal-status {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: var(--ym-font-size-label-s);
+	color: var(--ym-controls-color-secondary-text-enabled);
+}
+
+.nmc-modal-status.error {
+	color: #ff5c5c;
+}
+
+.nmc-modal .btn {
+	padding: var(--ym-spacer-size-xs) var(--ym-spacer-size-l);
+	height: var(--ym-icon-size-m);
+	border-radius: var(--ym-radius-size-xxxl);
+	border: 1px solid transparent;
+	font-family: inherit;
+	font-size: var(--ym-font-size-label-s);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ym-spacer-size-xxs);
+	background: var(--ym-controls-color-secondary-default-enabled);
+	color: var(--ym-controls-color-secondary-on_default-enabled);
+}
+
+.nmc-modal .btn-primary {
+	background: __STORE_ACCENT__;
+	color: #000;
+	font-weight: var(--ym-font-weight-bold);
+}
+
+.nmc-modal .btn:disabled {
+	opacity: 0.38;
+	cursor: not-allowed;
+}
+
+.nmc-modal .CodeMirror {
+	height: 60vh;
+	font-size: 0.85rem;
+	background: var(--ym-background-color-primary-enabled-basic);
+	color: var(--ym-controls-color-secondary-on_default-enabled);
+}
+
+.nmc-modal .CodeMirror-gutters {
+	border-right-color: transparent;
+	background: var(--ym-background-color-primary-enabled-content);
+}
+
+.nmc-modal .CodeMirror-linenumber {
+	color: var(--ym-controls-color-secondary-text-enabled);
+}
+
+.nmc-modal .CodeMirror-cursor {
+	border-left-color: currentColor;
+}
+
+.nmc-modal .CodeMirror-selected {
+	background: var(--ym-controls-color-secondary-default-pressed);
+}
+
+.nmc-modal .CodeMirror-activeline-background {
+	background: var(--ym-controls-color-secondary-default-enabled);
+}
+
+.nmc-modal .CodeMirror .cm-property,
+.nmc-modal .CodeMirror .cm-string {
+	color: var(--nmc-accent);
+}
+
+.nmc-modal .CodeMirror .cm-number,
+.nmc-modal .CodeMirror .cm-atom {
+	color: #5ee87a;
+}
+
+.nmc-modal .CodeMirror .cm-keyword {
+	color: #ff8a8a;
+}
+
+.nmc-modal .CodeMirror .cm-comment {
+	color: var(--ym-controls-color-secondary-text-enabled);
+}
+
+.nmc-modal .CodeMirror .cm-error {
+	color: var(--nmc-err);
+}
+
+.nmc-modal .CodeMirror-matchingbracket {
+	color: var(--nmc-accent) !important;
+}
+
+.nmc-modal .markdown-body {
+	--fgColor-default: var(--ym-controls-color-secondary-on_default-enabled);
+	--fgColor-muted: var(--ym-controls-color-secondary-text-enabled);
+	--fgColor-accent: var(--nmc-accent);
+	--fgColor-danger: var(--nmc-err);
+	--bgColor-default: transparent;
+	--bgColor-muted: var(--ym-background-color-primary-enabled-content);
+	--borderColor-default: var(
+		--ym-controls-color-secondary-outline-enabled_stroke
+	);
+	--borderColor-muted: var(
+		--ym-controls-color-secondary-outline-enabled_stroke
+	);
+	--color-prettylights-syntax-comment: var(
+		--ym-controls-color-secondary-text-enabled
+	);
+	--color-prettylights-syntax-constant: var(--nmc-accent);
+	--color-prettylights-syntax-entity: var(--nmc-accent);
+	--color-prettylights-syntax-keyword: var(--nmc-err);
+	--color-prettylights-syntax-string: var(--nmc-accent);
+	--color-prettylights-syntax-variable: var(
+		--ym-controls-color-secondary-on_default-enabled
+	);
+}

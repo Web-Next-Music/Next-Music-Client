@@ -6,7 +6,7 @@ import {
 	normalizeGitUrl,
 	resolveSubmoduleUrl,
 	loadGitmodules,
-} from "./github.js";
+} from "./github/index.js";
 
 export async function downloadTree(
 	contentPath,

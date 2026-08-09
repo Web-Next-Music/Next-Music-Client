@@ -16,7 +16,7 @@ import {
 	renderMarkdown,
 	getRateLimitState,
 	pLimit,
-} from "./github.js";
+} from "./github/index.js";
 
 import { getLogo, setLogo } from "./cache.js";
 
