@@ -29,10 +29,15 @@ export function mkNumber(path) {
 	inp.variant = "outlined";
 	inp.type = "number";
 	inp.classList.add("num");
-	inp.value = getPath(state.CONFIG, path) ?? 0;
+	inp.value = getPath(state.CONFIG, path) || "";
 	inp.addEventListener("input", () => {
+		if (inp.value.trim() === "") {
+			setPath(state.CONFIG, path, "");
+			scheduleSave();
+			return;
+		}
 		const v = parseInt(inp.value, 10);
-		setPath(state.CONFIG, path, isNaN(v) ? 0 : v);
+		setPath(state.CONFIG, path, isNaN(v) ? "" : v);
 		scheduleSave();
 	});
 	return inp;

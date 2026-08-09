@@ -518,10 +518,11 @@ function close() {
 	if (ws) {
 		const socket = ws;
 		ws = null;
+		socket.on("error", () => {});
 		try {
 			socket.close(1000, "client disconnect");
 		} catch {}
-		socket.removeAllListeners();
+		process.nextTick(() => socket.removeAllListeners());
 	}
 
 	setStatus({
