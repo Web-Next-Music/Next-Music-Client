@@ -156,7 +156,7 @@ export function buildGitHubStarBlock(onRefresh) {
 	} else {
 		const recheckBtn = document.createElement("mdui-button");
 		recheckBtn.variant = "tonal";
-		recheckBtn.textContent = t("settings.github.recheck");
+		recheckBtn.textContent = t("settings.github.relogin");
 		recheckBtn.addEventListener("click", doConnect);
 
 		const disconnectBtn = document.createElement("mdui-button");
