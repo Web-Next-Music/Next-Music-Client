@@ -1,6 +1,7 @@
 let _dlRoot = null;
 let _dlHost = null;
 let _dlContainer = null;
+let _dlAnchor = null;
 let _dlTemplate = null;
 let _dlBodyObserver = null;
 let _dlRenderPending = false;
@@ -21,11 +22,10 @@ const DL_SPINNER_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="no
 
 const DL_SPINNER_CSS = __CSS_FILE__("./styles/downloadSpinner.css");
 
-function findSettingsButtonContainer() {
-	const settingsBtn = document.querySelector(
-		'[class*="PlayerBarDesktopWithBackgroundProgressBar_settingsButton"]',
+function findMetaContainer() {
+	return document.querySelector(
+		'[class*="PlayerBarDesktopWithBackgroundProgressBar_meta"]',
 	);
-	return settingsBtn?.parentElement ?? null;
 }
 
 function isDownloadButtonAttached() {
@@ -97,7 +97,7 @@ function renderDownloadPortal() {
 	const { React, ReactDOMPortal } = getSiteComponents();
 	return ReactDOMPortal.createPortal(
 		React.createElement(NmDownloadButton),
-		_dlContainer,
+		_dlAnchor,
 	);
 }
 
@@ -105,7 +105,7 @@ function renderDownloadButton() {
 	const { React, ReactDOMClient, ReactDOMPortal } = getSiteComponents();
 	if (!React || !ReactDOMClient || !ReactDOMPortal) return false;
 
-	const container = findSettingsButtonContainer();
+	const container = findMetaContainer();
 	if (!container) return false;
 
 	const template = readDownloadActionTemplate(container);
@@ -117,7 +117,19 @@ function renderDownloadButton() {
 	_dlHost.style.display = "none";
 	document.body.appendChild(_dlHost);
 
+	const anchor = document.createElement("span");
+	anchor.style.display = "contents";
+	const settingsBtn = container.querySelector(
+		'[class*="PlayerBarDesktopWithBackgroundProgressBar_settingsButton"]',
+	);
+	if (settingsBtn) {
+		container.insertBefore(anchor, settingsBtn);
+	} else {
+		container.appendChild(anchor);
+	}
+
 	_dlContainer = container;
+	_dlAnchor = anchor;
 	_dlTemplate = template;
 	_dlRoot = ReactDOMClient.createRoot(_dlHost);
 	_dlRoot.render(renderDownloadPortal());
@@ -143,12 +155,6 @@ function mountDownloadButton(renderState, onClick) {
 	_dlState = renderState ?? { phase: "idle" };
 	_dlOnClick = onClick;
 
-	if (isDownloadButtonAttached()) {
-		_dlRoot.render(renderDownloadPortal());
-		return true;
-	}
-	if (!renderDownloadButton()) return false;
-
 	if (!_dlBodyObserver) {
 		_dlBodyObserver = new MutationObserver(() => scheduleDownloadRecheck());
 		_dlBodyObserver.observe(document.body, {
@@ -157,7 +163,12 @@ function mountDownloadButton(renderState, onClick) {
 		});
 	}
 
-	return true;
+	if (isDownloadButtonAttached()) {
+		_dlRoot.render(renderDownloadPortal());
+		return true;
+	}
+
+	return renderDownloadButton();
 }
 
 function updateDownloadButtonState(renderState) {
@@ -174,6 +185,10 @@ function cleanupDownloadButton() {
 	if (_dlHost) {
 		_dlHost.remove();
 		_dlHost = null;
+	}
+	if (_dlAnchor) {
+		_dlAnchor.remove();
+		_dlAnchor = null;
 	}
 	_dlContainer = null;
 	_dlTemplate = null;
