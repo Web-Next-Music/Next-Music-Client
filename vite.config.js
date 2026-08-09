@@ -127,6 +127,69 @@ const CM_FILES = [
 	["addon/fold/brace-fold.js", "addon/fold/brace-fold.js"],
 ];
 
+function copyListenAlongCallback() {
+	return {
+		name: "copy-listenalong-callback",
+		closeBundle() {
+			const files = [
+				[
+					join(
+						"src",
+						"lib",
+						"listenAlong",
+						"callback",
+						"callback.html",
+					),
+					join(
+						"dist",
+						"lib",
+						"listenAlong",
+						"callback",
+						"callback.html",
+					),
+				],
+				[
+					join(
+						"src",
+						"lib",
+						"listenAlong",
+						"callback",
+						"callback.css",
+					),
+					join(
+						"dist",
+						"lib",
+						"listenAlong",
+						"callback",
+						"callback.css",
+					),
+				],
+				[
+					join(
+						"src",
+						"assets",
+						"listen-along",
+						"callback",
+						"bg.webp",
+					),
+					join(
+						"dist",
+						"assets",
+						"listen-along",
+						"callback",
+						"bg.webp",
+					),
+				],
+			];
+			for (const [from, to] of files) {
+				if (!existsSync(from)) continue;
+				mkdirSync(dirname(to), { recursive: true });
+				copyFileSync(from, to);
+			}
+		},
+	};
+}
+
 function isMainEntry(file) {
 	return !file.startsWith(RENDERER_DIR) && !file.startsWith(BUILD_DIR);
 }
@@ -184,7 +247,12 @@ function mainConfig() {
 			"process.env.ENCRYPTION_KEY": JSON.stringify(ENCRYPTION_KEY_VALUE),
 		},
 
-		plugins: [copyCjsFiles(), copyCodeMirror(), copyStoreAssets()],
+		plugins: [
+			copyCjsFiles(),
+			copyCodeMirror(),
+			copyStoreAssets(),
+			copyListenAlongCallback(),
+		],
 
 		build: {
 			outDir: "dist",

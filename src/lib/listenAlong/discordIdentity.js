@@ -1,5 +1,9 @@
 import { getConfig, saveConfig } from "../configManager.js";
-import { getDiscordTokens, refreshDiscordTokens } from "./discordAuth.js";
+import {
+	getDiscordTokens,
+	refreshDiscordTokens,
+	fetchDiscordProfile,
+} from "./discordAuth.js";
 
 const EXPIRY_SAFETY_MS = 60000;
 
@@ -46,57 +50,27 @@ export async function getValidDiscordAccessToken() {
 	}
 }
 
-function defaultDiscordAvatarUrl(user) {
-	const index =
-		user.discriminator && user.discriminator !== "0"
-			? Number(user.discriminator) % 5
-			: Number((BigInt(user.id) >> 22n) % 6n);
-
-	return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-}
-
-async function fetchAndCacheDiscordProfile(accessToken) {
-	let username = null;
-	let avatarUrl = null;
-	try {
-		const res = await fetch("https://discord.com/api/users/@me", {
-			headers: { Authorization: `Bearer ${accessToken}` },
-		});
-		if (res.ok) {
-			const user = await res.json();
-			username = user.username || null;
-			avatarUrl = user.avatar
-				? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
-				: defaultDiscordAvatarUrl(user);
-			const config = getConfig();
-			config.discord = {
-				...config.discord,
-				username,
-				avatarUrl,
-			};
-			saveConfig(config);
-		}
-	} catch {}
-
-	return { username, avatarUrl };
+function cacheDiscordProfile(username, avatarUrl) {
+	const config = getConfig();
+	config.discord = { ...config.discord, username, avatarUrl };
+	saveConfig(config);
 }
 
 export async function ensureDiscordProfile() {
 	const accessToken = await getValidDiscordAccessToken();
 	if (!accessToken) return;
 
-	await fetchAndCacheDiscordProfile(accessToken);
+	try {
+		const { username, avatarUrl } = await fetchDiscordProfile(accessToken);
+		if (username) cacheDiscordProfile(username, avatarUrl);
+	} catch {}
 }
 
 export async function connectDiscordIdentity() {
-	const tokens = await getDiscordTokens();
+	const { tokens, username, avatarUrl } = await getDiscordTokens();
 	const config = getConfig();
-	config.discord = { ...tokens, username: null };
+	config.discord = { ...tokens, username, avatarUrl };
 	saveConfig(config);
-
-	const { username, avatarUrl } = await fetchAndCacheDiscordProfile(
-		tokens.accessToken,
-	);
 
 	return { ok: true, username, avatarUrl };
 }
