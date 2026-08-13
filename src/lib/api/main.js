@@ -237,6 +237,10 @@ window.nextmusicApi = {
 	getState,
 	getCurrentAverageColor,
 
+	getQueueSnapshot,
+	applyIncomingQueue,
+	onQueueChange: (listener) => observeQueue(listener),
+
 	getPlayers,
 	getActivePlayerId: () => getActivePlayer()?.id ?? null,
 	pauseAll,

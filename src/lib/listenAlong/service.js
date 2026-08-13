@@ -22,6 +22,7 @@ const HOST_ONLY_TYPES = new Set([
 	"playstate",
 	"seek",
 	"transfer_host",
+	"queue_sync",
 ]);
 
 const INVITE_PREFIX = "NMJ-";

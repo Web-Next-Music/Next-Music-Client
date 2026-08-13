@@ -59,6 +59,8 @@
 	let isNavSettling = false;
 
 	const ugcByTrackId = new Map();
+	let lastSentQueue = null;
+	let lastAppliedQueue = null;
 
 	function isHost() {
 		return connection.isHost;
@@ -444,6 +446,7 @@
 	let playStateTimer = null;
 	let timelinePollTimer = null;
 	let trackObserverTimer = null;
+	let queuePollTimer = null;
 
 	function playerStatus() {
 		return window.nextmusicApi?.getState?.()?.status ?? null;
@@ -735,6 +738,24 @@
 		applySyncState(msg, fromHost, fromHost || isInitializing);
 	}
 
+	function sameQueue(a, b) {
+		if (!a || !b || a.length !== b.length) return false;
+		for (let i = 0; i < a.length; i++) {
+			if (a[i].trackId !== b[i].trackId) return false;
+		}
+		return true;
+	}
+
+	function handleQueueSync(msg) {
+		if (isHost()) return;
+		if (!Array.isArray(msg.queue) || msg.queue.length === 0) return;
+
+		if (sameQueue(msg.queue, lastAppliedQueue)) return;
+		lastAppliedQueue = msg.queue;
+
+		window.nextmusicApi?.applyIncomingQueue?.(msg.queue, msg.queueIndex);
+	}
+
 	function handleMessage(msg) {
 		if (!msg || typeof msg.type !== "string") return;
 
@@ -787,10 +808,20 @@
 			case "host_changed":
 				connection.hostId = msg.hostId || null;
 				renderPanel();
+				if (msg.hostId && msg.hostId === SELF_DISCORD_ID) {
+					setTimeout(() => {
+						forceSendCurrentTrack();
+						debouncedQueueSync(true);
+					}, 250);
+				}
 				break;
 
 			case "state_sync":
 				handleStateSync(msg);
+				break;
+
+			case "queue_sync":
+				handleQueueSync(msg);
 				break;
 
 			case "client_joined":
@@ -853,6 +884,13 @@
 			startPlayStateObserver();
 			startTimelineObserver();
 			startDriftControl();
+
+			if (isHost()) {
+				setTimeout(() => {
+					forceSendCurrentTrack();
+					debouncedQueueSync(true);
+				}, 250);
+			}
 
 			clearTimeout(initTimeout);
 			initTimeout = setTimeout(liftInitializing, 5000);
@@ -1211,6 +1249,22 @@
 		return getTrackId();
 	}
 
+	function forceSendCurrentTrack() {
+		const p = getAlbumPath();
+		if (!p || !isConnected()) return;
+
+		lastSentPath = p;
+
+		const message = { type: "navigate", trackId: p, roomId: ROOM_ID };
+		const ugc = ugcByTrackId.get(p);
+		if (p.startsWith(UGC_PREFIX) && ugc) message.ugc = ugc;
+
+		const pos = getPosition();
+		if (typeof pos === "number") message.position = pos;
+
+		LA.send(message);
+	}
+
 	const SEND_DELAY_MS = 1000;
 	let _navigateTimer = null;
 
@@ -1233,6 +1287,37 @@
 
 			LA.send(message);
 		}, SEND_DELAY_MS);
+	}
+
+	const QUEUE_SEND_DELAY_MS = 800;
+	let _queueTimer = null;
+
+	function debouncedQueueSync(force = false) {
+		clearTimeout(_queueTimer);
+		_queueTimer = setTimeout(
+			() => {
+				if (!isHost() || !isConnected()) return;
+
+				const snap = window.nextmusicApi?.getQueueSnapshot?.();
+				if (!snap?.queue?.length) return;
+				if (!force && sameQueue(snap.queue, lastSentQueue)) return;
+
+				const queue = snap.queue.map((entry) => {
+					const ugc = ugcByTrackId.get(entry.trackId);
+					return ugc ? { ...entry, ugc } : entry;
+				});
+
+				lastSentQueue = snap.queue;
+
+				LA.send({
+					type: "queue_sync",
+					roomId: ROOM_ID,
+					queue,
+					queueIndex: snap.index,
+				});
+			},
+			force ? 0 : QUEUE_SEND_DELAY_MS,
+		);
 	}
 
 	function trySend(p) {
@@ -1283,6 +1368,8 @@
 
 			applySyncState(serverState, true);
 		}
+
+		if (isHost()) debouncedQueueSync(true);
 	}
 
 	function pauseSyncNoTrack(reason) {
@@ -1333,6 +1420,14 @@
 		}
 
 		trackObserverTimer = setInterval(onTrack, 1000);
+
+		window.nextmusicApi?.onQueueChange?.(() => {
+			if (isHost()) debouncedQueueSync();
+		});
+
+		queuePollTimer = setInterval(() => {
+			if (isHost()) debouncedQueueSync();
+		}, 3000);
 	}
 
 	function stopListenAlong() {
@@ -1351,6 +1446,10 @@
 		if (trackObserverTimer) {
 			clearInterval(trackObserverTimer);
 			trackObserverTimer = null;
+		}
+		if (queuePollTimer) {
+			clearInterval(queuePollTimer);
+			queuePollTimer = null;
 		}
 		document.removeEventListener("keydown", onPanelHotkey);
 		window.nextmusicApi?.unmountListenAlongPanel?.();

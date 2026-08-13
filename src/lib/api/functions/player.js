@@ -420,6 +420,25 @@ function playTrackById(trackId) {
 		return false;
 	}
 
+	const wantedId = String(trackId);
+
+	const existingList = queue.playerQueue?.queueState?.entityList?.value ?? [];
+	const existingIdx = existingList.findIndex(
+		(e) => e?.entity?.entityData?.meta?.id === wantedId,
+	);
+	if (existingIdx !== -1) {
+		try {
+			player.setEntityByIndex(existingIdx);
+			player.play();
+			return true;
+		} catch (err) {
+			console.warn(
+				`[nextmusicApi] Cannot start queued track ${trackId}: ${err.message}`,
+			);
+			return false;
+		}
+	}
+
 	const currentIndex = player.playbackState?.queueState?.index?.value ?? -1;
 
 	try {
@@ -466,6 +485,167 @@ function playTrackById(trackId) {
 		}
 	}, 100);
 
+	return true;
+}
+
+const QUEUE_SNAPSHOT_WINDOW = 25;
+
+function getQueueSnapshot() {
+	const player = getMainPlayer();
+	if (!player) return null;
+
+	const queueState = player.queueController?.playerQueue?.queueState;
+	const entityList = queueState?.entityList?.value;
+	const idx = queueState?.index?.value;
+
+	if (!Array.isArray(entityList) || idx == null) return null;
+
+	const start = Math.max(0, idx - QUEUE_SNAPSHOT_WINDOW);
+	const end = Math.min(entityList.length, idx + QUEUE_SNAPSHOT_WINDOW + 1);
+
+	const queue = [];
+	for (let i = start; i < end; i++) {
+		const id = entityList[i]?.entity?.entityData?.meta?.id;
+		if (id == null) continue;
+		queue.push({ trackId: String(id) });
+	}
+
+	return { queue, index: idx - start };
+}
+
+function observeQueue(listener) {
+	let unsubscribe = null;
+	let retryTimer = null;
+	let stopped = false;
+
+	function bind() {
+		if (stopped) return;
+
+		clearTimeout(retryTimer);
+		retryTimer = null;
+
+		unsubscribe?.();
+		unsubscribe = null;
+
+		const player = getMainPlayer();
+		const entityList =
+			player?.queueController?.playerQueue?.queueState?.entityList;
+
+		if (typeof entityList?.onChange !== "function") {
+			retryTimer = setTimeout(bind, OBSERVE_RETRY_MS);
+			return;
+		}
+
+		unsubscribe = entityList.onChange(() => listener());
+	}
+
+	bind();
+
+	return () => {
+		stopped = true;
+		clearTimeout(retryTimer);
+		unsubscribe?.();
+	};
+}
+
+function applyIncomingQueue(entries, currentIndex) {
+	const player = getMainPlayer();
+	const queue = player?.queueController;
+	const pq = queue?.playerQueue;
+	if (!queue || !pq || !Array.isArray(entries) || entries.length === 0) {
+		return false;
+	}
+
+	const wantedIds = entries.map((e) => String(e.trackId));
+
+	const prevList = pq.queueState.entityList.value ?? [];
+
+	function reorder() {
+		const list = pq.queueState.entityList.value ?? [];
+		const prevIdx = pq.queueState.index.value ?? -1;
+		const currentId =
+			list[prevIdx]?.entity?.entityData?.meta?.id != null
+				? String(list[prevIdx].entity.entityData.meta.id)
+				: null;
+		const byId = new Map();
+		for (const entity of list) {
+			const id = entity?.entity?.entityData?.meta?.id;
+			if (id == null) continue;
+			const key = String(id);
+			const queue = byId.get(key);
+			if (queue) queue.push(entity);
+			else byId.set(key, [entity]);
+		}
+
+		const lastUsed = new Map();
+		const newList = wantedIds
+			.map((id) => {
+				const queue = byId.get(id);
+				if (queue?.length) {
+					const entity = queue.shift();
+					lastUsed.set(id, entity);
+					return entity;
+				}
+				return lastUsed.get(id);
+			})
+			.filter(Boolean);
+		if (newList.length === 0) return false;
+
+		try {
+			pq.setEntityList(newList, false);
+			pq.setOrder(
+				newList.map((_, i) => i),
+				false,
+			);
+		} catch (err) {
+			console.warn(
+				`[nextmusicApi] applyIncomingQueue reorder failed: ${err.message}`,
+			);
+			return false;
+		}
+
+		if (currentId != null) {
+			const newIdx = newList.findIndex(
+				(entity) =>
+					String(entity?.entity?.entityData?.meta?.id) === currentId,
+			);
+			if (newIdx !== -1) pq.queueState.index.value = newIdx;
+		}
+
+		return true;
+	}
+
+	const knownIds = new Set(
+		prevList
+			.map((entity) => entity?.entity?.entityData?.meta?.id)
+			.filter((id) => id != null)
+			.map(String),
+	);
+	const missingIds = wantedIds.filter((id) => !knownIds.has(id));
+
+	if (missingIds.length === 0) {
+		return reorder();
+	}
+
+	try {
+		queue.inject({
+			entitiesData: missingIds.map((id) => ({
+				type: "music",
+				meta: { id, realId: id },
+				fromCurrentContext: false,
+				loadEntityMeta: true,
+			})),
+			position: prevList.length,
+			silent: false,
+		});
+	} catch (err) {
+		console.warn(
+			`[nextmusicApi] applyIncomingQueue: cannot inject new tracks: ${err.message}`,
+		);
+		return reorder();
+	}
+
+	setTimeout(reorder, 250);
 	return true;
 }
 
