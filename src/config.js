@@ -28,6 +28,8 @@ export function getTrayIconPath(userExperiments = {}) {
 		: path.join(__dirname, "assets/nm-icons/nm-tray.png");
 }
 
+export const SECRET_KEYS = ["github", "discord"];
+
 export const defaultConfig = {
 	launchSettings: {
 		loaderWindow: true,
@@ -110,6 +112,7 @@ export function getPaths() {
 		nextMusicDirectory: userData,
 		addonsDirectory: path.join(userData, "Addons"),
 		languagesDirectory: path.join(userData, "Languages"),
-		configFilePath: path.join(userData, "Config.json"),
+		configFilePath: path.join(userData, "Config.lua"),
+		legacyConfigFilePath: path.join(userData, "Config.json"),
 	};
 }

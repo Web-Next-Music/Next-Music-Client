@@ -1,4 +1,5 @@
-import { getPaths, defaultConfig } from "../config.js";
+import { getPaths, defaultConfig, SECRET_KEYS } from "../config.js";
+import { parseLuaConfig, stringifyLuaConfig } from "./luaConfig.js";
 import fs from "fs";
 
 let config;
@@ -11,6 +12,13 @@ function reorderConfig(obj, defaultObj, isRoot = true) {
 		defaultObj === null ||
 		Array.isArray(defaultObj)
 	) {
+		if (Array.isArray(defaultObj)) {
+			if (Array.isArray(obj)) return obj;
+			if (obj && typeof obj === "object" && Object.keys(obj).length === 0)
+				return [];
+			return obj ?? structuredClone(defaultObj);
+		}
+
 		return obj ?? defaultObj;
 	}
 
@@ -24,14 +32,14 @@ function reorderConfig(obj, defaultObj, isRoot = true) {
 	const result = {};
 
 	for (const key of Object.keys(defaultObj)) {
-		if (key in obj) {
+		if (obj && typeof obj === "object" && key in obj) {
 			result[key] = reorderConfig(obj[key], defaultObj[key], false);
 		} else {
 			result[key] = structuredClone(defaultObj[key]);
 		}
 	}
 
-	if (isRoot) {
+	if (isRoot && obj && typeof obj === "object") {
 		for (const key of Object.keys(obj)) {
 			if (!(key in defaultObj) && CONFIG_EXTRA_KEYS_WHITELIST.has(key)) {
 				result[key] = obj[key];
@@ -40,6 +48,47 @@ function reorderConfig(obj, defaultObj, isRoot = true) {
 	}
 
 	return result;
+}
+
+function splitConfig(fullConfig) {
+	const settings = {};
+	const secrets = {};
+
+	for (const key of Object.keys(fullConfig)) {
+		if (SECRET_KEYS.includes(key)) secrets[key] = fullConfig[key];
+		else settings[key] = fullConfig[key];
+	}
+
+	for (const key of SECRET_KEYS) {
+		if (!(key in secrets))
+			secrets[key] = structuredClone(defaultConfig[key]);
+	}
+
+	return { settings, secrets };
+}
+
+function writeLuaConfig(fullConfig) {
+	const { configFilePath } = getPaths();
+	const { settings, secrets } = splitConfig(fullConfig);
+
+	fs.writeFileSync(
+		configFilePath,
+		stringifyLuaConfig(settings, secrets),
+		"utf-8",
+	);
+}
+
+function readLegacyConfig() {
+	const { legacyConfigFilePath } = getPaths();
+
+	if (!fs.existsSync(legacyConfigFilePath)) return null;
+
+	try {
+		return JSON.parse(fs.readFileSync(legacyConfigFilePath, "utf-8"));
+	} catch (err) {
+		console.error("[Config] Failed to read legacy config:", err);
+		return null;
+	}
 }
 
 export function loadConfig() {
@@ -60,35 +109,30 @@ export function loadConfig() {
 		fs.mkdirSync(languagesDirectory, { recursive: true });
 
 	if (!fs.existsSync(configFilePath)) {
-		fs.writeFileSync(
-			configFilePath,
-			JSON.stringify(defaultConfig, null, 2),
-			"utf-8",
-		);
+		const legacy = readLegacyConfig();
 
-		config = structuredClone(defaultConfig);
+		config = reorderConfig(legacy ?? defaultConfig, defaultConfig);
+
+		if (legacy) console.log("[Config] Migrated Config.json to Config.lua");
+
+		writeLuaConfig(config);
 		return config;
 	}
 
 	try {
 		const raw = fs.readFileSync(configFilePath, "utf-8");
-		const parsed = JSON.parse(raw);
-		config = reorderConfig(parsed, defaultConfig);
+		const { config: settings, secrets } = parseLuaConfig(raw);
+		const merged = { ...settings, ...secrets };
 
-		if (JSON.stringify(parsed) !== JSON.stringify(config)) {
-			fs.writeFileSync(
-				configFilePath,
-				JSON.stringify(config, null, 2),
-				"utf-8",
-			);
-		}
-	} catch {
+		config = reorderConfig(merged, defaultConfig);
+
+		if (JSON.stringify(merged) !== JSON.stringify(config))
+			writeLuaConfig(config);
+	} catch (err) {
+		console.error("[Config] Failed to read Config.lua:", err);
+
 		config = structuredClone(defaultConfig);
-		fs.writeFileSync(
-			configFilePath,
-			JSON.stringify(config, null, 2),
-			"utf-8",
-		);
+		writeLuaConfig(config);
 	}
 
 	return config;
@@ -100,15 +144,10 @@ export function getConfig() {
 }
 
 export function saveConfig(newConfig) {
-	const { configFilePath } = getPaths();
 	config = reorderConfig(newConfig, defaultConfig);
 
 	try {
-		fs.writeFileSync(
-			configFilePath,
-			JSON.stringify(config, null, 2),
-			"utf-8",
-		);
+		writeLuaConfig(config);
 	} catch (err) {
 		console.error("[Config] Failed to save config:", err);
 	}
