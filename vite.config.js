@@ -238,6 +238,18 @@ function copyStoreAssets() {
 	};
 }
 
+function copyDefaultConfig() {
+	return {
+		name: "copy-default-config",
+		closeBundle() {
+			const from = join("src", "defaultConfig.lua");
+			if (!existsSync(from)) return;
+			mkdirSync("dist", { recursive: true });
+			copyFileSync(from, join("dist", "defaultConfig.lua"));
+		},
+	};
+}
+
 function mainConfig() {
 	const entries = walk("src").filter(isMainEntry);
 
@@ -252,6 +264,7 @@ function mainConfig() {
 			copyCodeMirror(),
 			copyStoreAssets(),
 			copyListenAlongCallback(),
+			copyDefaultConfig(),
 		],
 
 		build: {

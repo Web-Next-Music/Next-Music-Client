@@ -1,8 +1,10 @@
 "use strict";
 
 import { app } from "electron";
+import fs from "fs";
 import path from "path";
 import { getBuiltinExperimentState } from "./lib/experiments/builtinExperiments.js";
+import { parseLuaConfig } from "./lib/luaConfig.js";
 
 export const isDev = !app.isPackaged;
 export const devUrl = "http://localhost:6788";
@@ -30,78 +32,40 @@ export function getTrayIconPath(userExperiments = {}) {
 
 export const SECRET_KEYS = ["github", "discord"];
 
-export const defaultConfig = {
-	launchSettings: {
-		loaderWindow: true,
-		startMinimized: false,
-		splashScreen: true,
-	},
+const DEFAULT_CONFIG_FILE = path.join(__dirname, "defaultConfig.lua");
 
-	windowSettings: {
-		titleBar: {
-			enable: true,
-			nextText: {
-				enable: true,
-				displayYandexMusicVersion: false,
-			},
-		},
-		alwaysOnTop: false,
-		freeWindowResize: false,
-		nextTitle: true,
-		transparentBg: false,
-	},
+const ARRAY_PATHS = new Set(["programSettings.addons.onlineScripts"]);
 
-	programSettings: {
-		richPresence: {
-			enable: true,
-			rpcTitle: "Next Music",
-			largeImageUrl:
-				"https://github.com/Web-Next-Music/Next-Music-Client",
-			buttons: {
-				trackButton: true,
-				githubButton: true,
-				listenAlongButton: false,
-			},
-		},
-		addons: {
-			enable: true,
-			onlineScripts: [],
-		},
-		checkUpdates: true,
-		downloader: true,
-		obsWidget: false,
-		alwaysExpandedPlayer: false,
-		ugcShare: true,
-		fastPlay: true,
-		lrclib: false,
-		disableAutoZoom: false,
-		antiSelect: false,
-		language: "en",
-	},
+function normalizeTables(value, keyPath = "") {
+	if (Array.isArray(value)) {
+		if (value.length === 0 && !ARRAY_PATHS.has(keyPath)) return {};
+		return value.map((item) => normalizeTables(item, keyPath));
+	}
 
-	alpha: {
-		volumeNormalization: false,
-		listenAlong: {
-			enable: false,
-			host: "127.0.0.1",
-			port: 7080,
-		},
-	},
+	if (value && typeof value === "object") {
+		const result = {};
 
-	experiments: {},
+		for (const key of Object.keys(value)) {
+			result[key] = normalizeTables(
+				value[key],
+				keyPath ? `${keyPath}.${key}` : key,
+			);
+		}
 
-	github: {
-		accessToken: null,
-		refreshToken: null,
-		expiresAt: null,
-	},
+		return result;
+	}
 
-	discord: {
-		accessToken: null,
-		refreshToken: null,
-		expiresAt: null,
-	},
-};
+	return value;
+}
+
+function loadDefaultConfig() {
+	const raw = fs.readFileSync(DEFAULT_CONFIG_FILE, "utf-8");
+	const { config, secrets } = parseLuaConfig(raw);
+
+	return normalizeTables({ ...config, ...secrets });
+}
+
+export const defaultConfig = loadDefaultConfig();
 
 export function getPaths() {
 	const userData = app.getPath("userData");
