@@ -18,6 +18,7 @@ import {
 import {
 	hasDiscordIdentity,
 	getDiscordUsername,
+	ensureDiscordProfile,
 	connectDiscordIdentity,
 	disconnectDiscordIdentity,
 } from "../../listenAlong/discordIdentity.js";
@@ -142,10 +143,16 @@ if (!ipcMain.listenerCount("settings:open-window")) {
 }
 
 if (!ipcMain.listenerCount("discord:has-token")) {
-	ipcMain.handle("discord:has-token", () => ({
-		hasToken: hasDiscordIdentity(),
-		username: getDiscordUsername(),
-	}));
+	ipcMain.handle("discord:has-token", async () => {
+		if (!hasDiscordIdentity()) return { hasToken: false, username: null };
+
+		await ensureDiscordProfile();
+
+		return {
+			hasToken: true,
+			username: getDiscordUsername(),
+		};
+	});
 }
 
 if (!ipcMain.listenerCount("discord:connect")) {

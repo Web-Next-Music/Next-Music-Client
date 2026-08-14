@@ -100,8 +100,6 @@ export const defaultConfig = {
 		accessToken: null,
 		refreshToken: null,
 		expiresAt: null,
-		username: null,
-		avatarUrl: null,
 	},
 };
 

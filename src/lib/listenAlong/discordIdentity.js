@@ -7,6 +7,8 @@ import {
 
 const EXPIRY_SAFETY_MS = 60000;
 
+let profileCache = null;
+
 function readIdentity() {
 	return getConfig()?.discord ?? {};
 }
@@ -17,11 +19,15 @@ export function hasDiscordIdentity() {
 }
 
 export function getDiscordUsername() {
-	return readIdentity().username || null;
+	return profileCache?.username || null;
+}
+
+export function getDiscordDisplayName() {
+	return profileCache?.displayName || profileCache?.username || null;
 }
 
 export function getDiscordAvatarUrl() {
-	return readIdentity().avatarUrl || null;
+	return profileCache?.avatarUrl || null;
 }
 
 export async function getValidDiscordAccessToken() {
@@ -50,29 +56,31 @@ export async function getValidDiscordAccessToken() {
 	}
 }
 
-function cacheDiscordProfile(username, avatarUrl) {
-	const config = getConfig();
-	config.discord = { ...config.discord, username, avatarUrl };
-	saveConfig(config);
-}
-
 export async function ensureDiscordProfile() {
+	if (profileCache) return profileCache;
+
 	const accessToken = await getValidDiscordAccessToken();
-	if (!accessToken) return;
+	if (!accessToken) return null;
 
 	try {
-		const { username, avatarUrl } = await fetchDiscordProfile(accessToken);
-		if (username) cacheDiscordProfile(username, avatarUrl);
+		const profile = await fetchDiscordProfile(accessToken);
+		if (profile.username) profileCache = profile;
 	} catch {}
+
+	return profileCache;
 }
 
 export async function connectDiscordIdentity() {
-	const { tokens, username, avatarUrl } = await getDiscordTokens();
+	const { tokens, username, displayName, avatarUrl } =
+		await getDiscordTokens();
+
 	const config = getConfig();
-	config.discord = { ...tokens, username, avatarUrl };
+	config.discord = { ...tokens };
 	saveConfig(config);
 
-	return { ok: true, username, avatarUrl };
+	profileCache = { username, displayName, avatarUrl };
+
+	return { ok: true, username, displayName, avatarUrl };
 }
 
 export function disconnectDiscordIdentity() {
@@ -81,8 +89,8 @@ export function disconnectDiscordIdentity() {
 		accessToken: null,
 		refreshToken: null,
 		expiresAt: null,
-		username: null,
-		avatarUrl: null,
 	};
 	saveConfig(config);
+
+	profileCache = null;
 }

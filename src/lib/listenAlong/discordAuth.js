@@ -88,6 +88,7 @@ export async function fetchDiscordProfile(accessToken) {
 	if (!res.ok) {
 		return {
 			username: null,
+			displayName: null,
 			avatarUrl: null,
 		};
 	}
@@ -95,6 +96,7 @@ export async function fetchDiscordProfile(accessToken) {
 	const user = await res.json();
 
 	const username = user.username || null;
+	const displayName = user.global_name || username;
 
 	const avatarUrl = user.avatar
 		? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
@@ -102,6 +104,7 @@ export async function fetchDiscordProfile(accessToken) {
 
 	return {
 		username,
+		displayName,
 		avatarUrl,
 	};
 }
@@ -120,7 +123,7 @@ function escapeHtml(str) {
 	);
 }
 
-function renderCallbackPage({ ok, username, avatarUrl, message }) {
+function renderCallbackPage({ ok, displayName, avatarUrl, message }) {
 	const template = fs.readFileSync(CALLBACK_HTML, "utf8");
 
 	const heading = ok ? "Congratulations!" : "Sign-in failed";
@@ -132,7 +135,7 @@ function renderCallbackPage({ ok, username, avatarUrl, message }) {
 			)}</p>`;
 
 	const identity =
-		ok && username
+		ok && displayName
 			? `
 				<div class="identity">
 					<img
@@ -141,7 +144,7 @@ function renderCallbackPage({ ok, username, avatarUrl, message }) {
 						alt=""
 					/>
 					<span class="username">
-						${escapeHtml(username)}
+						${escapeHtml(displayName)}
 					</span>
 				</div>
 			`
@@ -250,9 +253,8 @@ function getAuthResult(codeChallenge, codeVerifier) {
 			try {
 				const tokens = await exchangeCodeForToken(code, codeVerifier);
 
-				const { username, avatarUrl } = await fetchDiscordProfile(
-					tokens.accessToken,
-				);
+				const { username, displayName, avatarUrl } =
+					await fetchDiscordProfile(tokens.accessToken);
 
 				res.writeHead(200, {
 					"Content-Type": "text/html; charset=utf-8",
@@ -261,7 +263,7 @@ function getAuthResult(codeChallenge, codeVerifier) {
 				res.end(
 					renderCallbackPage({
 						ok: true,
-						username,
+						displayName,
 						avatarUrl,
 					}),
 				);
@@ -272,6 +274,7 @@ function getAuthResult(codeChallenge, codeVerifier) {
 					resolve({
 						tokens,
 						username,
+						displayName,
 						avatarUrl,
 					});
 				}

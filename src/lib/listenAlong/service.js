@@ -4,7 +4,7 @@ import { getConfig, saveConfig } from "../configManager.js";
 import {
 	getValidDiscordAccessToken,
 	hasDiscordIdentity,
-	getDiscordUsername,
+	getDiscordDisplayName,
 	getDiscordAvatarUrl,
 	ensureDiscordProfile,
 } from "./discordIdentity.js";
@@ -559,7 +559,7 @@ function waitUntil(predicate, timeoutMs) {
 async function pushDiscordProfile() {
 	await ensureDiscordProfile();
 	const url = getDiscordAvatarUrl();
-	const name = getDiscordUsername() || "";
+	const name = getDiscordDisplayName() || "";
 	if (!url && !name) return;
 	send({
 		type: "avatar_url",
