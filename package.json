@@ -68,7 +68,15 @@
 			"artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
 		},
 		"rpm": {
-			"depends": ["gtk3", "libnotify", "nss", "libXss", "glibc"],
+			"depends": [
+				"gtk3",
+				"libnotify",
+				"nss",
+				"libXScrnSaver",
+				"glibc",
+				"alsa-lib",
+				"libdrm"
+			],
 			"artifactName": "${name}_${version}_${arch}.rpm"
 		},
 		"protocols": [

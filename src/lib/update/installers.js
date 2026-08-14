@@ -36,8 +36,7 @@ export async function runWindowsInstallerUpdate() {
 export async function runSystemPackageUpdate() {
 	const asset = pickAsset(state.releaseInfo, state.installType);
 	if (!asset?.browser_download_url) {
-		fallbackOpenRelease();
-		return;
+		throw new Error("No suitable package asset found for this install type");
 	}
 
 	const dest = path.join(app.getPath("temp"), asset.name);
@@ -63,6 +62,7 @@ export function pickAsset(release, type) {
 	let ext;
 	if (type === "nsis") ext = ".exe";
 	else if (type === "pacman") ext = ".pkg.tar.zst";
+	else if (type === "rpm") ext = ".rpm";
 	else ext = ".deb";
 	return assets.find(
 		(a) => typeof a.name === "string" && a.name.endsWith(ext),
@@ -74,6 +74,14 @@ export function installSystemPackage(file, type) {
 		let args;
 		if (type === "pacman") {
 			args = ["pacman", "-U", "--noconfirm", file];
+		} else if (type === "rpm") {
+			// Fedora/RHEL-based: prefer dnf to resolve dependencies,
+			// fall back to plain rpm if dnf is unavailable.
+			args = [
+				"sh",
+				"-c",
+				`command -v dnf >/dev/null 2>&1 && dnf install -y "${file}" || rpm -Uvh --force "${file}"`,
+			];
 		} else {
 			args = [
 				"sh",
@@ -84,6 +92,12 @@ export function installSystemPackage(file, type) {
 
 		const child = spawn("pkexec", args, {
 			stdio: ["ignore", "ignore", "pipe"],
+			env: {
+				...process.env,
+				DISPLAY: process.env.DISPLAY || ":0",
+				XAUTHORITY: process.env.XAUTHORITY || "",
+				XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "",
+			},
 		});
 
 		let stderr = "";
