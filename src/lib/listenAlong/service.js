@@ -138,6 +138,9 @@ let status = {
 	connected: false,
 	connecting: false,
 	serverName: null,
+	serverDescription: null,
+	serverCover: null,
+	serverVersion: null,
 	roomName: null,
 	isHost: false,
 	hostId: null,
@@ -244,6 +247,57 @@ function checkAdminAccess(host, port, token) {
 	});
 }
 
+function fetchPublicInfo(host, port) {
+	return new Promise((resolve) => {
+		const req = https.request(
+			{
+				hostname: host,
+				port: port || 443,
+				path: "/api/info",
+				method: "GET",
+				rejectUnauthorized: false,
+				timeout: ADMIN_CHECK_TIMEOUT_MS,
+			},
+			(res) => {
+				let data = "";
+				res.on("data", (chunk) => {
+					data += chunk;
+				});
+				res.on("end", () => {
+					try {
+						resolve(JSON.parse(data));
+					} catch {
+						resolve(null);
+					}
+				});
+			},
+		);
+
+		req.on("error", () => resolve(null));
+		req.on("timeout", () => {
+			req.destroy();
+			resolve(null);
+		});
+		req.end();
+	});
+}
+
+function refreshPublicInfo() {
+	const host = settings?.host;
+	if (!host) return;
+	const port = settings.port;
+
+	fetchPublicInfo(host, port).then((info) => {
+		if (!info || settings?.host !== host || settings?.port !== port) return;
+		setStatus({
+			serverName: info.name || status.serverName,
+			serverDescription: info.description || null,
+			serverCover: info.cover || null,
+			serverVersion: info.version || null,
+		});
+	});
+}
+
 function refreshAdminAccess() {
 	const token = getConfig()?.github?.accessToken;
 	const host = settings?.host;
@@ -308,6 +362,9 @@ function publicStatus() {
 		connecting: status.connecting,
 		discordUserId: resolvedDiscordUserID,
 		serverName: status.serverName,
+		serverDescription: status.serverDescription,
+		serverCover: status.serverCover,
+		serverVersion: status.serverVersion,
 		serverLabel: serverLabel(),
 		roomId: settings?.roomId || null,
 		roomName: status.roomName,
@@ -384,6 +441,7 @@ function open() {
 	}
 
 	setStatus({ connecting: true, fatal: null });
+	refreshPublicInfo();
 
 	ws = new WebSocket(url, { rejectUnauthorized: false });
 
@@ -477,7 +535,10 @@ function open() {
 			}
 
 			setStatus({
-				serverName: msg.name || null,
+				serverName: msg.name || status.serverName,
+				serverDescription: msg.description || status.serverDescription,
+				serverCover: msg.cover || status.serverCover,
+				serverVersion: msg.version || status.serverVersion,
 				roomName: msg.roomName || null,
 				hostId: msg.hostId || null,
 			});
