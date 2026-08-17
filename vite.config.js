@@ -310,7 +310,7 @@ function rendererConfig(command) {
 		},
 
 		...(command === "build" && {
-			root: resolve(__dirname, "src/renderer"),
+			root: resolve(import.meta.dirname, "src/renderer"),
 		}),
 
 		server: {
@@ -319,25 +319,25 @@ function rendererConfig(command) {
 		},
 
 		build: {
-			outDir: resolve(__dirname, "dist/renderer"),
+			outDir: resolve(import.meta.dirname, "dist/renderer"),
 			emptyOutDir: true,
 			minify: "esbuild",
 			rollupOptions: {
 				input: {
 					info_v2: resolve(
-						__dirname,
+						import.meta.dirname,
 						"src/renderer/info_v2/index.html",
 					),
 					loader: resolve(
-						__dirname,
+						import.meta.dirname,
 						"src/renderer/loader/index.html",
 					),
 					settings: resolve(
-						__dirname,
+						import.meta.dirname,
 						"src/renderer/settings/index.html",
 					),
 					fallback: resolve(
-						__dirname,
+						import.meta.dirname,
 						"src/renderer/fallback/fallback.html",
 					),
 				},
