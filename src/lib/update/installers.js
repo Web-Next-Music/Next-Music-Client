@@ -63,6 +63,7 @@ export function pickAsset(release, type) {
 	let ext;
 	if (type === "nsis") ext = ".exe";
 	else if (type === "pacman") ext = ".pkg.tar.zst";
+	else if (type === "rpm") ext = ".rpm";
 	else ext = ".deb";
 	return assets.find(
 		(a) => typeof a.name === "string" && a.name.endsWith(ext),
@@ -74,6 +75,12 @@ export function installSystemPackage(file, type) {
 		let args;
 		if (type === "pacman") {
 			args = ["pacman", "-U", "--noconfirm", file];
+		} else if (type === "rpm") {
+			args = [
+				"sh",
+				"-c",
+				`dnf install -y "${file}" || rpm -Uvh --force "${file}"`,
+			];
 		} else {
 			args = [
 				"sh",
