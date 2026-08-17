@@ -29,6 +29,7 @@ export const API_FUNCTION_SUBMODULES = {
 		"chat",
 		"roomList",
 		"authGate",
+		"infoModal",
 		"index",
 	],
 };

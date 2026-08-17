@@ -24,6 +24,27 @@ function LaPanelCloseIcon(h) {
 	);
 }
 
+function LaInfoIcon(h) {
+	return h(
+		"svg",
+		{ width: 14, height: 14, viewBox: "0 0 16 16", fill: "none" },
+		h("circle", {
+			cx: 8,
+			cy: 8,
+			r: 6.5,
+			stroke: "currentColor",
+			strokeWidth: 1.4,
+		}),
+		h("circle", { cx: 8, cy: 5.1, r: 0.9, fill: "currentColor" }),
+		h("path", {
+			d: "M8 7.4v4.3",
+			stroke: "currentColor",
+			strokeWidth: 1.4,
+			strokeLinecap: "round",
+		}),
+	);
+}
+
 function LaDiscordIcon(h, size = 13) {
 	return h(
 		"svg",

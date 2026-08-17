@@ -27,6 +27,10 @@
 		connecting: false,
 		serverName: null,
 		serverVersion: null,
+		serverDescription: null,
+		serverCover: null,
+		minClientVersion: null,
+		maxClientVersion: null,
 		serverLabel: "",
 		roomId: null,
 		roomName: null,
@@ -35,6 +39,8 @@
 		isCreator: false,
 		roomList: [],
 		fatal: null,
+		isAdmin: false,
+		webPanelUrl: null,
 	};
 
 	let observerStarted = false;
@@ -288,6 +294,17 @@
 				? "Not connected"
 				: view.text || serverDisplayName(),
 			serverVersion: notConfigured ? null : connection.serverVersion,
+			serverDescription: notConfigured
+				? null
+				: connection.serverDescription,
+			serverCover: notConfigured ? null : connection.serverCover,
+			minClientVersion: notConfigured
+				? null
+				: connection.minClientVersion,
+			maxClientVersion: notConfigured
+				? null
+				: connection.maxClientVersion,
+			webPanelUrl: notConfigured ? null : connection.webPanelUrl,
 			connected: connection.connected,
 			connecting: connection.connecting,
 			isHost: isHost(),
@@ -760,10 +777,21 @@
 		if (!msg || typeof msg.type !== "string") return;
 
 		switch (msg.type) {
+			case "version_unsupported":
+				toast(msg.message || "Client version not supported");
+				break;
+
 			case "server_info":
 				connection.serverName = msg.name || connection.serverName;
 				connection.serverVersion =
 					msg.version || connection.serverVersion;
+				connection.serverDescription =
+					msg.description || connection.serverDescription;
+				connection.serverCover = msg.cover || connection.serverCover;
+				connection.minClientVersion =
+					msg.minClientVersion || connection.minClientVersion;
+				connection.maxClientVersion =
+					msg.maxClientVersion || connection.maxClientVersion;
 				connection.roomId = msg.roomId || null;
 				connection.roomName = msg.roomName || null;
 				connection.hostId = msg.hostId || null;

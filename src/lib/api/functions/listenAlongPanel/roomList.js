@@ -147,10 +147,23 @@ function LaPanelSidebar(props) {
 					: "Connect to server",
 				onClick: () => handlers.onToggleConnect?.(),
 			},
-			h("span", {
-				className: `nmc-la-panel-dot${state.dot === "connecting" ? " connecting" : ""}`,
-				style: { background: state.color },
-			}),
+			state.serverCover
+				? h(
+						"span",
+						{
+							className: `nmc-la-panel-sidebar-avatar-ring${state.dot === "connecting" ? " connecting" : ""}`,
+							style: { boxShadow: `0 0 0 2px ${state.color}` },
+						},
+						h("img", {
+							className: "nmc-la-panel-sidebar-avatar",
+							src: state.serverCover,
+							alt: "",
+						}),
+					)
+				: h("span", {
+						className: `nmc-la-panel-dot${state.dot === "connecting" ? " connecting" : ""}`,
+						style: { background: state.color },
+					}),
 			h(
 				"span",
 				{ className: "nmc-la-panel-sidebar-status-text" },
@@ -158,9 +171,17 @@ function LaPanelSidebar(props) {
 			),
 			state.serverVersion
 				? h(
-						"span",
-						{ className: "nmc-la-panel-server-version" },
-						state.serverVersion,
+						"button",
+						{
+							type: "button",
+							className: "nmc-la-panel-info-btn",
+							title: "Server info",
+							onClick: (event) => {
+								event.stopPropagation();
+								handlers.onOpenInfo?.();
+							},
+						},
+						LaInfoIcon(h),
 					)
 				: null,
 		),

@@ -14,77 +14,97 @@ function LaPanel() {
 	const h = React.createElement;
 	const state = _laPanelState;
 	const handlers = _laPanelHandlers;
+	const [showInfo, setShowInfo] = React.useState(false);
 
 	React.useEffect(() => {
 		const onKey = (event) => {
-			if (event.key === "Escape") handlers.onClose?.();
+			if (event.key === "Escape" && !showInfo) handlers.onClose?.();
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [handlers]);
+	}, [handlers, showInfo]);
+
+	const sidebarHandlers = {
+		...handlers,
+		onOpenInfo: () => setShowInfo(true),
+	};
 
 	return h(
-		"div",
-		{
-			className: "nmc-la-panel-bg",
-			onClick: (event) => {
-				if (event.target === event.currentTarget) handlers.onClose?.();
-			},
-		},
+		React.Fragment,
+		null,
+		showInfo
+			? h(LaInfoModal, {
+					React,
+					state,
+					onClose: () => setShowInfo(false),
+				})
+			: null,
 		h(
 			"div",
-			{ className: "nmc-la-panel" },
+			{
+				className: "nmc-la-panel-bg",
+				onClick: (event) => {
+					if (event.target === event.currentTarget)
+						handlers.onClose?.();
+				},
+			},
 			h(
 				"div",
-				{ className: "nmc-la-panel-header" },
+				{
+					className: `nmc-la-panel${showInfo ? " nmc-la-panel-dimmed" : ""}`,
+				},
 				h(
 					"div",
-					{ className: "nmc-la-panel-title" },
-					state.discordLinked
-						? h(LaPanelRoomBar, {
-								key: "roombar",
+					{ className: "nmc-la-panel-header" },
+					h(
+						"div",
+						{ className: "nmc-la-panel-title" },
+						state.discordLinked
+							? h(LaPanelRoomBar, {
+									key: "roombar",
+									React,
+									state,
+									handlers,
+								})
+							: null,
+					),
+					h(
+						"button",
+						{
+							type: "button",
+							className: "nmc-la-panel-close",
+							title: "Close",
+							onClick: () => handlers.onClose?.(),
+						},
+						LaPanelCloseIcon(h),
+					),
+				),
+				state.discordLinked
+					? h(
+							"div",
+							{ className: "nmc-la-panel-body" },
+							h(LaPanelSidebar, {
+								key: "sidebar",
+								React,
+								state,
+								handlers: sidebarHandlers,
+							}),
+							h(LaPanelChat, {
+								key: "chat",
 								React,
 								state,
 								handlers,
-							})
-						: null,
-				),
-				h(
-					"button",
-					{
-						type: "button",
-						className: "nmc-la-panel-close",
-						title: "Close",
-						onClick: () => handlers.onClose?.(),
-					},
-					LaPanelCloseIcon(h),
-				),
+							}),
+							h(LaPanelRoster, {
+								key: "roster",
+								React,
+								ReactDOMPortal,
+								state,
+								handlers,
+							}),
+						)
+					: h(LaPanelAuthGate, { React, handlers }),
 			),
-			state.discordLinked
-				? h(
-						"div",
-						{ className: "nmc-la-panel-body" },
-						h(LaPanelSidebar, {
-							key: "sidebar",
-							React,
-							state,
-							handlers,
-						}),
-						h(LaPanelChat, {
-							key: "chat",
-							React,
-							state,
-							handlers,
-						}),
-						h(LaPanelRoster, {
-							key: "roster",
-							React,
-							ReactDOMPortal,
-							state,
-							handlers,
-						}),
-					)
-				: h(LaPanelAuthGate, { React, handlers }),
 		),
 	);
 }

@@ -1,5 +1,6 @@
-import { ipcMain, powerSaveBlocker, BrowserWindow } from "electron";
+import { app, ipcMain, powerSaveBlocker, BrowserWindow } from "electron";
 import WebSocket from "ws";
+import https from "https";
 import { getConfig, saveConfig } from "../configManager.js";
 import {
 	getValidDiscordAccessToken,
@@ -15,6 +16,7 @@ const PING_INTERVAL_MS = 25000;
 
 const CLOSE_ROOM_NOT_FOUND = 4001;
 const CLOSE_KICKED = 4002;
+const CLOSE_VERSION_UNSUPPORTED = 4003;
 const ROOM_RETRY_MS = 20000;
 
 const HOST_ONLY_TYPES = new Set([
@@ -26,6 +28,8 @@ const HOST_ONLY_TYPES = new Set([
 ]);
 
 const INVITE_PREFIX = "NMJ-";
+const WEB_PANEL_ORIGIN = "https://nm.diram1x.ru";
+const ADMIN_CHECK_TIMEOUT_MS = 8000;
 
 function buildInvite() {
 	if (!settings?.host || !settings?.roomId) return null;
@@ -139,6 +143,8 @@ let status = {
 	hostId: null,
 	isCreator: false,
 	fatal: null,
+	isAdmin: false,
+	webPanelUrl: null,
 };
 
 function readSettings() {
@@ -170,9 +176,61 @@ function socketUrl() {
 
 	const params = new URLSearchParams();
 	if (settings.roomId) params.set("room", settings.roomId);
+	params.set("v", app.isPackaged ? app.getVersion() : "0.0");
 
 	const query = params.toString();
 	return `wss://${label}${query ? `?${query}` : ""}`;
+}
+
+function checkAdminAccess(host, port, token) {
+	return new Promise((resolve) => {
+		const req = https.request(
+			{
+				hostname: host,
+				port: port || 443,
+				path: "/api/admin/settings",
+				method: "GET",
+				rejectUnauthorized: false,
+				timeout: ADMIN_CHECK_TIMEOUT_MS,
+				headers: { Authorization: `Bearer ${token}` },
+			},
+			(res) => {
+				res.resume();
+				resolve(res.statusCode === 200);
+			},
+		);
+		req.on("error", () => resolve(false));
+		req.on("timeout", () => {
+			req.destroy();
+			resolve(false);
+		});
+		req.end();
+	});
+}
+
+function refreshAdminAccess() {
+	const token = getConfig()?.github?.accessToken;
+	const host = settings?.host;
+
+	if (!token || !host) {
+		setStatus({ isAdmin: false, webPanelUrl: null });
+		return;
+	}
+
+	checkAdminAccess(host, settings.port, token).then((isAdmin) => {
+		if (!isAdmin || settings?.host !== host) {
+			setStatus({ isAdmin: false, webPanelUrl: null });
+			return;
+		}
+		const params = new URLSearchParams({
+			server: host,
+			port: String(settings.port || ""),
+		});
+		setStatus({
+			isAdmin: true,
+			webPanelUrl: `${WEB_PANEL_ORIGIN}/la/settings?${params.toString()}`,
+		});
+	});
 }
 
 function broadcast(channel, payload) {
@@ -221,6 +279,8 @@ function publicStatus() {
 		hostId: status.hostId,
 		isCreator: status.isCreator,
 		fatal: status.fatal,
+		isAdmin: status.isAdmin,
+		webPanelUrl: status.webPanelUrl,
 		discordLinked: hasDiscordIdentity(),
 		peers: [...roster].map(([discordUserId, entry]) => ({
 			discordUserId,
@@ -302,6 +362,8 @@ function open() {
 		} else if (hasDiscordIdentity()) {
 			discordSignIn().catch(() => {});
 		}
+
+		refreshAdminAccess();
 
 		startPowerBlocker();
 
@@ -471,18 +533,35 @@ function open() {
 
 		const roomMissing = code === CLOSE_ROOM_NOT_FOUND;
 		const kicked = code === CLOSE_KICKED;
+		const versionUnsupported = code === CLOSE_VERSION_UNSUPPORTED;
+
+		if (versionUnsupported) {
+			broadcast("la:message", {
+				type: "version_unsupported",
+				message: reason?.toString() || "Client version not supported",
+			});
+		}
+
 		setStatus({
 			connected: false,
 			connecting: false,
 			isHost: false,
 			hostId: null,
 			isCreator: false,
-			fatal: roomMissing ? "room-not-found" : kicked ? "kicked" : null,
+			isAdmin: false,
+			webPanelUrl: null,
+			fatal: roomMissing
+				? "room-not-found"
+				: kicked
+					? "kicked"
+					: versionUnsupported
+						? "version-unsupported"
+						: null,
 		});
 
 		if (roomMissing) reconnectDelay = ROOM_RETRY_MS;
 
-		if (kicked) {
+		if (kicked || versionUnsupported) {
 			manuallyDisconnected = true;
 		} else {
 			scheduleReconnect();

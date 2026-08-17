@@ -16,7 +16,12 @@ import {
 	renderMarkdown,
 	getRateLimitState,
 	pLimit,
+	cachedGet,
+	CONTENTS_TTL,
 } from "./github/index.js";
+
+const CLIENT_REPO_OWNER = "Web-Next-Music";
+const CLIENT_REPO_NAME = "Next-Music-Client";
 
 import { getLogo, setLogo } from "./cache.js";
 
@@ -175,6 +180,23 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 
 	if (method === "GET" && urlPath === "/api/rate-limit")
 		return json(getRateLimitState());
+
+	if (method === "GET" && urlPath === "/api/client-tags") {
+		const token = getConfig().github?.accessToken || undefined;
+
+		try {
+			const { status, data } = await cachedGet(
+				`https://api.github.com/repos/${CLIENT_REPO_OWNER}/${CLIENT_REPO_NAME}/tags?per_page=100`,
+				{ token, ttl: CONTENTS_TTL },
+			);
+			if (status !== 200 || !Array.isArray(data))
+				return json({ tags: [] });
+
+			return json({ tags: data.map((t) => t.name).filter(Boolean) });
+		} catch {
+			return json({ tags: [] });
+		}
+	}
 
 	if (method === "GET" && urlPath.startsWith("/api/section/")) {
 		const section = urlPath.slice("/api/section/".length);
