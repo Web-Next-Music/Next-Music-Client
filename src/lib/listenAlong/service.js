@@ -182,8 +182,25 @@ function socketUrl() {
 	return `wss://${label}${query ? `?${query}` : ""}`;
 }
 
+function certPins() {
+	return getConfig()?.alpha?.listenAlong?.certPins || {};
+}
+
+function saveCertPin(key, fingerprint) {
+	const config = getConfig();
+	const la = (config.alpha ??= {}).listenAlong ?? {};
+	config.alpha.listenAlong = {
+		...la,
+		certPins: { ...(la.certPins || {}), [key]: fingerprint },
+	};
+	saveConfig(config);
+}
+
 function checkAdminAccess(host, port, token) {
 	return new Promise((resolve) => {
+		const pinKey = `${host}:${port || 443}`;
+		const pinned = certPins()[pinKey];
+
 		const req = https.request(
 			{
 				hostname: host,
@@ -199,12 +216,31 @@ function checkAdminAccess(host, port, token) {
 				resolve(res.statusCode === 200);
 			},
 		);
+
+		req.on("socket", (socket) => {
+			socket.once("secureConnect", () => {
+				const fingerprint = socket.getPeerCertificate()?.fingerprint256;
+				if (!fingerprint) {
+					req.destroy();
+					resolve(false);
+					return;
+				}
+				if (!pinned) {
+					saveCertPin(pinKey, fingerprint);
+				} else if (pinned !== fingerprint) {
+					req.destroy();
+					resolve(false);
+					return;
+				}
+				req.end();
+			});
+		});
+
 		req.on("error", () => resolve(false));
 		req.on("timeout", () => {
 			req.destroy();
 			resolve(false);
 		});
-		req.end();
 	});
 }
 
