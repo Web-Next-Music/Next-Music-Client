@@ -129,7 +129,8 @@ export function onStart() {
 	if (isSystemPackageType(state.installType)) {
 		runSystemPackageUpdate().catch((err) => {
 			console.error("[Updater] system update failed:", err);
-			fallbackOpenRelease();
+			sendError(err?.message || String(err));
+			state.started = false;
 		});
 		return;
 	}

@@ -12,7 +12,10 @@ export function detectInstallType() {
 
 	if (ownsPath("pacman", ["-Qo", exe])) return "pacman";
 	if (ownsPath("dpkg", ["-S", exe])) return "deb";
+	if (ownsPath("rpm", ["-qf", exe])) return "rpm";
 
+	if (hasCommand("rpm") && !hasCommand("dpkg") && !hasCommand("pacman"))
+		return "rpm";
 	if (hasCommand("pacman")) return "pacman";
 	if (hasCommand("dpkg") || hasCommand("apt-get")) return "deb";
 
@@ -55,5 +58,5 @@ export function isWindowsInstallerType(type) {
 
 // System packages we install via pkexec.
 export function isSystemPackageType(type) {
-	return type === "pacman" || type === "deb";
+	return type === "pacman" || type === "deb" || type === "rpm";
 }

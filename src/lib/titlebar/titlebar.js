@@ -21,6 +21,9 @@
 
 		const bar = document.createElement("div");
 		bar.className = "TitleBar_root";
+		// Hard-set a readable fallback color in case Yandex theme CSS
+		// variables aren't available (e.g. on some Linux WM/sessions).
+		bar.style.color = "var(--nm-btn-color, #707070)";
 
 		if (window.__nmcTitleBarConfig?.showNextText) {
 			const label = document.createElement("span");
@@ -99,6 +102,10 @@
 		mountTitleBar();
 		mountTitleBar.mounted = !!document.querySelector(".TitleBar_root");
 	}
+
+	// Also attempt to remount shortly after load, in case the page
+	// resets DOM (Yandex Music does full re-renders on navigation).
+	window.addEventListener("load", () => setTimeout(ensureTitleBar, 0));
 
 	ensureTitleBar();
 

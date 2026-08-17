@@ -17,6 +17,7 @@
 		"build": "vite build && vite build --mode main",
 		"build:win": "vite build && vite build --mode main && cross-env pnpm_config_verify_deps_before_run=false electron-builder --win --publish never",
 		"build:linux": "vite build && vite build --mode main && cross-env pnpm_config_verify_deps_before_run=false electron-builder --linux --publish never",
+		"build:deb-rpm": "vite build && vite build --mode main && cross-env pnpm_config_verify_deps_before_run=false electron-builder --linux deb rpm --publish never",
 		"build:all": "vite build && vite build --mode main && cross-env pnpm_config_verify_deps_before_run=false electron-builder --win --linux --publish never",
 		"start": "electron dist/index.js",
 		"format": "biome format --write .",
@@ -51,7 +52,7 @@
 		},
 		"linux": {
 			"artifactName": "${name}_${version}_${arch}.${ext}",
-			"target": ["AppImage", "deb", "pacman"],
+			"target": ["AppImage", "deb", "pacman", "rpm"],
 			"category": "Audio",
 			"maintainer": "Diramix <39developer@diram1x.ru>",
 			"icon": "src/assets/nm-icons/icon-256.png",
@@ -65,6 +66,18 @@
 		"pacman": {
 			"depends": ["gtk3", "libnotify", "nss", "libxss", "glibc"],
 			"artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
+		},
+		"rpm": {
+			"depends": [
+				"gtk3",
+				"libnotify",
+				"nss",
+				"libXScrnSaver",
+				"glibc",
+				"alsa-lib",
+				"libdrm"
+			],
+			"artifactName": "${name}_${version}_${arch}.rpm"
 		},
 		"protocols": [
 			{

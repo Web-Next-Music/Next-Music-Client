@@ -1,0 +1,58 @@
+name: Package Linux (deb/rpm)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+              libarchive-tools \
+              xz-utils \
+              fakeroot \
+              ruby \
+              rpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build deb and rpm packages
+        env:
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+        run: pnpm run build:deb-rpm
+
+      - name: Upload deb/rpm artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-music-linux-packages
+          path: |
+            release/*.deb
+            release/*.rpm
+          if-no-files-found: error

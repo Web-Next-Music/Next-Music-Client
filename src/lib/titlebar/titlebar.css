@@ -6,12 +6,21 @@
 }
 
 .TitleBar_root {
-	--nm-spacer-size-xxxl: var(--ym-spacer-size-xxxl);
-	--nm-line-height: var(--ym-font-line-height-label-s);
-	--nm-btn-color: var(--ym-controls-color-primary-text-enabled_variant);
-	--nm-btn-hover-bg: var(--ym-controls-color-secondary-default-hovered);
+	--nm-spacer-size-xxxl: var(--ym-spacer-size-xxxl, 40px);
+	--nm-line-height: var(--ym-font-line-height-label-s, 1.3);
+	--nm-btn-color: var(
+		--ym-controls-color-primary-text-enabled_variant,
+		#707070
+	);
+	--nm-btn-hover-bg: var(
+		--ym-controls-color-secondary-default-hovered,
+		rgba(0, 0, 0, 0.06)
+	);
 	--nm-btn-close-hover-bg: #f23f42;
-	--next-text-color: var(--ym-controls-color-primary-text-enabled_variant);
+	--next-text-color: var(
+		--ym-controls-color-primary-text-enabled_variant,
+		#707070
+	);
 }
 
 [class*="CommonLayout_root"] {
@@ -33,8 +42,11 @@
 	align-items: center;
 	justify-content: flex-end;
 	-webkit-app-region: drag;
-	z-index: 99999;
+	z-index: 999999;
 	user-select: none;
+	pointer-events: auto;
+	visibility: visible;
+	opacity: 1;
 }
 
 .TitleBar_root .TitleBar_nextText {
@@ -60,6 +72,16 @@
 	justify-content: center;
 	-webkit-app-region: no-drag;
 	padding: 0;
+}
+
+.TitleBar_root .TitleBar_button svg {
+	display: block;
+	flex-shrink: 0;
+}
+
+.TitleBar_root .TitleBar_button path,
+.TitleBar_root .TitleBar_button rect {
+	stroke: currentColor;
 }
 
 .TitleBar_root .TitleBar_button svg {

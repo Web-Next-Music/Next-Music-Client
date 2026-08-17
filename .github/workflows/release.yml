@@ -99,6 +99,7 @@ jobs:
             release/*.exe
             release/*.AppImage
             release/*.deb
+            release/*.rpm
             release/*.pkg.tar.zst
 
       - name: Setup SSH for AUR
