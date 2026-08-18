@@ -208,7 +208,7 @@ function checkAdminAccess(host, port, token) {
 			{
 				hostname: host,
 				port: port || 443,
-				path: "/api/admin/settings",
+				path: "/api/settings",
 				method: "GET",
 				rejectUnauthorized: false,
 				timeout: ADMIN_CHECK_TIMEOUT_MS,
