@@ -1,3 +1,6 @@
+const UGC_TRACK_ID_RE =
+	/^ugc:|^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const TRACK_LINK_RE =
 	/music\.yandex\.[a-z]+\/album\/(\d+)\/track\/(\d+)|music\.yandex\.[a-z]+\/track\/(\d+)|music\.yandex\.[a-z]+\/album\/(\d+)(?!\/track)/i;
 
@@ -65,14 +68,14 @@ function LaNowPlayingBar(props) {
 	const h = React.createElement;
 	const trackId = state.nowPlaying?.id;
 	const playing = !!state.nowPlaying?.playing;
+	const ugc = state.nowPlaying?.ugc;
+	const isUgc = !!trackId && UGC_TRACK_ID_RE.test(trackId);
 	const [meta, setMeta] = React.useState(undefined);
 	const [position, setPosition] = React.useState(0);
+	const [localDurationMs, setLocalDurationMs] = React.useState(null);
 
 	React.useEffect(() => {
-		if (!trackId) {
-			setMeta(null);
-			return;
-		}
+		if (!trackId || isUgc) return;
 		let cancelled = false;
 		fetchLinkMeta({ type: "track", id: trackId }).then((result) => {
 			if (!cancelled) setMeta(result);
@@ -80,7 +83,17 @@ function LaNowPlayingBar(props) {
 		return () => {
 			cancelled = true;
 		};
-	}, [trackId]);
+	}, [trackId, isUgc]);
+
+	const resolvedMeta = isUgc
+		? {
+				trackId,
+				title: ugc?.t || "Shared Track",
+				artists: ugc?.a || "",
+				coverUrl: ugc?.c || null,
+				durationMs: null,
+			}
+		: meta;
 
 	React.useEffect(() => {
 		const basePosition = state.nowPlaying?.position ?? 0;
@@ -91,17 +104,22 @@ function LaNowPlayingBar(props) {
 		setPosition(basePosition + elapsed);
 
 		const api = window.nextmusicApi;
-		if (!api || !trackId) return;
+		if (!api || !trackId) {
+			setLocalDurationMs(null);
+			return;
+		}
 
-		const localPosition = () => {
-			const local = api.getCurrentTrack?.();
-			return local?.id === trackId
-				? (api.getState?.()?.progress?.position ?? null)
-				: null;
-		};
 		const applyLocal = () => {
-			const p = localPosition();
-			if (p !== null) setPosition(p);
+			const local = api.getCurrentTrack?.();
+			if (local?.id !== trackId) {
+				setLocalDurationMs(null);
+				return;
+			}
+			const p = api.getState?.()?.progress?.position;
+			if (typeof p === "number") setPosition(p);
+			setLocalDurationMs(
+				typeof local.durationMs === "number" ? local.durationMs : null,
+			);
 		};
 		applyLocal();
 
@@ -121,18 +139,19 @@ function LaNowPlayingBar(props) {
 		};
 	}, [trackId]);
 
-	if (!trackId || meta === null) return null;
+	if (!trackId || resolvedMeta === null) return null;
 
-	const durationSec = (meta?.durationMs ?? 0) / 1000;
+	const durationSec =
+		(localDurationMs ?? resolvedMeta?.durationMs ?? 0) / 1000;
 	const ratio = durationSec > 0 ? Math.min(1, position / durationSec) : 0;
 
 	return h(
 		"div",
 		{ className: "nmc-la-panel-nowplaying" },
-		meta?.coverUrl
+		resolvedMeta?.coverUrl
 			? h("img", {
 					className: "nmc-la-panel-nowplaying-cover",
-					src: meta.coverUrl,
+					src: resolvedMeta.coverUrl,
 					alt: "",
 				})
 			: h("div", {
@@ -141,11 +160,11 @@ function LaNowPlayingBar(props) {
 		h(
 			"div",
 			{ className: "nmc-la-panel-nowplaying-title" },
-			meta === undefined
+			resolvedMeta === undefined
 				? "Loading…"
-				: meta.artists
-					? `${meta.title} - ${meta.artists}`
-					: meta.title,
+				: resolvedMeta.artists
+					? `${resolvedMeta.title} - ${resolvedMeta.artists}`
+					: resolvedMeta.title,
 		),
 		h(
 			"span",

@@ -138,7 +138,7 @@ function LaPanelUserMenu(props) {
 function LaPanelRoster(props) {
 	const { React, ReactDOMPortal, state, handlers } = props;
 	const h = React.createElement;
-	const avatars = state.avatars ?? [];
+	const avatars = state.roomId ? (state.avatars ?? []) : [];
 	const [openMenuFor, setOpenMenuFor] = React.useState(null);
 	const moreBtnRefs = React.useRef({});
 
@@ -207,6 +207,12 @@ function LaPanelRoster(props) {
 	return h(
 		"div",
 		{ className: "nmc-la-panel-col nmc-la-panel-roster" },
+		h(
+			"div",
+			{ className: "nmc-la-panel-roster-count" },
+			LaPeopleIcon(h),
+			avatars.length,
+		),
 		h(
 			"div",
 			{ className: "nmc-la-panel-roster-list nmc-la-panel-scroll" },

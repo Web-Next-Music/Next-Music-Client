@@ -65,6 +65,26 @@ function LaVolumeIcon(h, muted) {
 	);
 }
 
+function LaPeopleIcon(h) {
+	return h(
+		"svg",
+		{
+			width: 13,
+			height: 13,
+			viewBox: "0 0 16 16",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: 1.4,
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+		},
+		h("circle", { cx: 6, cy: 5.3, r: 2.3 }),
+		h("path", { d: "M1.5 13.5c0-2.6 2-4.2 4.5-4.2s4.5 1.6 4.5 4.2" }),
+		h("path", { d: "M10.8 3.3a2.3 2.3 0 010 4.4" }),
+		h("path", { d: "M12 9.4c2 .3 3.5 1.7 3.5 4.1" }),
+	);
+}
+
 function LaDiscordIcon(h, size = 13) {
 	return h(
 		"svg",

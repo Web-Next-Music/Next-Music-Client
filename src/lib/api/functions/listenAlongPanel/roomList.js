@@ -1,10 +1,11 @@
 function LaRoomListCover(props) {
 	const { React, trackId } = props;
 	const h = React.createElement;
+	const isUgc = !!trackId && UGC_TRACK_ID_RE.test(trackId);
 	const [meta, setMeta] = React.useState(undefined);
 
 	React.useEffect(() => {
-		if (!trackId) return;
+		if (!trackId || isUgc) return;
 		let cancelled = false;
 		fetchLinkMeta({ type: "track", id: trackId }).then((result) => {
 			if (!cancelled) setMeta(result);
@@ -12,9 +13,10 @@ function LaRoomListCover(props) {
 		return () => {
 			cancelled = true;
 		};
-	}, [trackId]);
+	}, [trackId, isUgc]);
 
-	if (!trackId) return null;
+	if (!trackId || isUgc) return null;
+	if (meta !== undefined && !meta?.coverUrl) return null;
 
 	return h("img", {
 		className: `nmc-la-panel-room-list-item-cover${meta?.coverUrl ? "" : " skeleton"}`,

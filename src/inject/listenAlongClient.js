@@ -286,22 +286,27 @@
 	function panelState() {
 		const view = islandState();
 		const notConfigured = view.hidden;
-		const currentTrack = window.nextmusicApi?.getCurrentTrack?.();
 		const serverNowPlaying = isHost()
 			? {
-					id: currentTrack?.id ?? null,
+					id: getShareableTrack()?.trackId ?? null,
 					playing: isPlayingNow() === true,
 					position:
 						window.nextmusicApi?.getState?.()?.progress?.position ??
 						0,
 					serverTime: Date.now(),
+					ugc: null,
 				}
 			: {
 					id: serverState?.trackId ?? null,
 					playing: !!serverState?.playing,
 					position: serverState?.position ?? 0,
 					serverTime: serverState?.serverTime ?? Date.now(),
+					ugc: null,
 				};
+		if (serverNowPlaying.id) {
+			serverNowPlaying.ugc =
+				ugcByTrackId.get(serverNowPlaying.id) ?? null;
+		}
 		return {
 			dot: notConfigured ? "disconnected" : view.dot,
 			color: notConfigured ? "#888" : view.color,
@@ -336,21 +341,10 @@
 	}
 
 	let _panelOpen = false;
-	let roomListPollTimer = null;
-	const ROOM_LIST_POLL_MS = 4000;
 
 	function renderPanel() {
 		if (!_panelOpen) return;
 		window.nextmusicApi?.updateListenAlongPanel?.(panelState());
-	}
-
-	function pollRoomList() {
-		if (!_panelOpen || !connection.connected) return;
-		LA.listRooms?.().then((res) => {
-			if (!res?.rooms) return;
-			connection.roomList = res.rooms;
-			renderPanel();
-		});
 	}
 
 	function openPanel() {
@@ -359,18 +353,11 @@
 			panelState(),
 			panelHandlers(),
 		);
-		if (!roomListPollTimer) {
-			roomListPollTimer = setInterval(pollRoomList, ROOM_LIST_POLL_MS);
-		}
 	}
 
 	function closePanel() {
 		_panelOpen = false;
 		window.nextmusicApi?.unmountListenAlongPanel?.();
-		if (roomListPollTimer) {
-			clearInterval(roomListPollTimer);
-			roomListPollTimer = null;
-		}
 	}
 
 	function togglePanel() {
