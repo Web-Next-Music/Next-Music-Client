@@ -294,6 +294,28 @@
 	font-size: 0.8rem;
 	outline: none;
 }
+.nmc-la-panel-notify-volume {
+	flex-shrink: 0;
+	margin-top: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px;
+	border-top: 1px solid var(--ym-controls-color-secondary-text-disabled);
+}
+.nmc-la-panel-notify-volume-icon {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.65;
+}
+.nmc-la-panel-notify-volume-slider {
+	flex: 1 1 auto;
+	min-width: 0;
+	accent-color: var(--ym-controls-color-primary-default-enabled);
+	cursor: pointer;
+}
 .nmc-la-panel-roombar-text {
 	flex: 1 1 auto;
 	min-width: 0;

@@ -131,6 +131,45 @@ function LaPanelRoomName(props) {
 	);
 }
 
+const LA_NOTIFY_VOLUME_KEY = "nmc-la-notify-volume";
+
+function readChatNotifyVolume() {
+	const raw = Number.parseFloat(localStorage.getItem(LA_NOTIFY_VOLUME_KEY));
+	return Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 1;
+}
+
+function LaPanelNotifyVolume(props) {
+	const { React, state } = props;
+	const h = React.createElement;
+	const [volume, setVolume] = React.useState(readChatNotifyVolume);
+
+	if (!state.connected) return null;
+
+	return h(
+		"div",
+		{ className: "nmc-la-panel-notify-volume" },
+		h(
+			"span",
+			{ className: "nmc-la-panel-notify-volume-icon" },
+			LaVolumeIcon(h, volume === 0),
+		),
+		h("input", {
+			className: "nmc-la-panel-notify-volume-slider",
+			type: "range",
+			min: 0,
+			max: 1,
+			step: 0.01,
+			value: volume,
+			title: "Notification volume",
+			onChange: (e) => {
+				const next = Number.parseFloat(e.target.value);
+				setVolume(next);
+				localStorage.setItem(LA_NOTIFY_VOLUME_KEY, String(next));
+			},
+		}),
+	);
+}
+
 function LaPanelSidebar(props) {
 	const { React, state, handlers } = props;
 	const h = React.createElement;
@@ -187,6 +226,12 @@ function LaPanelSidebar(props) {
 		),
 		h(LaPanelRoomName, { key: "room-name", React, state, handlers }),
 		h(LaPanelRoomList, { key: "room-list", React, state, handlers }),
+		h(LaPanelNotifyVolume, {
+			key: "notify-volume",
+			React,
+			state,
+			handlers,
+		}),
 	);
 }
 

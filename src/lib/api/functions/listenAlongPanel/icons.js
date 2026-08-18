@@ -45,6 +45,26 @@ function LaInfoIcon(h) {
 	);
 }
 
+function LaVolumeIcon(h, muted) {
+	return h(
+		"svg",
+		{
+			width: 14,
+			height: 14,
+			viewBox: "0 0 16 16",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: 1.4,
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+		},
+		h("path", { d: "M2 6h2.5L9 3v10L4.5 10H2z", fill: "currentColor" }),
+		muted
+			? h("path", { d: "M11.5 6.5l3 3M14.5 6.5l-3 3" })
+			: h("path", { d: "M11.3 5.8a3.6 3.6 0 010 4.4" }),
+	);
+}
+
 function LaDiscordIcon(h, size = 13) {
 	return h(
 		"svg",

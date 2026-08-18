@@ -389,9 +389,17 @@
 	});
 
 	let chatNotifySound = null;
+	const NOTIFY_VOLUME_KEY = "nmc-la-notify-volume";
+
+	function getChatNotifyVolume() {
+		const raw = Number.parseFloat(localStorage.getItem(NOTIFY_VOLUME_KEY));
+		return Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 1;
+	}
 
 	function playChatNotifySound() {
 		try {
+			const volume = getChatNotifyVolume();
+			if (volume <= 0) return;
 			const port = window.__nextmusicApiAssetPort ?? 2007;
 			if (!chatNotifySound) {
 				chatNotifySound = new Audio(
@@ -399,6 +407,7 @@
 				);
 			}
 			chatNotifySound.currentTime = 0;
+			chatNotifySound.volume = volume;
 			chatNotifySound.play().catch(() => {});
 		} catch {}
 	}
