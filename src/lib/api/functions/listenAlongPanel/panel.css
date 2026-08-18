@@ -390,6 +390,16 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+.nmc-la-panel-room-list-item-cover {
+	flex-shrink: 0;
+	width: 20px;
+	height: 20px;
+	border-radius: 3px;
+	object-fit: cover;
+}
+.nmc-la-panel-room-list-item-cover.skeleton {
+	background: var(--ym-controls-color-primary-default-disabled);
+}
 .nmc-la-panel-room-list-item-count {
 	font-size: 0.72rem;
 	opacity: 0.5;
@@ -573,6 +583,10 @@
 .nmc-la-panel-menu-item.danger {
 	color: #f04747;
 }
+.nmc-la-panel-chat-outer {
+	flex: 1 1 auto;
+	min-width: 0;
+}
 .nmc-la-panel-chat {
 	flex: 1 1 auto;
 	padding: 10px;
@@ -667,6 +681,51 @@
 .nmc-la-panel-chat-send:disabled {
 	opacity: 0.4;
 	cursor: not-allowed;
+}
+.nmc-la-panel-nowplaying {
+	position: relative;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	border-bottom: 1px solid var(--ym-controls-color-secondary-text-disabled);
+	pointer-events: none;
+	user-select: none;
+}
+.nmc-la-panel-nowplaying-cover {
+	flex-shrink: 0;
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	object-fit: cover;
+}
+.nmc-la-panel-nowplaying-cover.skeleton {
+	background: var(--ym-controls-color-primary-default-disabled);
+}
+.nmc-la-panel-nowplaying-title {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-size: 0.78rem;
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.nmc-la-panel-nowplaying-timeline {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 2px;
+	background: var(--ym-controls-color-primary-default-enabled);
+}
+.nmc-la-panel-nowplaying-playpause {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: currentColor;
+	opacity: 0.85;
 }
 .nmc-la-panel-track-widget {
 	display: flex;

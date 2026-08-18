@@ -89,12 +89,24 @@ function LaPanel() {
 								state,
 								handlers: sidebarHandlers,
 							}),
-							h(LaPanelChat, {
-								key: "chat",
-								React,
-								state,
-								handlers,
-							}),
+							h(
+								"div",
+								{
+									className:
+										"nmc-la-panel-col nmc-la-panel-chat-outer",
+								},
+								h(LaNowPlayingBar, {
+									key: "nowplaying",
+									React,
+									state,
+								}),
+								h(LaPanelChat, {
+									key: "chat",
+									React,
+									state,
+									handlers,
+								}),
+							),
 							h(LaPanelRoster, {
 								key: "roster",
 								React,

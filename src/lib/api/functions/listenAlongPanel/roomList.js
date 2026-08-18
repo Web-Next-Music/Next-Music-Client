@@ -1,3 +1,28 @@
+function LaRoomListCover(props) {
+	const { React, trackId } = props;
+	const h = React.createElement;
+	const [meta, setMeta] = React.useState(undefined);
+
+	React.useEffect(() => {
+		if (!trackId) return;
+		let cancelled = false;
+		fetchLinkMeta({ type: "track", id: trackId }).then((result) => {
+			if (!cancelled) setMeta(result);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [trackId]);
+
+	if (!trackId) return null;
+
+	return h("img", {
+		className: `nmc-la-panel-room-list-item-cover${meta?.coverUrl ? "" : " skeleton"}`,
+		src: meta?.coverUrl || undefined,
+		alt: "",
+	});
+}
+
 function LaPanelRoomList(props) {
 	const { React, state, handlers } = props;
 	const h = React.createElement;
@@ -17,6 +42,11 @@ function LaPanelRoomList(props) {
 			h(
 				"div",
 				{ key: room.roomId, className: "nmc-la-panel-room-list-item" },
+				h(LaRoomListCover, {
+					key: "cover",
+					React,
+					trackId: room.trackId,
+				}),
 				h(
 					"span",
 					{ className: "nmc-la-panel-room-list-item-name" },
@@ -88,6 +118,11 @@ function LaPanelRoomName(props) {
 		return h(
 			"div",
 			{ className: "nmc-la-panel-room-name" },
+			h(LaRoomListCover, {
+				key: "cover",
+				React,
+				trackId: state.nowPlaying?.id,
+			}),
 			h(
 				"span",
 				{ className: "nmc-la-panel-room-name-text" },
@@ -99,6 +134,13 @@ function LaPanelRoomName(props) {
 	return h(
 		"div",
 		{ className: "nmc-la-panel-room-name" },
+		editing
+			? null
+			: h(LaRoomListCover, {
+					key: "cover",
+					React,
+					trackId: state.nowPlaying?.id,
+				}),
 		editing
 			? h("input", {
 					className: "nmc-la-panel-room-name-input",

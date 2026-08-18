@@ -43,6 +43,7 @@ function fetchLinkMeta(link) {
 					coverUrl: coverUrlFromUri(
 						data.coverUri ?? data.albums?.[0]?.coverUri,
 					),
+					durationMs: data.durationMs ?? null,
 				};
 			}
 
@@ -57,6 +58,128 @@ function fetchLinkMeta(link) {
 
 	_laTrackMetaCache.set(cacheKey, promise);
 	return promise;
+}
+
+function LaNowPlayingBar(props) {
+	const { React, state } = props;
+	const h = React.createElement;
+	const trackId = state.nowPlaying?.id;
+	const playing = !!state.nowPlaying?.playing;
+	const [meta, setMeta] = React.useState(undefined);
+	const [position, setPosition] = React.useState(0);
+
+	React.useEffect(() => {
+		if (!trackId) {
+			setMeta(null);
+			return;
+		}
+		let cancelled = false;
+		fetchLinkMeta({ type: "track", id: trackId }).then((result) => {
+			if (!cancelled) setMeta(result);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [trackId]);
+
+	React.useEffect(() => {
+		const basePosition = state.nowPlaying?.position ?? 0;
+		const baseServerTime = state.nowPlaying?.serverTime ?? Date.now();
+		const elapsed = state.nowPlaying?.playing
+			? Math.max(0, (Date.now() - baseServerTime) / 1000)
+			: 0;
+		setPosition(basePosition + elapsed);
+
+		const api = window.nextmusicApi;
+		if (!api || !trackId) return;
+
+		const localPosition = () => {
+			const local = api.getCurrentTrack?.();
+			return local?.id === trackId
+				? (api.getState?.()?.progress?.position ?? null)
+				: null;
+		};
+		const applyLocal = () => {
+			const p = localPosition();
+			if (p !== null) setPosition(p);
+		};
+		applyLocal();
+
+		const offTrack = api.onTrackChange?.(applyLocal);
+		const offProgress = api.onProgressChange?.((progress) => {
+			if (
+				typeof progress?.position === "number" &&
+				api.getCurrentTrack?.()?.id === trackId
+			) {
+				setPosition(progress.position);
+			}
+		});
+
+		return () => {
+			offTrack?.();
+			offProgress?.();
+		};
+	}, [trackId]);
+
+	if (!trackId || meta === null) return null;
+
+	const durationSec = (meta?.durationMs ?? 0) / 1000;
+	const ratio = durationSec > 0 ? Math.min(1, position / durationSec) : 0;
+
+	return h(
+		"div",
+		{ className: "nmc-la-panel-nowplaying" },
+		meta?.coverUrl
+			? h("img", {
+					className: "nmc-la-panel-nowplaying-cover",
+					src: meta.coverUrl,
+					alt: "",
+				})
+			: h("div", {
+					className: "nmc-la-panel-nowplaying-cover skeleton",
+				}),
+		h(
+			"div",
+			{ className: "nmc-la-panel-nowplaying-title" },
+			meta === undefined
+				? "Loading…"
+				: meta.artists
+					? `${meta.title} - ${meta.artists}`
+					: meta.title,
+		),
+		h(
+			"span",
+			{
+				className: "nmc-la-panel-nowplaying-playpause",
+				title: playing ? "Playing" : "Paused",
+			},
+			playing
+				? h(
+						"svg",
+						{
+							width: 12,
+							height: 12,
+							viewBox: "0 0 16 16",
+							fill: "currentColor",
+						},
+						h("path", { d: "M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z" }),
+					)
+				: h(
+						"svg",
+						{
+							width: 12,
+							height: 12,
+							viewBox: "0 0 16 16",
+							fill: "currentColor",
+						},
+						h("path", { d: "M4 2.5v11l10-5.5-10-5.5z" }),
+					),
+		),
+		h("div", {
+			className: "nmc-la-panel-nowplaying-timeline",
+			style: { width: `${ratio * 100}%` },
+		}),
+	);
 }
 
 function LaTrackWidget(props) {
