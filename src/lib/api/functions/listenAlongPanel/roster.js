@@ -1,5 +1,16 @@
 function laAvatarEl(h, a, size) {
 	if (a.id === SERVER_AVATAR_ID) {
+		if (a.url) {
+			return h("img", {
+				className: "nmc-la-panel-avatar",
+				src: a.url,
+				alt: "",
+				style: {
+					width: size,
+					height: size,
+				},
+			});
+		}
 		const px = Number.parseFloat(size) || 38;
 		return h(
 			"div",

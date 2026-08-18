@@ -57,9 +57,12 @@ function LaPanelChat(props) {
 							id: m.discordUserId,
 							name:
 								m.discordUserId === SERVER_AVATAR_ID
-									? "server"
+									? state.text || "server"
 									: m.discordUserId,
-							url: null,
+							url:
+								m.discordUserId === SERVER_AVATAR_ID
+									? state.serverCover || null
+									: null,
 							isHost: false,
 						};
 						const link = parseTrackLink(m.text);
