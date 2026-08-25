@@ -17,7 +17,7 @@ const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
 // Services
 import { createTray } from "./lib/tray.js";
 import { initUpdater } from "./lib/update/index.js";
-import { presenceService, initWS } from "./lib/richPresence.js";
+import { presenceService, initSiteRPC } from "./lib/richPresence.js";
 import { createWindow } from "./lib/window/mainWindow/createWindow.js";
 import { setupSplashScreen } from "./lib/splashScreen.js";
 import { setupStoreIpc } from "./lib/storePage/storeIpc.js";
@@ -215,7 +215,7 @@ app.whenReady().then(() => {
 
 	// Discord rich presence - only start if enabled
 	if (config.programSettings?.richPresence?.enable) {
-		initWS();
+		initSiteRPC();
 
 		checkGitHubStar()
 			.then(({ hasStarred }) => {

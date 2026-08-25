@@ -1,8 +1,6 @@
 (function () {
 	"use strict";
 
-	const WSPORT = 6972;
-	const WS_URL = `ws://127.0.0.1:${WSPORT}`;
 	const POLL_INTERVAL = 1000; // ms
 	const ENCRYPTION_KEY = window.__NEXT_MUSIC_ENCRYPTION_KEY__ || "";
 
@@ -10,27 +8,11 @@
 		return window.nextmusicApi.encodeTrackKey(data, ENCRYPTION_KEY);
 	}
 
-	const pendingData = new Map();
-	const cooldownDuration = 2000;
 	const cooldownTimers = new Map();
+	const cooldownDuration = 2000;
 
 	let lastSentData = null;
 	let lastPosition = null;
-	let conn = null;
-
-	function connect() {
-		conn = window.nextmusicApi.wsReconnect(WS_URL, {
-			reconnectDelay: 3000,
-			onOpen: () => {
-				pendingData.forEach((data, index) => {
-					const payload = { playerIndex: index, ...data };
-					conn.send(JSON.stringify(payload));
-					pendingData.delete(index);
-				});
-			},
-			onError: (e) => console.error("[WS] ❌ WS Error:", e),
-		});
-	}
 
 	function getPlayerData() {
 		const api = window.nextmusicApi;
@@ -91,18 +73,12 @@
 
 	function scheduleSend(data) {
 		const index = 0;
-		pendingData.set(index, data);
 
 		if (cooldownTimers.has(index)) clearTimeout(cooldownTimers.get(index));
 
 		const timer = setTimeout(() => {
-			const pending = pendingData.get(index);
-			if (pending && conn?.getSocket()?.readyState === WebSocket.OPEN) {
-				const payload = { playerIndex: index, ...pending };
-				conn.send(JSON.stringify(payload));
-			}
-			pendingData.delete(index);
 			cooldownTimers.delete(index);
+			window.nmcRPC.send({ playerIndex: index, ...data });
 		}, cooldownDuration);
 
 		cooldownTimers.set(index, timer);
@@ -110,12 +86,7 @@
 
 	function sendImmediate(data) {
 		const index = 0;
-		if (conn?.getSocket()?.readyState === WebSocket.OPEN) {
-			const payload = { playerIndex: index, ...data };
-			conn.send(JSON.stringify(payload));
-		} else {
-			pendingData.set(index, data);
-		}
+		window.nmcRPC.send({ playerIndex: index, ...data });
 	}
 
 	function poll() {
@@ -140,8 +111,7 @@
 	}
 
 	function waitForApi() {
-		if (window.nextmusicApi) {
-			connect();
+		if (window.nextmusicApi && window.nmcRPC) {
 			setInterval(poll, POLL_INTERVAL);
 		} else {
 			setTimeout(waitForApi, 500);

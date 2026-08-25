@@ -1,5 +1,5 @@
 import { Client } from "@xhayper/discord-rpc";
-import WebSocket, { WebSocketServer } from "ws";
+import { ipcMain } from "electron";
 import { getConfig } from "./configManager.js";
 import { checkGitHubStar } from "./githubStarAuth.js";
 import {
@@ -11,10 +11,8 @@ import {
 const CLIENT_ID = "1300258490815741952";
 const GITHUB_LINK = `https://github.com/Web-Next-Music/Next-Music-Client`;
 const NM_WEBSITE_LINK = `https://nm.diram1x.ru`;
-const WSPORT = 6972;
 
 let rpc;
-let wss = null;
 let isReady = false;
 let lastActivity = null;
 let lastPlayerState = null;
@@ -49,50 +47,12 @@ function initRPC() {
 	rpc.login().catch(console.error);
 }
 
-function initWS() {
-	console.log(`[WS] Starting WebSocket server on port ${WSPORT}…`);
+function initSiteRPC() {
+	if (ipcMain.listenerCount("rpc:site-data")) return;
 
-	wss = new WebSocketServer({ port: WSPORT }, () =>
-		console.log(
-			`[WS] WebSocket server listening at ws://127.0.0.1:${WSPORT}`,
-		),
-	);
-
-	wss.on("error", (err) => {
-		console.error(`[WS] ❌ Server error:`, err.message);
-	});
-
-	wss.on("connection", (ws) => {
-		console.log("[WS] New connection");
-
-		if (lastRawData) {
-			try {
-				ws.send(JSON.stringify(lastRawData));
-			} catch {}
-		}
-
-		ws.on("message", (msg) => {
-			try {
-				const data = JSON.parse(msg.toString());
-				lastRawData = data;
-
-				broadcastToSiteClients(data, ws);
-				updateActivity(data);
-			} catch (e) {
-				console.error("[WS] ❌ Error parsing data:", e);
-			}
-		});
-	});
-}
-
-function broadcastToSiteClients(data, sender) {
-	if (!wss) return;
-	const msg = JSON.stringify(data);
-
-	wss.clients.forEach((client) => {
-		if (client !== sender && client.readyState === WebSocket.OPEN) {
-			client.send(msg);
-		}
+	ipcMain.on("rpc:site-data", (_event, data) => {
+		lastRawData = data;
+		updateActivity(data);
 	});
 }
 
@@ -309,4 +269,4 @@ function presenceService(hasStarred = false) {
 	initRPC();
 }
 
-export { initRPC, initWS, updateActivity, presenceService };
+export { initRPC, initSiteRPC, updateActivity, presenceService };

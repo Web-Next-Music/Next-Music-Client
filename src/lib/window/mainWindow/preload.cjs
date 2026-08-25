@@ -505,6 +505,10 @@ injectIntoMainWorld(
 	`(${ynisonDeviceNamePatcher.toString()})(${JSON.stringify(YNISON_DEVICE_NAME)});`,
 );
 
+contextBridge.exposeInMainWorld("nmcRPC", {
+	send: (data) => ipcRenderer.send("rpc:site-data", data),
+});
+
 contextBridge.exposeInMainWorld("nmcStore", {
 	openOnBoot: storeOpenOnBoot,
 	route: STORE_ROUTE,
