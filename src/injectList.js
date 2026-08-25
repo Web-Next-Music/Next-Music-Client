@@ -42,7 +42,7 @@ export const injectList = [
 	},
 	{
 		file: "obsWidget.js",
-		condition: (config) => config?.programSettings?.obsWidget,
+		condition: (config) => config?.programSettings?.obsWidget?.enable,
 	},
 	{
 		file: "siteRPCServer.js",

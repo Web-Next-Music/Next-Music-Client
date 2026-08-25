@@ -72,7 +72,11 @@ function serveStaticFile(req, res, staticDir) {
 }
 
 export function startServer(options = {}) {
-	const { port = 4091, staticDir = path.join(__dirname, "public") } = options;
+	const {
+		port = 4091,
+		host = "127.0.0.1",
+		staticDir = path.join(__dirname, "public"),
+	} = options;
 
 	if (server) return;
 
@@ -80,8 +84,8 @@ export function startServer(options = {}) {
 		serveStaticFile(req, res, staticDir);
 	});
 
-	server.listen(port, "0.0.0.0", () => {
-		log(`HTTP server listening on http://0.0.0.0:${port}`);
+	server.listen(port, host, () => {
+		log(`HTTP server listening on http://${host}:${port}`);
 	});
 
 	wss = new WebSocket.Server({ server });

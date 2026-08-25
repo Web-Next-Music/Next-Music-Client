@@ -199,8 +199,13 @@ app.whenReady().then(() => {
 	initUpdater(config);
 
 	// OBS widget
-	if (config?.programSettings?.obsWidget) {
-		startServer({ port: 4091 });
+	if (config?.programSettings?.obsWidget?.enable) {
+		startServer({
+			port: 4091,
+			host: config?.programSettings?.obsWidget?.exposeNetwork
+				? "0.0.0.0"
+				: "127.0.0.1",
+		});
 	}
 
 	startListenAlong();

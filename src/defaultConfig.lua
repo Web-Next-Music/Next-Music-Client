@@ -33,10 +33,13 @@ nm.config = {
 		addons = {
 			enable = true,
 			onlineScripts = {},
+        },
+		obsWidget = {
+			enable = false,
+			exposeNetwork = false,
 		},
 		checkUpdates = true,
 		downloader = true,
-		obsWidget = false,
 		alwaysExpandedPlayer = false,
 		ugcShare = true,
 		fastPlay = true,
