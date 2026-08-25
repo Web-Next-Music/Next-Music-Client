@@ -1,6 +1,4 @@
-local nm = {}
-
-nm.config = {
+local config = {
 	launchSettings = {
 		loaderWindow = true,
 		startMinimized = false,
@@ -59,7 +57,7 @@ nm.config = {
 	experiments = {},
 }
 
-nm.secrets = {
+local secrets = {
 	github = {
 		accessToken = nil,
 		refreshToken = nil,
@@ -72,4 +70,4 @@ nm.secrets = {
 	},
 }
 
-return nm
+return config, secrets

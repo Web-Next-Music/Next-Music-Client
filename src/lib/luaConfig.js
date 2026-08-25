@@ -55,13 +55,11 @@ function serializeValue(value, indent) {
 
 export function stringifyLuaConfig(config, secrets) {
 	return [
-		"local nm = {}",
+		`local config = ${serializeValue(config, 0)}`,
 		"",
-		`nm.config = ${serializeValue(config, 0)}`,
+		`local secrets = ${serializeValue(secrets, 0)}`,
 		"",
-		`nm.secrets = ${serializeValue(secrets, 0)}`,
-		"",
-		"return nm",
+		"return config, secrets",
 		"",
 	].join("\n");
 }
@@ -249,8 +247,10 @@ function readAssignment(text, name) {
 }
 
 export function parseLuaConfig(text) {
-	const config = readAssignment(text, "nm\\.config");
-	const secrets = readAssignment(text, "nm\\.secrets");
+	const config =
+		readAssignment(text, "config") ?? readAssignment(text, "nm\\.config");
+	const secrets =
+		readAssignment(text, "secrets") ?? readAssignment(text, "nm\\.secrets");
 
 	return {
 		config: config && typeof config === "object" ? config : {},
