@@ -118,7 +118,7 @@
 			"volumeNormalization": "Volume Normalization",
 			"listenAlong": "Listen Along",
 			"blackIsland": "Black Island",
-			"host": "IP Address",
+			"host": "Host",
 			"port": "Port",
 			"roomId": "Room ID",
 			"antiSelect": "Anti-Select",

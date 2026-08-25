@@ -117,7 +117,7 @@
 			"volumeNormalization": "Нормализация Громкости",
 			"listenAlong": "Совместное Прослушивание",
 			"blackIsland": "Чёрный Цвет Острова",
-			"host": "IP адрес",
+			"host": "Хост",
 			"port": "Порт",
 			"roomId": "ID Комнаты",
 			"antiSelect": "Анти-выделение",
