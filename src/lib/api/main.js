@@ -171,6 +171,11 @@ window.nextmusicApi = {
 		};
 	},
 
+	getSiteContexts,
+	wrapWithSiteContexts,
+	getComponentFromElement,
+	renderInSiteContext,
+
 	showToast: notify,
 	showCopyToast: notifyCopy,
 	showErrorToast: notifyError,

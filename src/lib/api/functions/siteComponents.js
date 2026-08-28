@@ -194,3 +194,194 @@ function getMissingSiteComponents() {
 		(n) => !found[n],
 	);
 }
+
+let _siteContexts = null;
+let _siteContextsPath = null;
+let _siteErrorBoundary = null;
+
+const ANCHOR_SELECTORS = [
+	"nav a",
+	"nav button",
+	"main a",
+	"main button",
+	"a[href]",
+	"button",
+];
+
+const ANCHOR_SCAN_LIMIT = 20;
+
+function providerChainFrom(fiber) {
+	const chain = [];
+	const seen = new Set();
+
+	for (let f = fiber; f; f = f.return) {
+		if (f.tag !== 10) continue;
+
+		const context = f.type?._context ?? f.type;
+		if (!context || seen.has(context)) continue;
+
+		seen.add(context);
+		chain.push({ context, value: f.memoizedProps?.value });
+	}
+
+	return chain;
+}
+
+function captureSiteContexts() {
+	let best = [];
+
+	for (const selector of ANCHOR_SELECTORS) {
+		let scanned = 0;
+
+		for (const el of document.querySelectorAll(selector)) {
+			if (scanned++ >= ANCHOR_SCAN_LIMIT) break;
+
+			const fiber = fiberOf(el);
+			if (!fiber) continue;
+
+			const chain = providerChainFrom(fiber);
+			if (chain.length > best.length) best = chain;
+		}
+
+		if (best.length) break;
+	}
+
+	return best;
+}
+
+function getSiteContexts(options) {
+	const path = location.pathname;
+
+	if (options?.refresh || !_siteContexts || _siteContextsPath !== path) {
+		_siteContexts = captureSiteContexts();
+		_siteContextsPath = path;
+	}
+
+	return _siteContexts;
+}
+
+function wrapWithSiteContexts(element, contexts) {
+	const { React } = getSiteComponents();
+	if (!React) return element;
+
+	let node = element;
+
+	for (const entry of contexts ?? getSiteContexts()) {
+		const Provider = entry.context?.Provider ?? entry.context;
+		if (!Provider) continue;
+		node = React.createElement(Provider, { value: entry.value }, node);
+	}
+
+	return node;
+}
+
+function getSiteErrorBoundary(React) {
+	if (_siteErrorBoundary) return _siteErrorBoundary;
+
+	class SiteContextBoundary extends React.Component {
+		constructor(props) {
+			super(props);
+			this.state = { error: null };
+		}
+
+		static getDerivedStateFromError(error) {
+			return { error };
+		}
+
+		componentDidCatch(error) {
+			if (typeof this.props.onError === "function") {
+				this.props.onError(error);
+			} else {
+				console.error("[siteComponents] render failed:", error);
+			}
+		}
+
+		render() {
+			if (!this.state.error) return this.props.children;
+			return this.props.fallback ?? null;
+		}
+	}
+
+	_siteErrorBoundary = SiteContextBoundary;
+	return _siteErrorBoundary;
+}
+
+function getComponentFromElement(selector, predicate, options = {}) {
+	const maxDepth = options.maxDepth ?? 8;
+	const nodes =
+		typeof selector === "string"
+			? document.querySelectorAll(selector)
+			: selector
+				? [selector]
+				: [];
+
+	for (const el of nodes) {
+		let fiber = fiberOf(el);
+
+		for (let d = 0; d < maxDepth && fiber; d++, fiber = fiber.return) {
+			const type = fiber.type;
+			const usable =
+				typeof type === "function" ||
+				(type && typeof type === "object" && type.$$typeof);
+			if (!usable) continue;
+
+			if (predicate) {
+				let matched = false;
+				try {
+					matched = predicate(type, fiber);
+				} catch {}
+				if (!matched) continue;
+			} else if (typeof type !== "function") {
+				continue;
+			}
+
+			return {
+				component: type,
+				props: fiber.memoizedProps,
+				contexts: providerChainFrom(fiber.return),
+			};
+		}
+	}
+
+	return null;
+}
+
+function renderInSiteContext(element, host, options = {}) {
+	const { React, ReactDOMClient } = getSiteComponents();
+	if (!React || !ReactDOMClient || !host) return null;
+
+	const Boundary = getSiteErrorBoundary(React);
+	const root = ReactDOMClient.createRoot(host);
+	let generation = 0;
+
+	const handle = {
+		root,
+		host,
+		render(next) {
+			generation += 1;
+			const tree =
+				options.withContexts === false
+					? next
+					: wrapWithSiteContexts(next, options.contexts);
+
+			root.render(
+				React.createElement(
+					Boundary,
+					{
+						key: generation,
+						onError: options.onError,
+						fallback: options.fallback,
+					},
+					tree,
+				),
+			);
+
+			return handle;
+		},
+		unmount() {
+			root.unmount();
+		},
+	};
+
+	return handle.render(element);
+}
