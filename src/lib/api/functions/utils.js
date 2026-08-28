@@ -200,3 +200,46 @@ function searchFiber(fiber, cls, depth = 0) {
 	search(fiber, depth);
 	return found;
 }
+
+function findMetaContainer() {
+	return document.querySelector(
+		'[class*="PlayerBarDesktopWithBackgroundProgressBar_meta"]',
+	);
+}
+
+function readActionTemplate(container, ownId) {
+	for (const btn of container.querySelectorAll("button")) {
+		if (btn.id === ownId || btn.disabled) continue;
+
+		const button = getComponentFromElement(btn, isButtonType, {
+			maxDepth: 4,
+		});
+		if (!button) continue;
+
+		const icon = getComponentFromElement(
+			btn.querySelector("svg"),
+			isIconType,
+			{ maxDepth: 6 },
+		);
+		if (!icon) continue;
+
+		const buttonProps = { ...button.props };
+		for (const key of [
+			"forwardRef",
+			"icon",
+			"spinner",
+			"onClick",
+			"children",
+			"disabled",
+			"aria-label",
+			"aria-hidden",
+			"data-test-id",
+		]) {
+			delete buttonProps[key];
+		}
+
+		return { Button: button.component, buttonProps, Icon: icon.component };
+	}
+
+	return null;
+}

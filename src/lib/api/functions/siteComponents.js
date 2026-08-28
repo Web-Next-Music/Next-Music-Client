@@ -17,6 +17,46 @@ function hasKeys(src, ...words) {
 	return words.every((w) => new RegExp("\\b" + w + "\\b").test(src));
 }
 
+function typeSource(type) {
+	const fn =
+		typeof type === "function"
+			? type
+			: (type?.render ?? type?.type ?? null);
+	return typeof fn === "function" ? fnBody(fn) : "";
+}
+
+function isButtonType(type) {
+	return hasKeys(
+		firstDestructureKeys(typeSource(type)),
+		"isBlock",
+		"iconPosition",
+		"withRipple",
+	);
+}
+
+function isLinkType(type) {
+	return hasKeys(
+		typeSource(type),
+		"textClassName",
+		"containerClassName",
+		"iconPosition",
+	);
+}
+
+function isTextType(type) {
+	return hasKeys(
+		firstDestructureKeys(typeSource(type)),
+		"weight",
+		"variant",
+		"type",
+		"size",
+	);
+}
+
+function isIconType(type) {
+	return /iconsCollection/.test(typeSource(type));
+}
+
 function isReactMod(m) {
 	return (
 		typeof m.createElement === "function" &&
@@ -59,13 +99,19 @@ const MODULE_SLOTS = {
 const FIBER_SLOTS = {
 	Button: {
 		selector: "button",
-		test: (fn) =>
-			hasKeys(
-				firstDestructureKeys(fnBody(fn)),
-				"isBlock",
-				"iconPosition",
-				"withRipple",
-			),
+		test: isButtonType,
+	},
+	Link: {
+		selector: "a",
+		test: isLinkType,
+	},
+	Text: {
+		selector: "span",
+		test: isTextType,
+	},
+	Icon: {
+		selector: "svg",
+		test: isIconType,
 	},
 	SearchInput: {
 		selector: "input",
@@ -196,7 +242,6 @@ function getMissingSiteComponents() {
 }
 
 let _siteContexts = null;
-let _siteContextsPath = null;
 let _siteErrorBoundary = null;
 
 const ANCHOR_SELECTORS = [
@@ -250,13 +295,9 @@ function captureSiteContexts() {
 }
 
 function getSiteContexts(options) {
-	const path = location.pathname;
+	if (options?.cache && _siteContexts) return _siteContexts;
 
-	if (options?.refresh || !_siteContexts || _siteContextsPath !== path) {
-		_siteContexts = captureSiteContexts();
-		_siteContextsPath = path;
-	}
-
+	_siteContexts = captureSiteContexts();
 	return _siteContexts;
 }
 

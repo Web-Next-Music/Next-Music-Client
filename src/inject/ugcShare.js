@@ -1,5 +1,5 @@
 (function () {
-	const LINK_ICON_SVG = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" aria-hidden="true" focusable="false" role="img" class="svg-icon"><use xlink:href="/icons/sprite.svg#chain_xxs"/></svg>`;
+	const LINK_ICON = { variant: "chain", size: "xs" };
 
 	const ENCRYPTION_KEY = window.__NEXT_MUSIC_ENCRYPTION_KEY__ || "";
 
@@ -129,7 +129,7 @@
 			return;
 		}
 
-		api.mountUgcShareButton(LINK_ICON_SVG, onShareClick);
+		api.mountUgcShareButton(LINK_ICON, onShareClick);
 	}
 
 	getNMAPI()?.onTrackChange?.(syncShareButton);

@@ -9,24 +9,9 @@ let _dlEnabled = false;
 let _dlState = { phase: "idle" };
 let _dlOnClick = null;
 
-const DL_ICON_SVG = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24"
-  aria-hidden="true" focusable="false" role="img" class="svg-icon">
-  <use xlink:href="/icons/sprite.svg#download_xxs"/>
-</svg>`;
-
-const DL_SPINNER_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-  aria-hidden="true" focusable="false" class="nm-dl-spinner">
-  <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.2"
-    stroke-linecap="round" stroke-dasharray="42 14" />
-</svg>`;
+const DL_ICON = { variant: "download", size: "xxs" };
 
 const DL_SPINNER_CSS = __CSS_FILE__("./styles/downloadSpinner.css");
-
-function findMetaContainer() {
-	return document.querySelector(
-		'[class*="PlayerBarDesktopWithBackgroundProgressBar_meta"]',
-	);
-}
 
 function isDownloadButtonAttached() {
 	return (
@@ -36,60 +21,36 @@ function isDownloadButtonAttached() {
 	);
 }
 
-function readDownloadActionTemplate(container) {
-	for (const btn of container.querySelectorAll("button")) {
-		if (btn.id === "nm-download-btn" || btn.disabled) continue;
-
-		const iconWrap = btn.querySelector(":scope > span");
-		if (!iconWrap) continue;
-
-		return {
-			buttonClassName: btn.className,
-			iconWrapClassName: iconWrap.className,
-		};
-	}
-	return null;
-}
-
 function NmDownloadButton() {
 	const { React } = getSiteComponents();
-	const template = _dlTemplate;
+	const { Button, buttonProps, Icon } = _dlTemplate;
 	const state = _dlState;
-	const disabled = state.phase !== "idle";
+	const busy = state.phase !== "idle";
 
-	const content =
-		state.phase === "idle"
-			? React.createElement("span", {
-					className: template.iconWrapClassName,
-					dangerouslySetInnerHTML: { __html: DL_ICON_SVG },
-				})
-			: React.createElement(
-					React.Fragment,
-					null,
-					React.createElement("span", {
-						className: template.iconWrapClassName,
-						dangerouslySetInnerHTML: { __html: DL_SPINNER_SVG },
-					}),
-					React.createElement("div", { id: "nm-dl-progress-track" }),
-					React.createElement("div", {
-						id: "nm-dl-progress-fill",
-						style: {
-							width: `${Math.min((state.progress ?? 0) * 100, 100)}%`,
-						},
-					}),
-				);
+	const button = React.createElement(Button, {
+		...buttonProps,
+		id: "nm-download-btn",
+		"aria-label": "Download track",
+		icon: React.createElement(Icon, DL_ICON),
+		spinner: busy
+			? React.createElement("span", { className: "nm-dl-spinner" })
+			: undefined,
+		onClick: _dlOnClick,
+	});
+
+	if (!busy) return button;
 
 	return React.createElement(
-		"button",
-		{
-			id: "nm-download-btn",
-			type: "button",
-			className: template.buttonClassName,
-			"aria-label": "Download track",
-			disabled,
-			onClick: _dlOnClick,
-		},
-		content,
+		"span",
+		{ id: "nm-dl-progress-wrap" },
+		button,
+		React.createElement("span", { id: "nm-dl-progress-track" }),
+		React.createElement("span", {
+			id: "nm-dl-progress-fill",
+			style: {
+				width: `${Math.min((state.progress ?? 0) * 100, 100)}%`,
+			},
+		}),
 	);
 }
 
@@ -108,7 +69,7 @@ function renderDownloadButton() {
 	const container = findMetaContainer();
 	if (!container) return false;
 
-	const template = readDownloadActionTemplate(container);
+	const template = readActionTemplate(container, "nm-download-btn");
 	if (!template) return false;
 
 	cleanupDownloadButton();
@@ -131,12 +92,13 @@ function renderDownloadButton() {
 	_dlContainer = container;
 	_dlAnchor = anchor;
 	_dlTemplate = template;
-	_dlRoot = ReactDOMClient.createRoot(_dlHost);
-	_dlRoot.render(renderDownloadPortal());
+	_dlRoot = renderInSiteContext(renderDownloadPortal(), _dlHost, {
+		onError: (err) => console.error("[downloadButton] render failed:", err),
+	});
 
 	injectStyleTag("nm-dl-spinner-style", DL_SPINNER_CSS);
 
-	return true;
+	return !!_dlRoot;
 }
 
 function scheduleDownloadRecheck() {

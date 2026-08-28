@@ -5,12 +5,20 @@
 }
 .nm-dl-spinner {
 	display: block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid currentColor;
+	border-inline-end-color: transparent;
+	border-radius: 50%;
 	animation: nm-spin 0.9s linear infinite;
-	transform-origin: center;
 }
-#nm-download-btn {
+#nm-download-btn svg {
+	width: 24px;
+	height: 24px;
+}
+#nm-dl-progress-wrap {
 	position: relative;
-	overflow: visible;
+	display: inline-flex;
 }
 #nm-dl-progress-track {
 	position: absolute;

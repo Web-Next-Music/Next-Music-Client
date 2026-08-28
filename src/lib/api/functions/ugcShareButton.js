@@ -6,12 +6,6 @@ let _shareBodyObserver = null;
 let _shareRenderPending = false;
 let _shareEnabled = false;
 
-function findMetaContainer() {
-	return document.querySelector(
-		'[class*="PlayerBarDesktopWithBackgroundProgressBar_meta"]',
-	);
-}
-
 function isShareButtonAttached() {
 	return (
 		!!_shareContainer &&
@@ -20,37 +14,15 @@ function isShareButtonAttached() {
 	);
 }
 
-function readActionTemplate(container) {
-	for (const btn of container.querySelectorAll("button")) {
-		if (btn.id === "ugc-share-btn" || btn.disabled) continue;
-
-		const iconWrap = btn.querySelector(":scope > span");
-		if (!iconWrap) continue;
-
-		return {
-			buttonClassName: btn.className,
-			iconWrapClassName: iconWrap.className,
-		};
-	}
-	return null;
-}
-
-function createShareButton(React, template, iconSvg, onClick) {
+function createShareButton(React, template, icon, onClick) {
 	return function UgcShareButton() {
-		return React.createElement(
-			"button",
-			{
-				id: "ugc-share-btn",
-				type: "button",
-				className: template.buttonClassName,
-				"aria-label": "Share track",
-				onClick,
-			},
-			React.createElement("span", {
-				className: template.iconWrapClassName,
-				dangerouslySetInnerHTML: { __html: iconSvg },
-			}),
-		);
+		return React.createElement(template.Button, {
+			...template.buttonProps,
+			id: "ugc-share-btn",
+			"aria-label": "Share track",
+			icon: React.createElement(template.Icon, icon),
+			onClick,
+		});
 	};
 }
 
@@ -58,14 +30,14 @@ function findInsertionReference(container) {
 	return container.firstElementChild;
 }
 
-function renderShareButton(iconSvg, onClick) {
+function renderShareButton(icon, onClick) {
 	const { React, ReactDOMClient, ReactDOMPortal } = getSiteComponents();
 	if (!React || !ReactDOMClient || !ReactDOMPortal) return false;
 
 	const container = findMetaContainer();
 	if (!container) return false;
 
-	const template = readActionTemplate(container);
+	const template = readActionTemplate(container, "ugc-share-btn");
 	if (!template) return false;
 
 	cleanupShareButton();
@@ -83,41 +55,45 @@ function renderShareButton(iconSvg, onClick) {
 		container.appendChild(anchor);
 	}
 
-	const UgcShareButton = createShareButton(React, template, iconSvg, onClick);
+	const UgcShareButton = createShareButton(React, template, icon, onClick);
 
 	_shareContainer = container;
 	_shareAnchor = anchor;
-	_shareRoot = ReactDOMClient.createRoot(_shareHost);
-	_shareRoot.render(
+	_shareRoot = renderInSiteContext(
 		ReactDOMPortal.createPortal(
 			React.createElement(UgcShareButton),
 			anchor,
 		),
+		_shareHost,
+		{
+			onError: (err) =>
+				console.error("[ugcShareButton] render failed:", err),
+		},
 	);
 
-	return true;
+	return !!_shareRoot;
 }
 
-function scheduleShareRecheck(iconSvg, onClick) {
+function scheduleShareRecheck(icon, onClick) {
 	if (_shareRenderPending) return;
 	_shareRenderPending = true;
 	requestAnimationFrame(() => {
 		_shareRenderPending = false;
 		if (_shareEnabled && !isShareButtonAttached()) {
-			renderShareButton(iconSvg, onClick);
+			renderShareButton(icon, onClick);
 		}
 	});
 }
 
-function mountUgcShareButton(iconSvg, onClick) {
+function mountUgcShareButton(icon, onClick) {
 	_shareEnabled = true;
 
 	if (isShareButtonAttached()) return true;
-	if (!renderShareButton(iconSvg, onClick)) return false;
+	if (!renderShareButton(icon, onClick)) return false;
 
 	if (!_shareBodyObserver) {
 		_shareBodyObserver = new MutationObserver(() =>
-			scheduleShareRecheck(iconSvg, onClick),
+			scheduleShareRecheck(icon, onClick),
 		);
 		_shareBodyObserver.observe(document.body, {
 			childList: true,
