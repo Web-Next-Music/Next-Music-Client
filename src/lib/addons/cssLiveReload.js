@@ -61,8 +61,10 @@ async function execAddonScript(script, label) {
 		await activeAddonsWindow.webContents.executeJavaScript(
 			`(() => {
 				if (!location.host.includes("music.yandex.ru")) return;
-				return (() => {${script}})();
-			})()`,
+				return (() => {${script}
+})();
+			})()
+//# sourceURL=nmc-addon/${label}`,
 		);
 	} catch (err) {
 		console.error(`[Addons] executeJavaScript failed for '${label}':`, err);

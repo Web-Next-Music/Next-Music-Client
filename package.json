@@ -35,6 +35,12 @@
 			}
 		],
 		"files": ["dist/**/*", "package.json"],
+		"extraResources": [
+			{
+				"from": "src/assets/addon-types",
+				"to": "addon-types"
+			}
+		],
 		"directories": {
 			"buildResources": "src/assets",
 			"output": "release"
@@ -117,6 +123,7 @@
 		"electron-updater": "^6.8.9",
 		"lamejs": "^1.2.1",
 		"mdui": "^2.1.5",
+		"sucrase": "^3.35.1",
 		"ws": "^8.21.3"
 	}
 }

@@ -1,9 +1,15 @@
+function readSvgAttrs(el) {
+	const out = {};
+	for (const attr of el.attributes) out[attr.name] = attr.value;
+	delete out.class;
+	return out;
+}
+
 let _navRoot = null;
 let _navHost = null;
 let _navList = null;
 let _navBodyObserver = null;
 let _navRenderPending = false;
-let _navRender = null;
 
 function findNavList() {
 	return document.querySelector('[class*="NavbarDesktop_navigation"] > ol');
@@ -23,64 +29,51 @@ function findNavItemFiber(li) {
 	return null;
 }
 
-function readNavItemElements(li) {
-	const { React } = getSiteComponents();
-	if (!React) return null;
-
-	const navFiber = findNavItemFiber(li);
-	const link = navFiber?.memoizedProps?.children;
-	if (!link || typeof link !== "object" || !link.props) return null;
-
-	const parts = React.Children.toArray(link.props.children);
-	if (parts.length !== 2) return null;
-
-	return {
-		NavItem: navFiber.type,
-		navProps: navFiber.memoizedProps,
-		link,
-		icon: parts[0],
-		label: parts[1],
-	};
-}
-
-function readNavIcon(list) {
-	for (const li of list.querySelectorAll("li")) {
-		const anchor = li.querySelector("a");
-		if (!anchor) continue;
-
+function findSearchIcon(list) {
+	for (const anchor of list.querySelectorAll("li a")) {
 		const href = anchor.getAttribute("href") || "";
-		const text = anchor.textContent || "";
-		if (!/search/i.test(href) && !/search/i.test(text)) continue;
+		const label = anchor.textContent || "";
+		if (!/search/i.test(href) && !/search/i.test(label)) continue;
 
-		const parts = readNavItemElements(li);
-		if (parts) return parts.icon;
+		const svg = anchor.querySelector("svg");
+		if (svg) return svg;
 	}
-
 	return null;
 }
 
 function readNavTemplate(list) {
+	const searchSvg = findSearchIcon(list);
+
 	for (const li of list.querySelectorAll("li")) {
 		const anchor = li.querySelector("a");
 		if (!anchor || anchor.children.length !== 2) continue;
 		if (anchor.getAttribute("href") === STORE_ROUTE) continue;
 
-		const parts = readNavItemElements(li);
-		if (!parts) continue;
+		const iconWrap = anchor.children[0];
+		const labelWrap = anchor.children[1];
+		const svg = iconWrap.querySelector("svg");
+		const span = labelWrap.querySelector("span");
+		if (!svg || !span || svg.parentElement !== iconWrap) continue;
+
+		const fiber = findNavItemFiber(li);
+		if (!fiber) continue;
+
+		const iconSvg = searchSvg || svg;
 
 		return {
-			...parts,
 			sourceLi: li,
+			NavItem: fiber.type,
+			navProps: fiber.memoizedProps,
 			itemClass: li.className,
-			icon: readNavIcon(list) ?? parts.icon,
+			anchorClass: anchor.className,
+			iconClass: iconSvg.getAttribute("class") || "",
+			iconSvgAttrs: readSvgAttrs(iconSvg),
+			iconInnerHTML: iconSvg.innerHTML,
+			labelClass: span.className,
 		};
 	}
 
 	return null;
-}
-
-function labelClassOf(template) {
-	return template?.label?.props?.className ?? "";
 }
 
 function createNavItem(React, list, initialTemplate, label, onOpen) {
@@ -93,76 +86,78 @@ function createNavItem(React, list, initialTemplate, label, onOpen) {
 			[],
 		);
 
-		const templateRef = React.useRef(initialTemplate);
-
 		React.useEffect(() => {
+			const sourceLi = initialTemplate.sourceLi;
+			if (!sourceLi) return;
+
 			const sync = () => {
 				const fresh = readNavTemplate(list);
-				if (!fresh) return;
-
-				const prev = templateRef.current;
-				if (
-					prev.itemClass === fresh.itemClass &&
-					labelClassOf(prev) === labelClassOf(fresh)
-				) {
-					return;
-				}
-
-				templateRef.current = fresh;
-				setTemplate(fresh);
-				_navRender?.();
+				if (fresh) setTemplate(fresh);
 			};
 
-			const resize = new ResizeObserver(sync);
-			const observeItems = () => {
-				resize.disconnect();
-				for (const li of list.querySelectorAll("li")) {
-					resize.observe(li);
-				}
-			};
-
-			const mutations = new MutationObserver(() => {
-				observeItems();
-				sync();
-			});
-			mutations.observe(list, {
+			const attrObserver = new MutationObserver(sync);
+			attrObserver.observe(sourceLi, {
 				subtree: true,
-				childList: true,
 				attributes: true,
 				attributeFilter: ["class"],
 			});
 
-			observeItems();
-			sync();
+			const structureObserver = new MutationObserver(() => {
+				if (!sourceLi.isConnected) sync();
+			});
+			structureObserver.observe(list, { childList: true });
 
 			return () => {
-				mutations.disconnect();
-				resize.disconnect();
+				attrObserver.disconnect();
+				structureObserver.disconnect();
 			};
 		}, []);
 
-		const anchor = React.cloneElement(template.link, {
-			href: STORE_ROUTE,
-			"data-test-id": undefined,
-			onClick: (event) => {
-				event.preventDefault();
-				onOpen();
+		const { NavItem, navProps } = template;
+		const baseNavProps = { ...navProps };
+		delete baseNavProps.children;
+		delete baseNavProps.forwardRef;
+
+		const anchor = React.createElement(
+			"a",
+			{
+				className: template.anchorClass,
+				href: STORE_ROUTE,
+				role: "link",
+				target: "_self",
+				rel: "",
+				tabIndex: 0,
+				"aria-disabled": false,
+				onClick: (event) => {
+					event.preventDefault();
+					onOpen();
+				},
 			},
-			children: [
-				React.cloneElement(template.icon, { key: "icon" }),
-				React.cloneElement(template.label, {
-					key: "label",
-					children: label,
+			[
+				React.createElement("svg", {
+					key: "icon",
+					...template.iconSvgAttrs,
+					className: template.iconClass,
+					focusable: "false",
+					"aria-hidden": true,
+					dangerouslySetInnerHTML: { __html: template.iconInnerHTML },
 				}),
+				React.createElement(
+					"span",
+					{
+						key: "label",
+						className: template.labelClass,
+						title: label,
+						style: { WebkitLineClamp: 1 },
+					},
+					label,
+				),
 			],
-		});
+		);
 
-		const navProps = { ...template.navProps };
-		delete navProps.children;
-		delete navProps.forwardRef;
-
-		return React.createElement(template.NavItem, {
-			...navProps,
+		return React.createElement(NavItem, {
+			...baseNavProps,
+			className: template.itemClass,
 			selected,
 			children: anchor,
 		});
@@ -202,19 +197,15 @@ function renderNavItem(label, onOpen) {
 	);
 
 	_navList = list;
-
-	const portal = () =>
+	_navRoot = ReactDOMClient.createRoot(_navHost);
+	_navRoot.render(
 		ReactDOMPortal.createPortal(
 			React.createElement(NextStoreNavItem),
 			list,
-		);
+		),
+	);
 
-	_navRoot = renderInSiteContext(portal(), _navHost, {
-		onError: (err) => console.error("[nextStoreNav] render failed:", err),
-	});
-	_navRender = _navRoot ? () => _navRoot.render(portal()) : null;
-
-	return !!_navRoot;
+	return true;
 }
 
 function scheduleNavRecheck(label, onOpen) {
@@ -248,7 +239,6 @@ function unmountNextStoreNavItem() {
 		_navRoot.unmount();
 		_navRoot = null;
 	}
-	_navRender = null;
 	if (_navHost) {
 		_navHost.remove();
 		_navHost = null;

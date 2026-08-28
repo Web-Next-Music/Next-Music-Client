@@ -1,4 +1,6 @@
 let _siteComponents = null;
+let _lastComponentScan = 0;
+const COMPONENT_RESCAN_INTERVAL_MS = 3000;
 
 function fnBody(fn) {
 	try {
@@ -211,15 +213,26 @@ function scanFibers(found) {
 }
 
 function getSiteComponents(options) {
-	if (options?.refresh) _siteComponents = null;
+	if (options?.refresh) {
+		_siteComponents = null;
+		_lastComponentScan = 0;
+	}
 	if (_siteComponents) {
 		const missing = Object.keys({
 			...MODULE_SLOTS,
 			...FIBER_SLOTS,
 		}).filter((n) => !_siteComponents[n]);
 		if (!missing.length) return _siteComponents;
+
+		if (
+			!options?.force &&
+			Date.now() - _lastComponentScan < COMPONENT_RESCAN_INTERVAL_MS
+		) {
+			return _siteComponents;
+		}
 	}
 
+	_lastComponentScan = Date.now();
 	const found = _siteComponents || {};
 
 	try {
@@ -241,7 +254,7 @@ function getMissingSiteComponents() {
 	);
 }
 
-let _siteContexts = null;
+let _siteContextAnchor = null;
 let _siteErrorBoundary = null;
 
 const ANCHOR_SELECTORS = [
@@ -272,8 +285,9 @@ function providerChainFrom(fiber) {
 	return chain;
 }
 
-function captureSiteContexts() {
-	let best = [];
+function findSiteContextAnchor() {
+	let best = null;
+	let bestLen = 0;
 
 	for (const selector of ANCHOR_SELECTORS) {
 		let scanned = 0;
@@ -284,21 +298,28 @@ function captureSiteContexts() {
 			const fiber = fiberOf(el);
 			if (!fiber) continue;
 
-			const chain = providerChainFrom(fiber);
-			if (chain.length > best.length) best = chain;
+			const len = providerChainFrom(fiber).length;
+			if (len > bestLen) {
+				best = el;
+				bestLen = len;
+			}
 		}
 
-		if (best.length) break;
+		if (best) break;
 	}
 
 	return best;
 }
 
-function getSiteContexts(options) {
-	if (options?.cache && _siteContexts) return _siteContexts;
+function getSiteContexts() {
+	if (!_siteContextAnchor || !_siteContextAnchor.isConnected) {
+		_siteContextAnchor = findSiteContextAnchor();
+	}
 
-	_siteContexts = captureSiteContexts();
-	return _siteContexts;
+	if (!_siteContextAnchor) return [];
+
+	const fiber = fiberOf(_siteContextAnchor);
+	return fiber ? providerChainFrom(fiber) : [];
 }
 
 function wrapWithSiteContexts(element, contexts) {
@@ -393,13 +414,11 @@ function renderInSiteContext(element, host, options = {}) {
 
 	const Boundary = getSiteErrorBoundary(React);
 	const root = ReactDOMClient.createRoot(host);
-	let generation = 0;
 
 	const handle = {
 		root,
 		host,
 		render(next) {
-			generation += 1;
 			const tree =
 				options.withContexts === false
 					? next
@@ -409,7 +428,6 @@ function renderInSiteContext(element, host, options = {}) {
 				React.createElement(
 					Boundary,
 					{
-						key: generation,
 						onError: options.onError,
 						fallback: options.fallback,
 					},

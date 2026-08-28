@@ -3,10 +3,24 @@ import fs from "fs";
 import path from "path";
 import { statDirent, fileSignature } from "./fsUtils.js";
 import { ADDON_DIRS } from "./assetServer.js";
+import { isTypeDeclaration } from "./transpile.js";
 
 const { addonsDirectory } = getPaths();
 
+const IGNORED_DIRECTORIES = new Set(["node_modules", ".git"]);
+
+function isIgnoredDirectory(name) {
+	return name.startsWith("!") || IGNORED_DIRECTORIES.has(name);
+}
+
+function normalizeExtensions(extension) {
+	const list = Array.isArray(extension) ? extension : [extension];
+	return new Set(list.map((ext) => ext.toLowerCase()));
+}
+
 function loadFilesFromDirectory(directory, extension, callback) {
+	const extensions = normalizeExtensions(extension);
+
 	return new Promise((resolve) => {
 		fs.readdir(directory, { withFileTypes: true }, (err, entries) => {
 			if (err) {
@@ -34,7 +48,7 @@ function loadFilesFromDirectory(directory, extension, callback) {
 				const fullPath = info.fullPath;
 
 				if (info.isDirectory) {
-					if (entry.name.startsWith("!")) continue;
+					if (isIgnoredDirectory(entry.name)) continue;
 
 					if (
 						directory === addonsDirectory &&
@@ -64,7 +78,11 @@ function loadFilesFromDirectory(directory, extension, callback) {
 					continue;
 				}
 
-				if (info.isFile && path.extname(entry.name) === extension) {
+				if (
+					info.isFile &&
+					extensions.has(path.extname(entry.name).toLowerCase()) &&
+					!isTypeDeclaration(entry.name)
+				) {
 					const p = new Promise((res2) => {
 						fs.readFile(fullPath, "utf8", (readErr, content) => {
 							if (readErr) {
@@ -124,7 +142,7 @@ function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
 		}
 
 		if (info.isDirectory) {
-			if (entry.name.startsWith("!")) continue;
+			if (isIgnoredDirectory(entry.name)) continue;
 			if (entry.name === "assets") continue;
 
 			scanAddonCssFiles(info.fullPath, result);
@@ -172,7 +190,7 @@ function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
 		if (!info) continue;
 
 		if (info.isDirectory) {
-			if (entry.name.startsWith("!")) continue;
+			if (isIgnoredDirectory(entry.name)) continue;
 			if (entry.name === "assets") continue;
 
 			scanAddonCssMeta(info.fullPath, result);
@@ -209,7 +227,7 @@ function scanAddonCssDirectories(
 
 	for (const entry of entries) {
 		if (!entry.isDirectory()) continue;
-		if (entry.name.startsWith("!")) continue;
+		if (isIgnoredDirectory(entry.name)) continue;
 		if (entry.name === "assets") continue;
 
 		scanAddonCssDirectories(path.join(directory, entry.name), result);

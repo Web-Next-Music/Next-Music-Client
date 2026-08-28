@@ -16,6 +16,12 @@ import {
 	addonCssCache,
 	addonCssMeta,
 } from "./cssLiveReload.js";
+import {
+	ADDON_SCRIPT_EXTENSIONS,
+	scriptExtension,
+	transpileAddonScript,
+} from "./transpile.js";
+import { syncAddonTypings } from "./typings.js";
 
 const { addonsDirectory } = getPaths();
 
@@ -59,6 +65,54 @@ function addonNameFromPath(filePath) {
 	return path.relative(addonsDirectory, filePath).split(path.sep)[0];
 }
 
+function scriptPriority(filePath) {
+	return ADDON_SCRIPT_EXTENSIONS.indexOf(scriptExtension(filePath));
+}
+
+function dedupeAddonScripts(scripts) {
+	const best = new Map();
+
+	for (const script of scripts) {
+		const key = script.filePath.slice(
+			0,
+			-scriptExtension(script.filePath).length,
+		);
+		const current = best.get(key);
+
+		if (
+			!current ||
+			scriptPriority(script.filePath) < scriptPriority(current.filePath)
+		) {
+			if (current) {
+				console.log(
+					`Skip JS: ${relativeAddonPath(current.filePath)} (shadowed by ${relativeAddonPath(script.filePath)})`,
+				);
+			}
+			best.set(key, script);
+		} else {
+			console.log(
+				`Skip JS: ${relativeAddonPath(script.filePath)} (shadowed by ${relativeAddonPath(current.filePath)})`,
+			);
+		}
+	}
+
+	return [...best.values()].sort((a, b) =>
+		relativeAddonPath(a.filePath).localeCompare(
+			relativeAddonPath(b.filePath),
+		),
+	);
+}
+
+async function execAddonScriptFile(execJS, { jsContent, filePath }, suffix) {
+	const label = relativeAddonPath(filePath);
+	const code = await transpileAddonScript(jsContent, filePath, label);
+
+	if (code === null) return;
+
+	console.log(`Load JS${suffix}: ${label}`);
+	await execJS(code, label);
+}
+
 async function applyAddons(mainWindow) {
 	const config = getConfig();
 
@@ -76,6 +130,7 @@ async function applyAddons(mainWindow) {
 
 	console.log("Loading addons…");
 	setActiveAddonsWindow(mainWindow);
+	syncAddonTypings();
 
 	await startAssetServer();
 	startAddonCssLiveUpdates();
@@ -109,7 +164,7 @@ async function applyAddons(mainWindow) {
 
 	await loadFilesFromDirectory(
 		addonsDirectory,
-		".js",
+		ADDON_SCRIPT_EXTENSIONS,
 		(jsContent, filePath) => {
 			const target = experimentAddonNames.has(addonNameFromPath(filePath))
 				? experimentJs
@@ -120,10 +175,8 @@ async function applyAddons(mainWindow) {
 
 	await applyCssSnapshot(regularCss);
 
-	for (const { jsContent, filePath } of regularJs) {
-		const label = relativeAddonPath(filePath);
-		console.log(`Load JS: ${label}`);
-		execJS(jsContent, label);
+	for (const script of dedupeAddonScripts(regularJs)) {
+		await execAddonScriptFile(execJS, script, "");
 	}
 
 	if (experimentAddonNames.size > 0) {
@@ -131,10 +184,8 @@ async function applyAddons(mainWindow) {
 
 		await applyCssSnapshot(experimentCss);
 
-		for (const { jsContent, filePath } of experimentJs) {
-			const label = relativeAddonPath(filePath);
-			console.log(`Load JS (after experiments): ${label}`);
-			execJS(jsContent, label);
+		for (const script of dedupeAddonScripts(experimentJs)) {
+			await execAddonScriptFile(execJS, script, " (after experiments)");
 		}
 	}
 
@@ -155,9 +206,16 @@ async function applyAddons(mainWindow) {
 				return;
 			}
 
-			if (url.endsWith(".js")) {
-				await execJS(content, url);
-			} else if (url.endsWith(".css")) {
+			let pathname = url;
+
+			try {
+				pathname = new URL(url).pathname;
+			} catch {}
+
+			if (ADDON_SCRIPT_EXTENSIONS.includes(scriptExtension(pathname))) {
+				const code = await transpileAddonScript(content, pathname, url);
+				if (code !== null) await execJS(code, url);
+			} else if (pathname.endsWith(".css")) {
 				await execJS(
 					`(() => {
 						const key = ${JSON.stringify(url)};
