@@ -1,10 +1,16 @@
 import { nativeTheme } from "electron";
 import path from "path";
+import fs from "fs";
 
 // ESM __dirname fix
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const TEMPLATE = fs.readFileSync(
+	path.join(__dirname, "splashScreen.html"),
+	"utf8",
+);
 
 export function setupSplashScreen(mainWindow, targetUrl) {
 	const isDark = nativeTheme.shouldUseDarkColors;
@@ -22,21 +28,9 @@ export function setupSplashScreen(mainWindow, targetUrl) {
 	const FADE_DURATION = 500;
 	const VIDEO_MAX_MS = 10000;
 
-	const html = `
-        <html>
-        <body style="margin:0;background:${bgColor};display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;">
-        <video id="v" autoplay muted playsinline style="object-fit:contain;">
-            <source src="file://${videoPath}" type="video/webm">
-        </video>
-        <style>
-            video {
-                width: 100%;
-                height: 100%;
-                filter: hue-rotate(130deg);
-            }
-        </style>
-        </body></html>
-    `;
+	const html = TEMPLATE.replace(/__BG_COLOR__/g, bgColor)
+		.replace(/__VIDEO_SRC__/g, `file://${videoPath}`)
+		.replace(/__FADE_MS__/g, String(FADE_DURATION));
 
 	mainWindow.loadURL(
 		`data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
@@ -49,12 +43,7 @@ export function setupSplashScreen(mainWindow, targetUrl) {
 		loaded = true;
 
 		mainWindow.webContents
-			.executeJavaScript(
-				`
-            document.body.style.transition = 'opacity ${FADE_DURATION}ms cubic-bezier(0.4,0,0.2,1)';
-            document.body.style.opacity = '0';
-        `,
-			)
+			.executeJavaScript(`document.body.classList.add("fade-out");`)
 			.catch(console.error);
 
 		setTimeout(() => mainWindow.loadURL(targetUrl), FADE_DURATION);

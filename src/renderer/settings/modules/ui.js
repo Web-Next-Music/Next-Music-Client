@@ -398,7 +398,7 @@ export function buildUI() {
 
 		if (tab.key === "programSettings") {
 			const btnRow = document.createElement("div");
-			btnRow.style.cssText = "margin-top:10px;display:flex;gap:8px;";
+			btnRow.className = "addons-folder-row";
 			const btn = document.createElement("mdui-button");
 			btn.variant = "tonal";
 			btn.dataset.i18n = "settings.openAddons";

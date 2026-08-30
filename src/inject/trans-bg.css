@@ -1,0 +1,17 @@
+.ym-dark-theme {
+	--ym-background-color-primary-enabled-content: #0005 !important;
+	--ym-background-color-primary-enabled-basic: transparent !important;
+}
+
+html,
+body,
+.ym-dark-theme,
+.ym-light-theme,
+[class*="CommonLayout_root"] {
+	background: transparent !important;
+	background-color: transparent !important;
+}
+
+.PlayerBar_root__cXUnU {
+	background-color: #0005 !important;
+}

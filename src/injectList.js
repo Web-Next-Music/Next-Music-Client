@@ -50,6 +50,10 @@ export const injectList = [
 			config?.programSettings?.richPresence?.enable !== false,
 	},
 	{
+		file: "trans-bg.css",
+		condition: (config) => config?.windowSettings?.transparentBg,
+	},
+	{
 		file: "trans-bg.js",
 		condition: (config) => config?.windowSettings?.transparentBg,
 	},
