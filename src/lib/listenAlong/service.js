@@ -76,6 +76,15 @@ export function joinByInvite(code) {
 	const invite = parseInvite(code) ?? parseInvite(inviteCodeFromUrl(code));
 	if (!invite) return { ok: false, reason: "bad-code" };
 
+	if (
+		status.connected &&
+		settings?.host === invite.host &&
+		(settings?.port || "") === (invite.port || "") &&
+		settings?.roomId === invite.roomId
+	) {
+		return { ok: true, already: true, ...invite };
+	}
+
 	patchListenAlongConfig({
 		enable: true,
 		host: invite.host,

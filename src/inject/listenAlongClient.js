@@ -144,6 +144,10 @@
 						lastJoinedCode = null;
 						return;
 					}
+					if (res.already) {
+						toast("You're already connected to this room");
+						return;
+					}
 					toast(`Joining ${res.roomId} on ${res.host}`);
 				});
 			},
@@ -153,6 +157,10 @@
 		LA.onJoinedByLink?.((res) => {
 			if (!res?.ok) {
 				toast("That invite link is not valid");
+				return;
+			}
+			if (res.already) {
+				toast("You're already connected to this room");
 				return;
 			}
 			toast(`Joining ${res.roomId} on ${res.host}`);
