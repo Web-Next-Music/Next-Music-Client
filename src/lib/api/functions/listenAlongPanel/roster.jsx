@@ -70,7 +70,6 @@ function laAvatarEl(h, a, size) {
 function LaPanelUserMenu(props) {
 	const { React, ReactDOMPortal, a, state, handlers, anchorEl, onCloseMenu } =
 		props;
-	const h = React.createElement;
 	const [pos, setPos] = React.useState(null);
 
 	React.useLayoutEffect(() => {
@@ -97,40 +96,34 @@ function LaPanelUserMenu(props) {
 	if (!pos) return null;
 
 	return ReactDOMPortal.createPortal(
-		h(
-			"div",
-			{
-				className: "nmc-la-panel-menu",
-				style: { top: `${pos.top}px`, right: `${pos.right}px` },
-				onClick: (event) => event.stopPropagation(),
-			},
-			h(
-				"button",
-				{
-					type: "button",
-					className: "nmc-la-panel-menu-item",
-					onClick: () => {
+		<div
+			className="nmc-la-panel-menu"
+			style={{ top: `${pos.top}px`, right: `${pos.right}px` }}
+			onClick={(event) => event.stopPropagation()}
+		>
+			<button
+				type="button"
+				className="nmc-la-panel-menu-item"
+				onClick={() => {
+					onCloseMenu();
+					handlers.onCopyUserId?.(a.id);
+				}}
+			>
+				Copy UID
+			</button>
+			{canMakeHost ? (
+				<button
+					type="button"
+					className="nmc-la-panel-menu-item"
+					onClick={() => {
 						onCloseMenu();
-						handlers.onCopyUserId?.(a.id);
-					},
-				},
-				"Copy UID",
-			),
-			canMakeHost
-				? h(
-						"button",
-						{
-							type: "button",
-							className: "nmc-la-panel-menu-item",
-							onClick: () => {
-								onCloseMenu();
-								handlers.onMakeHost?.(a.id);
-							},
-						},
-						"Make host",
-					)
-				: null,
-		),
+						handlers.onMakeHost?.(a.id);
+					}}
+				>
+					Make host
+				</button>
+			) : null}
+		</div>,
 		document.body,
 	);
 }
@@ -142,81 +135,69 @@ function LaPanelRoster(props) {
 	const [openMenuFor, setOpenMenuFor] = React.useState(null);
 	const moreBtnRefs = React.useRef({});
 
-	const rows = avatars.length
-		? avatars.map((a, i) =>
-				h(
-					React.Fragment,
-					{ key: a.id },
-					i > 0 && avatars[i - 1].isHost && !a.isHost
-						? h("div", { className: "nmc-la-panel-roster-divider" })
-						: null,
-					h(
-						"div",
-						{
-							className: `nmc-la-panel-user${a.isHost ? " host" : ""}`,
-						},
-						laAvatarEl(
-							h,
-							{ ...a, hostColor: state.hostColor },
-							"28px",
-						),
-						h(
-							"span",
-							{
-								className: "nmc-la-panel-user-name",
-								style: a.isHost
-									? { color: state.hostColor }
-									: undefined,
-							},
-							a.name,
-						),
-						h(
-							"button",
-							{
-								ref: (el) => {
-									moreBtnRefs.current[a.id] = el;
-								},
-								type: "button",
-								className: `nmc-la-panel-more-btn${openMenuFor === a.id ? " open" : ""}`,
-								title: "More",
-								onClick: (event) => {
-									event.stopPropagation();
-									setOpenMenuFor((cur) =>
-										cur === a.id ? null : a.id,
-									);
-								},
-							},
-							LaMoreIcon(h),
-						),
-						openMenuFor === a.id
-							? h(LaPanelUserMenu, {
-									React,
-									ReactDOMPortal,
-									a,
-									state,
-									handlers,
-									anchorEl: moreBtnRefs.current[a.id],
-									onCloseMenu: () => setOpenMenuFor(null),
-								})
-							: null,
-					),
-				),
-			)
-		: h("div", { className: "nmc-la-panel-chat-empty" }, "No one here yet");
+	const rows = avatars.length ? (
+		avatars.map((a, i) => (
+			<React.Fragment key={a.id}>
+				{i > 0 && avatars[i - 1].isHost && !a.isHost ? (
+					<div className="nmc-la-panel-roster-divider" />
+				) : null}
+				<div className={`nmc-la-panel-user${a.isHost ? " host" : ""}`}>
+					{laAvatarEl(
+						h,
+						{ ...a, hostColor: state.hostColor },
+						"28px",
+					)}
+					<span
+						className="nmc-la-panel-user-name"
+						style={
+							a.isHost ? { color: state.hostColor } : undefined
+						}
+					>
+						{a.name}
+					</span>
+					<button
+						ref={(el) => {
+							moreBtnRefs.current[a.id] = el;
+						}}
+						type="button"
+						className={`nmc-la-panel-more-btn${openMenuFor === a.id ? " open" : ""}`}
+						title="More"
+						onClick={(event) => {
+							event.stopPropagation();
+							setOpenMenuFor((cur) =>
+								cur === a.id ? null : a.id,
+							);
+						}}
+					>
+						{LaMoreIcon(h)}
+					</button>
+					{openMenuFor === a.id ? (
+						<LaPanelUserMenu
+							React={React}
+							ReactDOMPortal={ReactDOMPortal}
+							a={a}
+							state={state}
+							handlers={handlers}
+							anchorEl={moreBtnRefs.current[a.id]}
+							onCloseMenu={() => setOpenMenuFor(null)}
+						/>
+					) : null}
+				</div>
+			</React.Fragment>
+		))
+	) : (
+		<div className="nmc-la-panel-chat-empty">No one here yet</div>
+	);
 
-	return h(
-		"div",
-		{ className: "nmc-la-panel-col nmc-la-panel-roster" },
-		h(
-			"div",
-			{ className: "nmc-la-panel-roster-count" },
-			LaPeopleIcon(h),
-			avatars.length,
-		),
-		h(
-			"div",
-			{ className: "nmc-la-panel-roster-list nmc-la-panel-scroll" },
-			rows,
-		),
+	return (
+		<div className="nmc-la-panel-col nmc-la-panel-roster">
+			<div className="nmc-la-panel-roster-count">
+				{LaPeopleIcon(h)}
+				{avatars.length}
+			</div>
+			<div className="nmc-la-panel-roster-list nmc-la-panel-scroll">
+				{rows}
+			</div>
+		</div>
 	);
 }

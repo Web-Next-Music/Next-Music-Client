@@ -1,4 +1,6 @@
-import { BrowserWindow, ipcMain, shell, app, nativeTheme } from "electron";
+import { BrowserWindow, shell, app, nativeTheme } from "electron";
+import { registerHandlers, on } from "../../ipc/registry.js";
+import { broadcastToRenderers } from "../../ipc/broadcast.js";
 import { getCurrentVersion } from "../../getAppVersion.js";
 import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
 import {
@@ -136,73 +138,6 @@ export function createSettingsWindow(options = {}) {
 	});
 }
 
-if (!ipcMain.listenerCount("settings:open-window")) {
-	ipcMain.handle("settings:open-window", (_event, tab) => {
-		createSettingsWindow({ tab });
-	});
-}
-
-if (!ipcMain.listenerCount("discord:has-token")) {
-	ipcMain.handle("discord:has-token", async () => {
-		if (!hasDiscordIdentity()) return { hasToken: false, username: null };
-
-		await ensureDiscordProfile();
-
-		return {
-			hasToken: true,
-			username: getDiscordUsername(),
-		};
-	});
-}
-
-if (!ipcMain.listenerCount("discord:connect")) {
-	ipcMain.handle("discord:connect", async () => {
-		try {
-			const result = await connectDiscordIdentity();
-			refreshDiscordIdentity();
-			return result;
-		} catch (err) {
-			return { ok: false, error: err.message };
-		}
-	});
-}
-
-if (!ipcMain.listenerCount("discord:disconnect")) {
-	ipcMain.handle("discord:disconnect", () => {
-		disconnectDiscordIdentity();
-		refreshDiscordIdentity();
-	});
-}
-
-if (!ipcMain.listenerCount("settings:get-versions")) {
-	ipcMain.handle("settings:get-versions", () => {
-		return {
-			app: getCurrentVersion(),
-			electron: process.versions.electron,
-			chromium: process.versions.chrome,
-			node: process.versions.node,
-		};
-	});
-}
-
-if (!ipcMain.listenerCount("settings:load-config")) {
-	ipcMain.handle("settings:load-config", () =>
-		maskConfigForRenderer(getConfig()),
-	);
-}
-
-if (!ipcMain.listenerCount("settings:get-addon-experiments")) {
-	ipcMain.handle("settings:get-addon-experiments", () =>
-		getAddonExperimentOverrides(),
-	);
-}
-
-if (!ipcMain.listenerCount("settings:get-builtin-experiments")) {
-	ipcMain.handle("settings:get-builtin-experiments", () =>
-		getBuiltinExperiments(),
-	);
-}
-
 function buildLiveExperimentOverrides(config) {
 	const resolved = mergeAddonExperiments(
 		resolveBuiltinExperiments(config?.experiments ?? {}),
@@ -228,8 +163,45 @@ function applyExperimentsLive(config) {
 		.catch(() => {});
 }
 
-if (!ipcMain.listenerCount("settings:save-config")) {
-	ipcMain.handle("settings:save-config", (_event, newConfig) => {
+function withSettingsWindow(fn) {
+	if (settingsWindow && !settingsWindow.isDestroyed()) fn(settingsWindow);
+}
+
+registerHandlers({
+	"settings:open-window": (_event, tab) => {
+		createSettingsWindow({ tab });
+	},
+
+	"discord:has-token": async () => {
+		if (!hasDiscordIdentity()) return { hasToken: false, username: null };
+		await ensureDiscordProfile();
+		return { hasToken: true, username: getDiscordUsername() };
+	},
+	"discord:connect": async () => {
+		try {
+			const result = await connectDiscordIdentity();
+			refreshDiscordIdentity();
+			return result;
+		} catch (err) {
+			return { ok: false, error: err.message };
+		}
+	},
+	"discord:disconnect": () => {
+		disconnectDiscordIdentity();
+		refreshDiscordIdentity();
+	},
+
+	"settings:get-versions": () => ({
+		app: getCurrentVersion(),
+		electron: process.versions.electron,
+		chromium: process.versions.chrome,
+		node: process.versions.node,
+	}),
+	"settings:load-config": () => maskConfigForRenderer(getConfig()),
+	"settings:get-addon-experiments": () => getAddonExperimentOverrides(),
+	"settings:get-builtin-experiments": () => getBuiltinExperiments(),
+
+	"settings:save-config": (_event, newConfig) => {
 		const currentConfig = getConfig();
 		const normalizedConfig = normalizeConfigFromRenderer(newConfig);
 		const { needRestart, experimentsChanged } = configChangeNeedsRestart(
@@ -247,71 +219,51 @@ if (!ipcMain.listenerCount("settings:save-config")) {
 		refreshListenAlong();
 
 		return { needRestart };
-	});
-}
+	},
 
-ipcMain.on("settings:toggle-maximize", () => {
-	if (!settingsWindow || settingsWindow.isDestroyed()) return;
+	"settings:toggle-maximize": on(() =>
+		withSettingsWindow((win) =>
+			win.isMaximized() ? win.unmaximize() : win.maximize(),
+		),
+	),
+	"settings:minimize": on(() => withSettingsWindow((win) => win.minimize())),
+	"settings:close": on(() => withSettingsWindow((win) => win.close())),
 
-	if (settingsWindow.isMaximized()) {
-		settingsWindow.unmaximize();
-	} else {
-		settingsWindow.maximize();
-	}
-});
+	"settings:open-addons-folder": on(() => {
+		const { addonsDirectory } = getPaths();
+		shell.openPath(addonsDirectory);
+	}),
+	"settings:restart-app": on(() => {
+		app.relaunch();
+		app.exit(0);
+	}),
 
-ipcMain.on("settings:minimize", () => {
-	if (settingsWindow && !settingsWindow.isDestroyed()) {
-		settingsWindow.minimize();
-	}
-});
+	"settings:load-lang-strings": () => getAllStrings?.() ?? {},
+	"settings:get-lang-list": () => {
+		const { languagesDirectory } = getPaths();
+		return getAvailableLanguages(languagesDirectory);
+	},
 
-ipcMain.on("settings:close", () => {
-	if (settingsWindow && !settingsWindow.isDestroyed()) {
-		settingsWindow.close();
-	}
-});
+	"settings:set-language": on((_event, langCode) => {
+		const { languagesDirectory } = getPaths();
 
-ipcMain.on("settings:open-addons-folder", () => {
-	const { addonsDirectory } = getPaths();
-	shell.openPath(addonsDirectory);
-});
+		loadLanguage(languagesDirectory, langCode);
 
-ipcMain.on("settings:restart-app", () => {
-	app.relaunch();
-	app.exit(0);
-});
+		const cfg = getConfig();
+		cfg.programSettings.language = langCode;
+		updateConfig(cfg);
 
-ipcMain.handle("settings:load-lang-strings", () => {
-	return getAllStrings?.() ?? {};
-});
+		_rebuildTray?.();
 
-ipcMain.handle("settings:get-lang-list", () => {
-	const { languagesDirectory } = getPaths();
-	return getAvailableLanguages(languagesDirectory);
-});
-
-ipcMain.on("settings:set-language", (_event, langCode) => {
-	const { languagesDirectory } = getPaths();
-
-	loadLanguage(languagesDirectory, langCode);
-
-	const cfg = getConfig();
-	cfg.programSettings.language = langCode;
-	updateConfig(cfg);
-
-	_rebuildTray?.();
-
-	if (settingsWindow && !settingsWindow.isDestroyed()) {
-		settingsWindow.webContents.send(
-			"settings:language-changed",
-			getAllStrings?.() ?? {},
+		withSettingsWindow((win) =>
+			win.webContents.send(
+				"settings:language-changed",
+				getAllStrings?.() ?? {},
+			),
 		);
-	}
 
-	BrowserWindow.getAllWindows().forEach((win) => {
-		if (win !== settingsWindow) {
-			win.webContents.send("change-language", langCode);
-		}
-	});
+		broadcastToRenderers("change-language", langCode, {
+			except: settingsWindow,
+		});
+	}),
 });

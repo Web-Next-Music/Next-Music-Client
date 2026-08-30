@@ -1,29 +1,21 @@
-import { BrowserWindow, nativeImage, ipcMain } from "electron";
+import { BrowserWindow, nativeImage } from "electron";
 import { getCurrentVersionWV } from "../../lib/getAppVersion.js";
 import { getTrayIconPath, getPaths } from "../../config.js";
 import { getConfig } from "../../lib/configManager.js";
 import { loadRendererPage } from "../paths.js";
 import { checkGitHubStar } from "../githubStarAuth.js";
+import { registerHandlers, sync } from "../ipc/registry.js";
 
-if (!ipcMain.listenerCount("get-app-version")) {
-	ipcMain.on("get-app-version", (event) => {
-		event.returnValue = getCurrentVersionWV();
-	});
-}
-
-if (!ipcMain.listenerCount("info-v2:get-init-data")) {
-	ipcMain.handle("info-v2:get-init-data", async () => {
+registerHandlers({
+	"get-app-version": sync(() => getCurrentVersionWV()),
+	"info-v2:get-init-data": async () => {
 		const { languagesDirectory } = getPaths();
 		const langCode = getConfig().programSettings?.language ?? "en";
 		const { hasStarred } = await checkGitHubStar();
 
-		return {
-			languagesDirectory,
-			langCode,
-			hasStarred,
-		};
-	});
-}
+		return { languagesDirectory, langCode, hasStarred };
+	},
+});
 
 const trayIcon = nativeImage
 	.createFromPath(getTrayIconPath(getConfig()?.experiments))

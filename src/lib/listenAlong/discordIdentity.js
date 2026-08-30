@@ -1,4 +1,4 @@
-import { getConfig, saveConfig } from "../configManager.js";
+import { getConfig, patchConfig } from "../configManager.js";
 import {
 	getDiscordTokens,
 	refreshDiscordTokens,
@@ -46,9 +46,9 @@ export async function getValidDiscordAccessToken() {
 
 	try {
 		const refreshed = await refreshDiscordTokens(identity.refreshToken);
-		const config = getConfig();
-		config.discord = { ...config.discord, ...refreshed };
-		saveConfig(config);
+		patchConfig((c) => {
+			c.discord = { ...c.discord, ...refreshed };
+		});
 		return refreshed.accessToken;
 	} catch (err) {
 		console.warn("[Discord Identity] Refresh failed:", err.message);
@@ -74,9 +74,9 @@ export async function connectDiscordIdentity() {
 	const { tokens, username, displayName, avatarUrl } =
 		await getDiscordTokens();
 
-	const config = getConfig();
-	config.discord = { ...tokens };
-	saveConfig(config);
+	patchConfig((c) => {
+		c.discord = { ...tokens };
+	});
 
 	profileCache = { username, displayName, avatarUrl };
 
@@ -84,13 +84,9 @@ export async function connectDiscordIdentity() {
 }
 
 export function disconnectDiscordIdentity() {
-	const config = getConfig();
-	config.discord = {
-		accessToken: null,
-		refreshToken: null,
-		expiresAt: null,
-	};
-	saveConfig(config);
+	patchConfig((c) => {
+		c.discord = { accessToken: null, refreshToken: null, expiresAt: null };
+	});
 
 	profileCache = null;
 }

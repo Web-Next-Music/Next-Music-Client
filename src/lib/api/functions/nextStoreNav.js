@@ -5,12 +5,6 @@ function readSvgAttrs(el) {
 	return out;
 }
 
-let _navRoot = null;
-let _navHost = null;
-let _navList = null;
-let _navBodyObserver = null;
-let _navRenderPending = false;
-
 function findNavList() {
 	return document.querySelector('[class*="NavbarDesktop_navigation"] > ol');
 }
@@ -164,84 +158,40 @@ function createNavItem(React, list, initialTemplate, label, onOpen) {
 	};
 }
 
-function isNavItemAttached() {
-	return (
-		!!_navList &&
-		_navList.isConnected &&
-		!!_navList.querySelector('a[href="' + STORE_ROUTE + '"]')
-	);
-}
+let _navLabel = "";
+let _navOnOpen = null;
 
-function renderNavItem(label, onOpen) {
-	const { React, ReactDOMClient, ReactDOMPortal } = getSiteComponents();
-	if (!React || !ReactDOMClient || !ReactDOMPortal) return false;
-
-	const list = findNavList();
-	if (!list) return false;
-
-	const template = readNavTemplate(list);
-	if (!template) return false;
-
-	unmountNextStoreNavItem();
-
-	_navHost = document.createElement("div");
-	_navHost.style.display = "none";
-	document.body.appendChild(_navHost);
-
-	const NextStoreNavItem = createNavItem(
-		React,
-		list,
-		template,
-		label,
-		onOpen,
-	);
-
-	_navList = list;
-	_navRoot = ReactDOMClient.createRoot(_navHost);
-	_navRoot.render(
-		ReactDOMPortal.createPortal(
-			React.createElement(NextStoreNavItem),
-			list,
-		),
-	);
-
-	return true;
-}
-
-function scheduleNavRecheck(label, onOpen) {
-	if (_navRenderPending) return;
-	_navRenderPending = true;
-	requestAnimationFrame(() => {
-		_navRenderPending = false;
-		if (!isNavItemAttached()) renderNavItem(label, onOpen);
-	});
-}
+const _navFeature = createPortalFeature({
+	id: "nextStoreNav",
+	useSiteContext: false,
+	findMount() {
+		const list = findNavList();
+		if (!list) return null;
+		if (!readNavTemplate(list)) return null;
+		return list;
+	},
+	isAttached(list) {
+		return !!list.querySelector('a[href="' + STORE_ROUTE + '"]');
+	},
+	buildElement({ React, mountEl }) {
+		const template = readNavTemplate(mountEl);
+		const NextStoreNavItem = createNavItem(
+			React,
+			mountEl,
+			template,
+			_navLabel,
+			_navOnOpen,
+		);
+		return React.createElement(NextStoreNavItem);
+	},
+});
 
 function mountNextStoreNavItem(label, onOpen) {
-	if (isNavItemAttached()) return true;
-	if (!renderNavItem(label, onOpen)) return false;
-
-	if (!_navBodyObserver) {
-		_navBodyObserver = new MutationObserver(() =>
-			scheduleNavRecheck(label, onOpen),
-		);
-		_navBodyObserver.observe(document.body, {
-			childList: true,
-			subtree: true,
-		});
-	}
-
-	return true;
+	_navLabel = label;
+	_navOnOpen = onOpen;
+	return _navFeature.mount();
 }
 
 function unmountNextStoreNavItem() {
-	if (_navRoot) {
-		_navRoot.unmount();
-		_navRoot = null;
-	}
-	if (_navHost) {
-		_navHost.remove();
-		_navHost = null;
-	}
-	_navList = null;
+	_navFeature.unmount();
 }

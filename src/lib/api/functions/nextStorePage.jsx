@@ -159,7 +159,6 @@ function useRateLimit(React) {
 
 function renderTabs(components, tab, setTab, counts) {
 	const { React, TabCarousel, Tab, TabWithTitle } = components;
-	const h = React.createElement;
 
 	const defs = [
 		["addons", t("tabAddons")],
@@ -170,45 +169,43 @@ function renderTabs(components, tab, setTab, counts) {
 	const labelOf = (value, label) => label + " • " + counts[value];
 
 	if (!TabCarousel) {
-		return h(
-			"div",
-			{ className: "nmc-tabs" },
-			defs.map(([value, label]) =>
-				h(
-					"button",
-					{
-						key: value,
-						type: "button",
-						className: tab === value ? "nmc-tab active" : "nmc-tab",
-						onClick: () => setTab(value),
-					},
-					labelOf(value, label),
-				),
-			),
+		return (
+			<div className="nmc-tabs">
+				{defs.map(([value, label]) => (
+					<button
+						key={value}
+						type="button"
+						className={tab === value ? "nmc-tab active" : "nmc-tab"}
+						onClick={() => setTab(value)}
+					>
+						{labelOf(value, label)}
+					</button>
+				))}
+			</div>
 		);
 	}
 
 	const TabComponent = TabWithTitle || Tab;
 
-	return h(
-		TabCarousel,
-		{ value: tab, onTabChange: setTab, elementId: "nmc-store" },
-		defs.map(([value, label]) =>
-			h(TabComponent, {
-				key: value,
-				value,
-				active: tab === value,
-				onTabChange: setTab,
-				title: labelOf(value, label),
-				children: TabWithTitle ? undefined : labelOf(value, label),
-			}),
-		),
+	return (
+		<TabCarousel value={tab} onTabChange={setTab} elementId="nmc-store">
+			{defs.map(([value, label]) => (
+				<TabComponent
+					key={value}
+					value={value}
+					active={tab === value}
+					onTabChange={setTab}
+					title={labelOf(value, label)}
+				>
+					{TabWithTitle ? undefined : labelOf(value, label)}
+				</TabComponent>
+			))}
+		</TabCarousel>
 	);
 }
 
 function renderSearch(components, query, setQuery) {
 	const { React, SearchInput } = components;
-	const h = React.createElement;
 
 	const onQuery = (value) =>
 		setQuery(
@@ -216,40 +213,42 @@ function renderSearch(components, query, setQuery) {
 		);
 
 	if (!SearchInput) {
-		return h("input", {
-			className: "nmc-search",
-			type: "text",
-			value: query,
-			placeholder: t("searchPlaceholder"),
-			onChange: onQuery,
-		});
+		return (
+			<input
+				className="nmc-search"
+				type="text"
+				value={query}
+				placeholder={t("searchPlaceholder")}
+				onChange={onQuery}
+			/>
+		);
 	}
 
-	return h(SearchInput, {
-		placeholder: t("searchPlaceholder"),
-		initialValue: query,
-		withResetButton: true,
-		onChange: onQuery,
-	});
+	return (
+		<SearchInput
+			placeholder={t("searchPlaceholder")}
+			initialValue={query}
+			withResetButton={true}
+			onChange={onQuery}
+		/>
+	);
 }
 
 function createStoreApp(components) {
 	const { React } = components;
-	const h = React.createElement;
 
 	const StoreButton = createStoreButton(React);
 	const Card = createStoreCard(React, StoreButton);
 	const EditorModal = createEditorModal(React, StoreButton);
 	const ReadmeModal = createReadmeModal(React, StoreButton);
 
-	const renderBanner = (key, text, action) =>
-		h(
-			"div",
-			{ className: "nmc-banner", key },
-			storeIcon(React, "warning", { key: "icon" }),
-			h("span", { key: "text" }, text),
-			action,
-		);
+	const renderBanner = (key, text, action) => (
+		<div className="nmc-banner" key={key}>
+			{storeIcon(React, "warning", { key: "icon" })}
+			<span key="text">{text}</span>
+			{action}
+		</div>
+	);
 
 	return function StoreApp() {
 		const [tab, setTab] = React.useState("addons");
@@ -296,20 +295,20 @@ function createStoreApp(components) {
 		);
 
 		const modals = [
-			editor
-				? h(EditorModal, {
-						key: "editor",
-						name: editor,
-						onClose: () => setEditor(null),
-					})
-				: null,
-			readme
-				? h(ReadmeModal, {
-						key: "readme",
-						item: readme,
-						onClose: () => setReadme(null),
-					})
-				: null,
+			editor ? (
+				<EditorModal
+					key="editor"
+					name={editor}
+					onClose={() => setEditor(null)}
+				/>
+			) : null,
+			readme ? (
+				<ReadmeModal
+					key="readme"
+					item={readme}
+					onClose={() => setReadme(null)}
+				/>
+			) : null,
 		];
 
 		const sections = buildSections(data);
@@ -339,71 +338,64 @@ function createStoreApp(components) {
 				renderBanner(
 					"restart",
 					t("statusRestartRequired"),
-					h(StoreButton, {
-						key: "btn",
-						variant: "primary",
-						label: t("btnRestart"),
-						onClick: () => {
+					<StoreButton
+						key="btn"
+						variant="primary"
+						label={t("btnRestart")}
+						onClick={() => {
 							storeJson("POST", "/api/reload", {}).catch(
 								() => {},
 							);
-						},
-					}),
+						}}
+					/>,
 				),
 			);
 		}
 
 		let body;
 		if (data[tab] === null) {
-			body = h("div", { className: "nmc-empty" }, t("statusLoading"));
+			body = <div className="nmc-empty">{t("statusLoading")}</div>;
 		} else if (!items.length) {
-			body = h(
-				"div",
-				{ className: "nmc-empty" },
-				needle
-					? t("searchNoResults", { query })
-					: t("statusEmptyInstalled"),
+			body = (
+				<div className="nmc-empty">
+					{needle
+						? t("searchNoResults", { query })
+						: t("statusEmptyInstalled")}
+				</div>
 			);
 		} else {
-			body = h(
-				"div",
-				{ className: "nmc-grid" },
-				items.map((item) =>
-					h(Card, {
-						key: item.name,
-						item,
-						section: tab,
-						hasUpdate: !!updates[lower(item.name)],
-						onAction,
-						onReadme,
-						onSettings,
-					}),
-				),
+			body = (
+				<div className="nmc-grid">
+					{items.map((item) => (
+						<Card
+							key={item.name}
+							item={item}
+							section={tab}
+							hasUpdate={!!updates[lower(item.name)]}
+							onAction={onAction}
+							onReadme={onReadme}
+							onSettings={onSettings}
+						/>
+					))}
+				</div>
 			);
 		}
 
-		return h(
-			"div",
-			null,
-			h(
-				"div",
-				{ className: "nmc-head" },
-				h(
-					"div",
-					{ className: "nmc-title" },
-					"Next Music ",
-					h("span", null, "Store"),
-				),
-			),
-			h("div", null, renderTabs(components, tab, setTab, counts)),
-			h(
-				"div",
-				{ className: "nmc-toolbar" },
-				renderSearch(components, query, setQuery),
-			),
-			body,
-			banners,
-			modals,
+		return (
+			<div>
+				<div className="nmc-head">
+					<div className="nmc-title">
+						Next Music <span>Store</span>
+					</div>
+				</div>
+				<div>{renderTabs(components, tab, setTab, counts)}</div>
+				<div className="nmc-toolbar">
+					{renderSearch(components, query, setQuery)}
+				</div>
+				{body}
+				{banners}
+				{modals}
+			</div>
 		);
 	};
 }

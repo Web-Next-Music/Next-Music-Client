@@ -1,10 +1,18 @@
 import { state, STAR_GATED_PATHS } from "./state.js";
 import { applyI18n, sectionName, tabName, t } from "./i18n.js";
-import { mkToggle, mkRow } from "./controls.js";
+import { mkToggle } from "./controls.js";
 import { renderExperimentsPanel } from "./experiments.js";
 import { buildGitHubStarBlock } from "./github.js";
 import { buildDiscordSignInBlock } from "./discord.js";
 import { getPath } from "./utils.js";
+import "../components/config-field.js";
+
+function el(tag, className, text) {
+	const node = document.createElement(tag);
+	if (className) node.className = className;
+	if (text != null) node.textContent = text;
+	return node;
+}
 
 const langSelects = [];
 
@@ -152,30 +160,64 @@ function isStarGated(path) {
 	);
 }
 
-function maybeGate(element, path) {
-	if (state.HAS_STARRED || !isStarGated(path)) return element;
+function isFieldGated(path) {
+	return !state.HAS_STARRED && isStarGated(path);
+}
 
-	element
-		.querySelectorAll(
-			"mdui-switch, mdui-text-field, mdui-select, mdui-button, input, select, textarea, button",
-		)
-		.forEach((el) => {
-			el.disabled = true;
-		});
-	const control = element.querySelector(
-		"mdui-switch, mdui-text-field, mdui-select",
+function renderGroup(node, container, depth) {
+	const isCard = depth > 0;
+	const enableIdx = node.children.findIndex(
+		(c) => c.kind === "field" && c.path.split(".").pop() === "enable",
 	);
-	if (control) control.classList.add("star-gate-blocked");
+	const title = sectionName(node.key);
 
-	const lbl = element.querySelector(".lbl");
-	if (lbl) {
-		const notice = document.createElement("div");
-		notice.className = "star-gate-notice";
-		notice.textContent = t("settings.starGate");
-		lbl.append(notice);
+	if (enableIdx === -1) {
+		if (!isCard) {
+			container.append(el("div", "sec-title", title));
+			renderNodes(node.children, container, depth + 1);
+			return;
+		}
+		const card = el("div", "group-card");
+		const head = el("div", "group-card-head");
+		head.append(el("span", "group-card-title", title));
+		const body = el("div", "group-card-body");
+		renderNodes(node.children, body, depth + 1);
+		card.append(head, body);
+		container.append(card);
+		return;
 	}
 
-	return element;
+	const enableField = node.children[enableIdx];
+	const rest = node.children.filter((_, i) => i !== enableIdx);
+
+	const head = el("div", isCard ? "group-card-head" : "sec-title-row");
+	head.append(
+		el("span", isCard ? "group-card-title" : "sec-title-label", title),
+	);
+	const toggle = mkToggle(enableField.path);
+	toggle.classList.add("group-head-toggle");
+	head.append(toggle);
+
+	const body = el("div", isCard ? "group-card-body" : "sec-body-wrap");
+	if (node.key === "addons") body.append(buildPulsesyncNotice());
+
+	const applyDisabled = () => {
+		body.classList.toggle(
+			"group-body--disabled",
+			!getPath(state.CONFIG, enableField.path),
+		);
+	};
+	toggle.addEventListener("change", applyDisabled);
+	renderNodes(rest, body, depth + 1);
+	applyDisabled();
+
+	if (isCard) {
+		const card = el("div", "group-card");
+		card.append(head, body);
+		container.append(card);
+	} else {
+		container.append(head, body);
+	}
 }
 
 export function renderNodes(nodes, container, depth) {
@@ -202,113 +244,16 @@ export function renderNodes(nodes, container, depth) {
 		lastKind = node.kind;
 
 		if (node.kind === "field") {
-			const { row, control } = mkRow(node);
-			rowTarget().append(maybeGate(row, node.path));
+			const field = document.createElement("config-field");
+			field.node = node;
+			field.gated = isFieldGated(node.path);
+			field.className = node.type === "array" ? "row col" : "row";
+			rowTarget().append(field);
 			if (node.type === "select" && node.path.endsWith("language")) {
-				langSelects.push(control);
+				langSelects.push(field);
 			}
 		} else if (node.kind === "group") {
-			const enableFieldIdx = node.children.findIndex(
-				(c) =>
-					c.kind === "field" && c.path.split(".").pop() === "enable",
-			);
-
-			if (depth === 0) {
-				if (enableFieldIdx !== -1) {
-					const enableField = node.children[enableFieldIdx];
-					const remainingChildren = node.children.filter(
-						(_, i) => i !== enableFieldIdx,
-					);
-
-					const secRow = document.createElement("div");
-					secRow.className = "sec-title-row";
-					const secLabel = document.createElement("span");
-					secLabel.className = "sec-title-label";
-					secLabel.textContent = sectionName(node.key);
-					secRow.append(secLabel);
-
-					const toggle = mkToggle(enableField.path);
-					toggle.classList.add("group-head-toggle");
-					secRow.append(toggle);
-					container.append(secRow);
-
-					const bodyWrap = document.createElement("div");
-					bodyWrap.className = "sec-body-wrap";
-
-					if (node.key === "addons") {
-						bodyWrap.append(buildPulsesyncNotice());
-					}
-
-					const applyDisabled = () => {
-						const enabled = !!getPath(
-							state.CONFIG,
-							enableField.path,
-						);
-						bodyWrap.classList.toggle(
-							"group-body--disabled",
-							!enabled,
-						);
-					};
-					toggle.addEventListener("change", applyDisabled);
-					renderNodes(remainingChildren, bodyWrap, depth + 1);
-					applyDisabled();
-					container.append(bodyWrap);
-				} else {
-					const h = document.createElement("div");
-					h.className = "sec-title";
-					h.textContent = sectionName(node.key);
-					container.append(h);
-					renderNodes(node.children, container, depth + 1);
-				}
-			} else {
-				const card = document.createElement("div");
-				card.className = "group-card";
-
-				const cardHead = document.createElement("div");
-				cardHead.className = "group-card-head";
-				const cardTitle = document.createElement("span");
-				cardTitle.className = "group-card-title";
-				cardTitle.textContent = sectionName(node.key);
-				cardHead.append(cardTitle);
-
-				if (enableFieldIdx !== -1) {
-					const enableField = node.children[enableFieldIdx];
-					const remainingChildren = node.children.filter(
-						(_, i) => i !== enableFieldIdx,
-					);
-
-					const toggle = mkToggle(enableField.path);
-					toggle.classList.add("group-head-toggle");
-					cardHead.append(toggle);
-					card.append(cardHead);
-
-					const cardBody = document.createElement("div");
-					cardBody.className = "group-card-body";
-
-					const applyDisabled = () => {
-						const enabled = !!getPath(
-							state.CONFIG,
-							enableField.path,
-						);
-						cardBody.classList.toggle(
-							"group-body--disabled",
-							!enabled,
-						);
-					};
-					toggle.addEventListener("change", applyDisabled);
-					renderNodes(remainingChildren, cardBody, depth + 1);
-					applyDisabled();
-					card.append(cardBody);
-				} else {
-					card.append(cardHead);
-					const cardBody = document.createElement("div");
-					cardBody.className = "group-card-body";
-					renderNodes(node.children, cardBody, depth + 1);
-					card.append(cardBody);
-				}
-
-				container.append(card);
-			}
+			renderGroup(node, container, depth);
 		}
 	});
 }
@@ -443,6 +388,6 @@ export function activateTab(key) {
 
 export function refresh() {
 	buildUI();
-	langSelects.forEach((s) => s._repopulate?.());
+	langSelects.forEach((s) => s.repopulate?.());
 	applyI18n();
 }

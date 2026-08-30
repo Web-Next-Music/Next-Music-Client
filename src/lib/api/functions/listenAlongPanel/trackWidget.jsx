@@ -65,7 +65,6 @@ function fetchLinkMeta(link) {
 
 function LaNowPlayingBar(props) {
 	const { React, state } = props;
-	const h = React.createElement;
 	const trackId = state.nowPlaying?.id;
 	const playing = !!state.nowPlaying?.playing;
 	const ugc = state.nowPlaying?.ugc;
@@ -145,65 +144,58 @@ function LaNowPlayingBar(props) {
 		(localDurationMs ?? resolvedMeta?.durationMs ?? 0) / 1000;
 	const ratio = durationSec > 0 ? Math.min(1, position / durationSec) : 0;
 
-	return h(
-		"div",
-		{ className: "nmc-la-panel-nowplaying" },
-		resolvedMeta?.coverUrl
-			? h("img", {
-					className: "nmc-la-panel-nowplaying-cover",
-					src: resolvedMeta.coverUrl,
-					alt: "",
-				})
-			: h("div", {
-					className: "nmc-la-panel-nowplaying-cover skeleton",
-				}),
-		h(
-			"div",
-			{ className: "nmc-la-panel-nowplaying-title" },
-			resolvedMeta === undefined
-				? "Loading…"
-				: resolvedMeta.artists
-					? `${resolvedMeta.title} - ${resolvedMeta.artists}`
-					: resolvedMeta.title,
-		),
-		h(
-			"span",
-			{
-				className: "nmc-la-panel-nowplaying-playpause",
-				title: playing ? "Playing" : "Paused",
-			},
-			playing
-				? h(
-						"svg",
-						{
-							width: 12,
-							height: 12,
-							viewBox: "0 0 16 16",
-							fill: "currentColor",
-						},
-						h("path", { d: "M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z" }),
-					)
-				: h(
-						"svg",
-						{
-							width: 12,
-							height: 12,
-							viewBox: "0 0 16 16",
-							fill: "currentColor",
-						},
-						h("path", { d: "M4 2.5v11l10-5.5-10-5.5z" }),
-					),
-		),
-		h("div", {
-			className: "nmc-la-panel-nowplaying-timeline",
-			style: { width: `${ratio * 100}%` },
-		}),
+	return (
+		<div className="nmc-la-panel-nowplaying">
+			{resolvedMeta?.coverUrl ? (
+				<img
+					className="nmc-la-panel-nowplaying-cover"
+					src={resolvedMeta.coverUrl}
+					alt=""
+				/>
+			) : (
+				<div className="nmc-la-panel-nowplaying-cover skeleton" />
+			)}
+			<div className="nmc-la-panel-nowplaying-title">
+				{resolvedMeta === undefined
+					? "Loading…"
+					: resolvedMeta.artists
+						? `${resolvedMeta.title} - ${resolvedMeta.artists}`
+						: resolvedMeta.title}
+			</div>
+			<span
+				className="nmc-la-panel-nowplaying-playpause"
+				title={playing ? "Playing" : "Paused"}
+			>
+				{playing ? (
+					<svg
+						width={12}
+						height={12}
+						viewBox="0 0 16 16"
+						fill="currentColor"
+					>
+						<path d="M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z" />
+					</svg>
+				) : (
+					<svg
+						width={12}
+						height={12}
+						viewBox="0 0 16 16"
+						fill="currentColor"
+					>
+						<path d="M4 2.5v11l10-5.5-10-5.5z" />
+					</svg>
+				)}
+			</span>
+			<div
+				className="nmc-la-panel-nowplaying-timeline"
+				style={{ width: `${ratio * 100}%` }}
+			/>
+		</div>
 	);
 }
 
 function LaTrackWidget(props) {
 	const { React, link, isHost, onPlay, nowPlaying } = props;
-	const h = React.createElement;
 	const [meta, setMeta] = React.useState(undefined);
 
 	React.useEffect(() => {
@@ -218,62 +210,51 @@ function LaTrackWidget(props) {
 
 	if (meta === null) return null;
 
-	return h(
-		"div",
-		{ className: "nmc-la-panel-track-widget" },
-		meta === undefined
-			? h("div", {
-					className: "nmc-la-panel-track-widget-cover skeleton",
-				})
-			: h("img", {
-					className: "nmc-la-panel-track-widget-cover",
-					src: meta.coverUrl,
-					alt: "",
-				}),
-		h(
-			"div",
-			{ className: "nmc-la-panel-track-widget-body" },
-			h(
-				"div",
-				{ className: "nmc-la-panel-track-widget-title" },
-				meta === undefined ? "Loading…" : meta.title,
-			),
-			meta?.artists
-				? h(
-						"div",
-						{ className: "nmc-la-panel-track-widget-artists" },
-						meta.artists,
-					)
-				: null,
-		),
-		isHost && meta?.trackId
-			? (() => {
-					const isCurrent = nowPlaying?.id === meta.trackId;
-					const isPlaying = isCurrent && nowPlaying.playing;
-					return h(
-						"button",
-						{
-							type: "button",
-							className: "nmc-la-panel-track-widget-play",
-							title: isPlaying ? "Pause" : "Play",
-							onClick: () => onPlay?.(meta.trackId),
-						},
-						h(
-							"svg",
-							{
-								width: 12,
-								height: 12,
-								viewBox: "0 0 16 16",
-								fill: "currentColor",
-							},
-							isPlaying
-								? h("path", {
-										d: "M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z",
-									})
-								: h("path", { d: "M4 2.5v11l10-5.5-10-5.5z" }),
-						),
-					);
-				})()
-			: null,
+	const isCurrent = !!meta?.trackId && nowPlaying?.id === meta.trackId;
+	const isPlaying = isCurrent && nowPlaying.playing;
+
+	return (
+		<div className="nmc-la-panel-track-widget">
+			{meta === undefined ? (
+				<div className="nmc-la-panel-track-widget-cover skeleton" />
+			) : (
+				<img
+					className="nmc-la-panel-track-widget-cover"
+					src={meta.coverUrl}
+					alt=""
+				/>
+			)}
+			<div className="nmc-la-panel-track-widget-body">
+				<div className="nmc-la-panel-track-widget-title">
+					{meta === undefined ? "Loading…" : meta.title}
+				</div>
+				{meta?.artists ? (
+					<div className="nmc-la-panel-track-widget-artists">
+						{meta.artists}
+					</div>
+				) : null}
+			</div>
+			{isHost && meta?.trackId ? (
+				<button
+					type="button"
+					className="nmc-la-panel-track-widget-play"
+					title={isPlaying ? "Pause" : "Play"}
+					onClick={() => onPlay?.(meta.trackId)}
+				>
+					<svg
+						width={12}
+						height={12}
+						viewBox="0 0 16 16"
+						fill="currentColor"
+					>
+						{isPlaying ? (
+							<path d="M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z" />
+						) : (
+							<path d="M4 2.5v11l10-5.5-10-5.5z" />
+						)}
+					</svg>
+				</button>
+			) : null}
+		</div>
 	);
 }

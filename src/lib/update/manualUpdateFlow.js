@@ -1,4 +1,5 @@
-import { app, ipcMain, shell, dialog } from "electron";
+import { app, shell, dialog } from "electron";
+import { registerHandlers, on } from "../ipc/registry.js";
 import { t } from "../langManager.js";
 import { createLoaderWindow } from "../window/createLoaderWindow.js";
 import {
@@ -146,10 +147,10 @@ export function onCancel() {
 }
 
 export function registerIpc() {
-	if (state.ipcRegistered) return;
-	state.ipcRegistered = true;
-	ipcMain.on("nmc-update:start", () => onStart());
-	ipcMain.on("nmc-update:cancel", () => onCancel());
+	registerHandlers({
+		"nmc-update:start": on(() => onStart()),
+		"nmc-update:cancel": on(() => onCancel()),
+	});
 }
 
 export function buildStrings() {

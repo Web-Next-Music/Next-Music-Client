@@ -29,95 +29,80 @@ function LaPanel() {
 		onOpenInfo: () => setShowInfo(true),
 	};
 
-	return h(
-		React.Fragment,
-		null,
-		showInfo
-			? h(LaInfoModal, {
-					React,
-					state,
-					onClose: () => setShowInfo(false),
-				})
-			: null,
-		h(
-			"div",
-			{
-				className: "nmc-la-panel-bg",
-				onClick: (event) => {
+	return (
+		<React.Fragment>
+			{showInfo ? (
+				<LaInfoModal
+					React={React}
+					state={state}
+					onClose={() => setShowInfo(false)}
+				/>
+			) : null}
+			<div
+				className="nmc-la-panel-bg"
+				onClick={(event) => {
 					if (event.target === event.currentTarget)
 						handlers.onClose?.();
-				},
-			},
-			h(
-				"div",
-				{
-					className: `nmc-la-panel${showInfo ? " nmc-la-panel-dimmed" : ""}`,
-				},
-				h(
-					"div",
-					{ className: "nmc-la-panel-header" },
-					h(
-						"div",
-						{ className: "nmc-la-panel-title" },
-						state.discordLinked
-							? h(LaPanelRoomBar, {
-									key: "roombar",
-									React,
-									state,
-									handlers,
-								})
-							: null,
-					),
-					h(
-						"button",
-						{
-							type: "button",
-							className: "nmc-la-panel-close",
-							title: "Close",
-							onClick: () => handlers.onClose?.(),
-						},
-						LaPanelCloseIcon(h),
-					),
-				),
-				state.discordLinked
-					? h(
-							"div",
-							{ className: "nmc-la-panel-body" },
-							h(LaPanelSidebar, {
-								key: "sidebar",
-								React,
-								state,
-								handlers: sidebarHandlers,
-							}),
-							h(
-								"div",
-								{
-									className:
-										"nmc-la-panel-col nmc-la-panel-chat-outer",
-								},
-								h(LaNowPlayingBar, {
-									key: "nowplaying",
-									React,
-									state,
-								}),
-								h(LaPanelChat, {
-									key: "chat",
-									React,
-									state,
-									handlers,
-								}),
-							),
-							h(LaPanelRoster, {
-								key: "roster",
-								React,
-								ReactDOMPortal,
-								state,
-								handlers,
-							}),
-						)
-					: h(LaPanelAuthGate, { React, handlers }),
-			),
-		),
+				}}
+			>
+				<div
+					className={`nmc-la-panel${showInfo ? " nmc-la-panel-dimmed" : ""}`}
+				>
+					<div className="nmc-la-panel-header">
+						<div className="nmc-la-panel-title">
+							{state.discordLinked ? (
+								<LaPanelRoomBar
+									key="roombar"
+									React={React}
+									state={state}
+									handlers={handlers}
+								/>
+							) : null}
+						</div>
+						<button
+							type="button"
+							className="nmc-la-panel-close"
+							title="Close"
+							onClick={() => handlers.onClose?.()}
+						>
+							{LaPanelCloseIcon(h)}
+						</button>
+					</div>
+					{state.discordLinked ? (
+						<div className="nmc-la-panel-body">
+							<LaPanelSidebar
+								key="sidebar"
+								React={React}
+								state={state}
+								handlers={sidebarHandlers}
+							/>
+							<div className="nmc-la-panel-col nmc-la-panel-chat-outer">
+								<LaNowPlayingBar
+									key="nowplaying"
+									React={React}
+									state={state}
+								/>
+								<LaPanelChat
+									key="chat"
+									React={React}
+									state={state}
+									handlers={handlers}
+								/>
+							</div>
+							<LaPanelRoster
+								key="roster"
+								React={React}
+								ReactDOMPortal={ReactDOMPortal}
+								state={state}
+								handlers={handlers}
+							/>
+						</div>
+					) : (
+						<LaPanelAuthGate React={React} handlers={handlers} />
+					)}
+				</div>
+			</div>
+		</React.Fragment>
 	);
 }
 

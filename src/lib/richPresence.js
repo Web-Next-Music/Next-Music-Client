@@ -1,6 +1,6 @@
 import { Client } from "@xhayper/discord-rpc";
-import { ipcMain } from "electron";
 import { getConfig } from "./configManager.js";
+import { registerHandlers, on } from "./ipc/registry.js";
 import { checkGitHubStar } from "./githubStarAuth.js";
 import {
 	buildInviteUrl,
@@ -48,11 +48,11 @@ function initRPC() {
 }
 
 function initSiteRPC() {
-	if (ipcMain.listenerCount("rpc:site-data")) return;
-
-	ipcMain.on("rpc:site-data", (_event, data) => {
-		lastRawData = data;
-		updateActivity(data);
+	registerHandlers({
+		"rpc:site-data": on((_event, data) => {
+			lastRawData = data;
+			updateActivity(data);
+		}),
 	});
 }
 

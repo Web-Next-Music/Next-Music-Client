@@ -2,6 +2,7 @@ export const API_FUNCTIONS_ORDER = [
 	"enableDevPanel",
 	"utils",
 	"siteComponents",
+	"portalFeature",
 	"storeRouter",
 	"storeIcons",
 	"storeStyles",

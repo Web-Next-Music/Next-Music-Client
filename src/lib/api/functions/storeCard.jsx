@@ -1,6 +1,4 @@
 function createStoreButton(React) {
-	const h = React.createElement;
-
 	return function StoreButton(props) {
 		const {
 			variant,
@@ -18,20 +16,20 @@ function createStoreButton(React) {
 		if (iconOnly) classes.push("btn-icon");
 
 		let content;
-		if (busy) content = h("span", { className: "nmc-spin" });
+		if (busy) content = <span className="nmc-spin" />;
 		else if (icon) content = storeIcon(React, icon);
 		else content = label;
 
-		return h(
-			"button",
-			{
-				type: "button",
-				className: classes.join(" "),
-				title: title || undefined,
-				disabled: !!disabled || !!busy,
-				onClick,
-			},
-			content,
+		return (
+			<button
+				type="button"
+				className={classes.join(" ")}
+				title={title || undefined}
+				disabled={!!disabled || !!busy}
+				onClick={onClick}
+			>
+				{content}
+			</button>
 		);
 	};
 }
@@ -90,8 +88,6 @@ function useHasSettings(React, item) {
 }
 
 function createStoreCard(React, StoreButton) {
-	const h = React.createElement;
-
 	return function StoreCard(props) {
 		const { item, section, hasUpdate, onAction, onReadme, onSettings } =
 			props;
@@ -130,135 +126,126 @@ function createStoreCard(React, StoreButton) {
 
 		if (hasUpdate) {
 			buttons.push(
-				h(StoreButton, {
-					key: "update",
-					variant: "primary",
-					label:
-						busy === "update" ? t("btnUpdating") : t("btnUpdate"),
-					busy: busy === "update",
-					disabled: !!busy,
-					onClick: () => run("update"),
-				}),
+				<StoreButton
+					key="update"
+					variant="primary"
+					label={
+						busy === "update" ? t("btnUpdating") : t("btnUpdate")
+					}
+					busy={busy === "update"}
+					disabled={!!busy}
+					onClick={() => run("update")}
+				/>,
 			);
 		}
 
 		if (item.installed) {
 			buttons.push(
-				h(StoreButton, {
-					key: "toggle",
-					variant: item.enabled ? "on" : "off",
-					iconOnly: compactToggle,
-					icon: compactToggle
-						? item.enabled
-							? "disable"
-							: "enable"
-						: undefined,
-					label: item.enabled ? t("btnDisable") : t("btnEnable"),
-					title: item.enabled
-						? t("tooltipDisable")
-						: t("tooltipEnable"),
-					busy: busy === "toggle",
-					disabled: !!busy,
-					onClick: () => run("toggle"),
-				}),
+				<StoreButton
+					key="toggle"
+					variant={item.enabled ? "on" : "off"}
+					iconOnly={compactToggle}
+					icon={
+						compactToggle
+							? item.enabled
+								? "disable"
+								: "enable"
+							: undefined
+					}
+					label={item.enabled ? t("btnDisable") : t("btnEnable")}
+					title={
+						item.enabled ? t("tooltipDisable") : t("tooltipEnable")
+					}
+					busy={busy === "toggle"}
+					disabled={!!busy}
+					onClick={() => run("toggle")}
+				/>,
 			);
 		} else {
 			buttons.push(
-				h(StoreButton, {
-					key: "download",
-					variant: "primary",
-					label:
+				<StoreButton
+					key="download"
+					variant="primary"
+					label={
 						busy === "download"
 							? t("btnDownloading")
-							: t("btnDownload"),
-					busy: busy === "download",
-					disabled: !!busy,
-					onClick: () => run("download"),
-				}),
+							: t("btnDownload")
+					}
+					busy={busy === "download"}
+					disabled={!!busy}
+					onClick={() => run("download")}
+				/>,
 			);
 		}
 
 		if (hasSettings) {
 			buttons.push(
-				h(StoreButton, {
-					key: "settings",
-					variant: "settings",
-					iconOnly: true,
-					icon: "settings",
-					title: t("tooltipSettings"),
-					disabled: !!busy,
-					onClick: () => onSettings(item),
-				}),
+				<StoreButton
+					key="settings"
+					variant="settings"
+					iconOnly={true}
+					icon="settings"
+					title={t("tooltipSettings")}
+					disabled={!!busy}
+					onClick={() => onSettings(item)}
+				/>,
 			);
 		}
 
 		if (item.installed) {
 			buttons.push(
-				h(StoreButton, {
-					key: "delete",
-					variant: confirmDelete ? "primary" : "danger",
-					iconOnly: !confirmDelete,
-					icon: confirmDelete ? undefined : "trash",
-					label: confirmDelete ? t("btnDeleteConfirm") : undefined,
-					title: t("tooltipDelete"),
-					busy: busy === "delete",
-					disabled: !!busy,
-					onClick: onDeleteClick,
-				}),
+				<StoreButton
+					key="delete"
+					variant={confirmDelete ? "primary" : "danger"}
+					iconOnly={!confirmDelete}
+					icon={confirmDelete ? undefined : "trash"}
+					label={confirmDelete ? t("btnDeleteConfirm") : undefined}
+					title={t("tooltipDelete")}
+					busy={busy === "delete"}
+					disabled={!!busy}
+					onClick={onDeleteClick}
+				/>,
 			);
 		}
 
 		if (error) {
 			buttons.push(
-				h(
-					"div",
-					{ key: "err", className: "nmc-sb", title: error },
-					error,
-				),
+				<div key="err" className="nmc-sb" title={error}>
+					{error}
+				</div>,
 			);
 		}
 
-		const logoNode = logo
-			? h("img", {
-					className: "nmc-logo",
-					src: logo,
-					alt: "",
-					onError: () => setLogo(null),
-				})
-			: h(
-					"div",
-					{
-						className: item.isLocal
-							? "nmc-logo-ph local"
-							: "nmc-logo-ph",
-					},
-					storeIcon(React, placeholderIconFor(item, section)),
-				);
+		const logoNode = logo ? (
+			<img
+				className="nmc-logo"
+				src={logo}
+				alt=""
+				onError={() => setLogo(null)}
+			/>
+		) : (
+			<div className={item.isLocal ? "nmc-logo-ph local" : "nmc-logo-ph"}>
+				{storeIcon(React, placeholderIconFor(item, section))}
+			</div>
+		);
 
 		const repo = item.submodule ? parseGithubRepo(item.subUrl) : null;
 
-		const subtitle = repo
-			? h(
-					"a",
-					{
-						className: "nmc-sub",
-						onClick: (event) => {
-							event.preventDefault();
-							openUrlExternal(
-								"https://github.com/" +
-									repo.owner +
-									"/" +
-									repo.repo,
-							);
-						},
-					},
-					repo.owner + " / " + repo.repo,
-				)
-			: h(
-					"div",
-					{ className: "nmc-sub" },
-					cardSubtitleText(item, section),
-				);
+		const subtitle = repo ? (
+			<a
+				className="nmc-sub"
+				onClick={(event) => {
+					event.preventDefault();
+					openUrlExternal(
+						"https://github.com/" + repo.owner + "/" + repo.repo,
+					);
+				}}
+			>
+				{repo.owner + " / " + repo.repo}
+			</a>
+		) : (
+			<div className="nmc-sub">{cardSubtitleText(item, section)}</div>
+		);
 
 		const readmeIcon = item.readme
 			? storeIcon(React, "readme", {
@@ -272,26 +259,20 @@ function createStoreCard(React, StoreButton) {
 		if (item.installed) cardClasses.push("installed");
 		if (item.installed && !item.enabled) cardClasses.push("disabled");
 
-		return h(
-			"div",
-			{ className: cardClasses.join(" ") },
-			h(
-				"div",
-				{ className: "nmc-card-top" },
-				logoNode,
-				h(
-					"div",
-					{ className: "nmc-meta" },
-					h(
-						"div",
-						{ className: "nmc-name" },
-						h("span", { className: "nmc-name-text" }, item.name),
-						readmeIcon,
-					),
-					subtitle,
-				),
-			),
-			h("div", { className: "nmc-actions" }, buttons),
+		return (
+			<div className={cardClasses.join(" ")}>
+				<div className="nmc-card-top">
+					{logoNode}
+					<div className="nmc-meta">
+						<div className="nmc-name">
+							<span className="nmc-name-text">{item.name}</span>
+							{readmeIcon}
+						</div>
+						{subtitle}
+					</div>
+				</div>
+				<div className="nmc-actions">{buttons}</div>
+			</div>
 		);
 	};
 }

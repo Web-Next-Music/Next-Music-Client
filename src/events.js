@@ -1,10 +1,11 @@
-import { ipcMain, BrowserWindow, shell } from "electron";
+import { BrowserWindow, shell } from "electron";
 import {
 	connectGitHubDeviceFlow,
 	disconnectGitHub,
 	checkGitHubStar,
 } from "./lib/githubStarAuth.js";
 import { getConfig } from "./lib/configManager.js";
+import { registerHandlers, on } from "./lib/ipc/registry.js";
 import { spawn } from "child_process";
 
 // Feed a Buffer into a writable stream in chunks, honoring backpressure so a
@@ -38,8 +39,8 @@ function writeBufferToStream(stream, buffer, chunkSize = 64 * 1024) {
 	});
 }
 
-if (!ipcMain.listenerCount("nmc:convert-mp3")) {
-	ipcMain.handle("nmc:convert-mp3", (_event, audioData) => {
+registerHandlers({
+	"nmc:convert-mp3": (_event, audioData) => {
 		const sender = _event.sender;
 		return new Promise((resolve) => {
 			const ff = spawn("ffmpeg", [
@@ -91,41 +92,26 @@ if (!ipcMain.listenerCount("nmc:convert-mp3")) {
 				() => {},
 			);
 		});
-	});
-}
+	},
+});
 
 export default function registerEvents(mainWindow) {
-	// Titlebar
-	ipcMain.on("nmc-minimize", () => mainWindow.minimize());
+	const win = () => global.mainWindow ?? mainWindow;
 
-	ipcMain.on("nmc-maximize", () => {
-		if (mainWindow.isMaximized()) mainWindow.unmaximize();
-		else mainWindow.maximize();
-	});
+	registerHandlers({
+		"nmc-minimize": on(() => win().minimize()),
+		"nmc-maximize": on(() => {
+			if (win().isMaximized()) win().unmaximize();
+			else win().maximize();
+		}),
+		"nmc-close": on(() => win().hide()),
+		"nmc-is-maximized": () => win().isMaximized(),
 
-	ipcMain.on("nmc-close", () => mainWindow.hide());
-
-	ipcMain.handle("nmc-is-maximized", () => {
-		return mainWindow.isMaximized();
-	});
-
-	// GitHub handlers
-	if (!ipcMain.listenerCount("github:star-status")) {
-		ipcMain.handle("github:star-status", async () => {
-			// Live check every time
-			return await checkGitHubStar();
-		});
-	}
-
-	if (!ipcMain.listenerCount("github:has-token")) {
-		ipcMain.handle("github:has-token", () => {
-			const config = getConfig();
-			return { hasToken: !!config.github?.accessToken };
-		});
-	}
-
-	if (!ipcMain.listenerCount("github:connect")) {
-		ipcMain.handle("github:connect", async (event) => {
+		"github:star-status": async () => await checkGitHubStar(),
+		"github:has-token": () => ({
+			hasToken: !!getConfig().github?.accessToken,
+		}),
+		"github:connect": async (event) => {
 			const sender = BrowserWindow.fromWebContents(event.sender);
 			return await connectGitHubDeviceFlow(
 				(info) => sender?.webContents.send("github:device-code", info),
@@ -135,18 +121,13 @@ export default function registerEvents(mainWindow) {
 						secondsLeft,
 					),
 			);
-		});
-	}
-
-	if (!ipcMain.listenerCount("github:disconnect")) {
-		ipcMain.handle("github:disconnect", () => {
+		},
+		"github:disconnect": () => {
 			disconnectGitHub();
-		});
-	}
+		},
 
-	if (!ipcMain.listenerCount("settings:open-external")) {
-		ipcMain.handle("settings:open-external", (_event, url) => {
+		"settings:open-external": (_event, url) => {
 			shell.openExternal(url);
-		});
-	}
+		},
+	});
 }

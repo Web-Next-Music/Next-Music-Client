@@ -1,12 +1,5 @@
-import {
-	Tray,
-	Menu,
-	shell,
-	BrowserWindow,
-	nativeImage,
-	app,
-	ipcMain,
-} from "electron";
+import { Tray, Menu, shell, BrowserWindow, nativeImage, app } from "electron";
+import { registerHandlers, on, sync } from "./ipc/registry.js";
 import { checkForUpdates } from "./update/index.js";
 import { getCurrentVersionWV } from "./getAppVersion.js";
 import { getTrayIconPath, getPaths } from "../config.js";
@@ -173,13 +166,14 @@ function selInfoVer() {
 	}
 }
 
-ipcMain.on("close-window", () => {
-	const infoWindow = BrowserWindow.getFocusedWindow();
-	if (infoWindow) infoWindow.close();
-});
-
-ipcMain.on("get-lang-info", (event) => {
-	const { languagesDirectory } = getPaths();
-	const langCode = getConfig().programSettings?.language ?? "en";
-	event.returnValue = { languagesDirectory, langCode };
+registerHandlers({
+	"close-window": on(() => {
+		const infoWindow = BrowserWindow.getFocusedWindow();
+		if (infoWindow) infoWindow.close();
+	}),
+	"get-lang-info": sync(() => {
+		const { languagesDirectory } = getPaths();
+		const langCode = getConfig().programSettings?.language ?? "en";
+		return { languagesDirectory, langCode };
+	}),
 });

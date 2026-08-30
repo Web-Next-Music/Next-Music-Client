@@ -1,5 +1,6 @@
 import { getPaths, defaultConfig, SECRET_KEYS } from "../config.js";
 import { parseLuaConfig, stringifyLuaConfig } from "./luaConfig.js";
+import { validateConfig } from "./config/schema.js";
 import fs from "fs";
 
 let config;
@@ -125,6 +126,7 @@ export function loadConfig() {
 		const merged = { ...settings, ...secrets };
 
 		config = reorderConfig(merged, defaultConfig);
+		validateConfig(config);
 
 		if (JSON.stringify(merged) !== JSON.stringify(config))
 			writeLuaConfig(config);
@@ -145,12 +147,20 @@ export function getConfig() {
 
 export function saveConfig(newConfig) {
 	config = reorderConfig(newConfig, defaultConfig);
+	validateConfig(config);
 
 	try {
 		writeLuaConfig(config);
 	} catch (err) {
 		console.error("[Config] Failed to save config:", err);
 	}
+}
+
+export function patchConfig(mutator) {
+	const cfg = getConfig();
+	mutator(cfg);
+	saveConfig(cfg);
+	return cfg;
 }
 
 export function setLanguage(langCode) {

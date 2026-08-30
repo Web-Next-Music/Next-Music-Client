@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { ipcMain } from "electron";
-
 import { handleRequest } from "./requestHandler.js";
+import { registerHandlers } from "../ipc/registry.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,50 +51,48 @@ function isTextual(contentType) {
 }
 
 export function setupStoreIpc() {
-	if (!ipcMain.listenerCount(EDITOR_CHANNEL)) {
-		ipcMain.handle(EDITOR_CHANNEL, async (event) => {
+	registerHandlers({
+		[EDITOR_CHANNEL]: async (event) => {
 			const js = readCodeMirror(CM_JS);
 			if (!js) throw new Error("CodeMirror assets not found");
 			await event.sender.executeJavaScript(js + "\n;void 0;");
 			return { css: readCodeMirror(CM_CSS) };
-		});
-	}
+		},
 
-	if (ipcMain.listenerCount(CHANNEL)) return;
+		[CHANNEL]: async (_event, payload) => {
+			const {
+				method = "GET",
+				urlPath = "/",
+				qp = {},
+				body = null,
+			} = payload || {};
 
-	ipcMain.handle(CHANNEL, async (_event, payload) => {
-		const {
-			method = "GET",
-			urlPath = "/",
-			qp = {},
-			body = null,
-		} = payload || {};
+			try {
+				const result = await handleRequest(
+					method,
+					urlPath,
+					qp,
+					async () => body ?? "",
+				);
 
-		try {
-			const result = await handleRequest(
-				method,
-				urlPath,
-				qp,
-				async () => body ?? "",
-			);
+				const headers = result.headers || {};
+				const contentType =
+					headers["Content-Type"] || headers["content-type"] || "";
 
-			const headers = result.headers || {};
-			const contentType =
-				headers["Content-Type"] || headers["content-type"] || "";
-
-			return {
-				status: result.status,
-				headers,
-				body: isTextual(contentType)
-					? result.body.toString("utf8")
-					: new Uint8Array(result.body),
-			};
-		} catch (e) {
-			return {
-				status: 500,
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ error: e.message }),
-			};
-		}
+				return {
+					status: result.status,
+					headers,
+					body: isTextual(contentType)
+						? result.body.toString("utf8")
+						: new Uint8Array(result.body),
+				};
+			} catch (e) {
+				return {
+					status: 500,
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ error: e.message }),
+				};
+			}
+		},
 	});
 }

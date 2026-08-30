@@ -6,5 +6,4 @@ export const state = {
 	manualMode: false,
 	createdManualLoader: false,
 	gateResolved: false,
-	ipcRegistered: false,
 };

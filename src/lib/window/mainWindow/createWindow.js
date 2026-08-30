@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain, session, nativeTheme, app } from "electron";
+import { BrowserWindow, session, nativeTheme, app } from "electron";
+import { registerHandlers, sync } from "../../ipc/registry.js";
 import { createLoaderWindow } from "../createLoaderWindow.js";
 import { applyAddons } from "../../addons/index.js";
 import {
@@ -16,6 +17,7 @@ import {
 import { fileURLToPath } from "url";
 import path from "path";
 import injector from "../../injector.js";
+import { transpileJsx } from "../../jsx/transform.js";
 import fs from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,36 +34,44 @@ function inlineCssFiles(source, baseDir) {
 	);
 }
 
-function readApiFunctionSource(name) {
-	const submodules = API_FUNCTION_SUBMODULES[name];
-	if (submodules) {
-		const baseDir = path.join(apiFunctionsDir, name);
-		return submodules
-			.map((sub) =>
-				inlineCssFiles(
-					fs.readFileSync(path.join(baseDir, `${sub}.js`), "utf-8"),
-					baseDir,
-				),
-			)
-			.join("\n");
+async function readApiUnit(baseDir, name) {
+	const jsxPath = path.join(baseDir, `${name}.jsx`);
+	if (fs.existsSync(jsxPath)) {
+		const transpiled = await transpileJsx(
+			fs.readFileSync(jsxPath, "utf-8"),
+			jsxPath,
+		);
+		return inlineCssFiles(transpiled, baseDir);
 	}
 	return inlineCssFiles(
-		fs.readFileSync(path.join(apiFunctionsDir, `${name}.js`), "utf-8"),
-		apiFunctionsDir,
+		fs.readFileSync(path.join(baseDir, `${name}.js`), "utf-8"),
+		baseDir,
 	);
 }
 
-if (!ipcMain.listenerCount("nmc:get-experiments")) {
-	ipcMain.on("nmc:get-experiments", (event) => {
+async function readApiFunctionSource(name) {
+	const submodules = API_FUNCTION_SUBMODULES[name];
+	if (submodules) {
+		const baseDir = path.join(apiFunctionsDir, name);
+		const parts = await Promise.all(
+			submodules.map((sub) => readApiUnit(baseDir, sub)),
+		);
+		return parts.join("\n");
+	}
+	return readApiUnit(apiFunctionsDir, name);
+}
+
+registerHandlers({
+	"nmc:get-experiments": sync(() => {
 		const config = getConfig();
-		event.returnValue = {
+		return {
 			experiments: mergeAddonExperiments(
 				resolveBuiltinExperiments(config?.experiments ?? {}),
 			),
 			managedNames: getAllAddonExperimentNames(),
 		};
-	});
-}
+	}),
+});
 
 let mainWindow;
 let cachedApiJs = null;
@@ -189,7 +199,7 @@ export function createWindow(config) {
 
 	async function onFinishLoad() {
 		if (titleBarEnabled) injectTitleBar();
-		injectApi();
+		await injectApi();
 
 		if (global.__nmcUpdateGate) {
 			try {
@@ -204,13 +214,15 @@ export function createWindow(config) {
 		if (!startMinimized) mainWindow.show();
 	}
 
-	function injectApi() {
+	async function injectApi() {
 		if (!cachedApiJs) {
 			if (fs.existsSync(apiBundleFile)) {
 				cachedApiJs = fs.readFileSync(apiBundleFile, "utf-8");
 			} else {
-				const parts = API_FUNCTIONS_ORDER.map((name) =>
-					readApiFunctionSource(name),
+				const parts = await Promise.all(
+					API_FUNCTIONS_ORDER.map((name) =>
+						readApiFunctionSource(name),
+					),
 				);
 				const mainJs = fs.readFileSync(apiMainFile, "utf-8");
 				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;

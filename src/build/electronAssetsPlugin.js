@@ -17,6 +17,7 @@ import {
 	API_FUNCTIONS_ORDER,
 	API_FUNCTION_SUBMODULES,
 } from "../lib/api/order.js";
+import { transpileJsx } from "../lib/jsx/transform.js";
 
 const SRC = "src";
 const DIST = "dist";
@@ -180,7 +181,7 @@ export function processDir(
 	}
 }
 
-function bundleApiFiles() {
+async function bundleApiFiles() {
 	const apiSrcDir = join(SRC, "lib", "api");
 	const functionsDir = join(apiSrcDir, "functions");
 	const mainFile = join(apiSrcDir, "main.js");
@@ -192,27 +193,35 @@ function bundleApiFiles() {
 			JSON.stringify(readFileSync(join(baseDir, rel), "utf-8")),
 		);
 
-	const readApiFunctionSource = (name) => {
-		const submodules = API_FUNCTION_SUBMODULES[name];
-		if (submodules) {
-			const baseDir = join(functionsDir, name);
-			return submodules
-				.map((sub) =>
-					inlineCssFiles(
-						readFileSync(join(baseDir, `${sub}.js`), "utf-8"),
-						baseDir,
-					),
-				)
-				.join("\n");
+	const readApiUnit = async (baseDir, name) => {
+		const jsxPath = join(baseDir, `${name}.jsx`);
+		if (existsSync(jsxPath)) {
+			const transpiled = await transpileJsx(
+				readFileSync(jsxPath, "utf-8"),
+				jsxPath,
+			);
+			return inlineCssFiles(transpiled, baseDir);
 		}
 		return inlineCssFiles(
-			readFileSync(join(functionsDir, `${name}.js`), "utf-8"),
-			functionsDir,
+			readFileSync(join(baseDir, `${name}.js`), "utf-8"),
+			baseDir,
 		);
 	};
 
-	const parts = API_FUNCTIONS_ORDER.map((name) =>
-		readApiFunctionSource(name),
+	const readApiFunctionSource = async (name) => {
+		const submodules = API_FUNCTION_SUBMODULES[name];
+		if (submodules) {
+			const baseDir = join(functionsDir, name);
+			const subs = await Promise.all(
+				submodules.map((sub) => readApiUnit(baseDir, sub)),
+			);
+			return subs.join("\n");
+		}
+		return readApiUnit(functionsDir, name);
+	};
+
+	const parts = await Promise.all(
+		API_FUNCTIONS_ORDER.map((name) => readApiFunctionSource(name)),
 	);
 	parts.push(readFileSync(mainFile, "utf-8"));
 
@@ -264,7 +273,7 @@ export function createElectronAssetsPlugin(encryptionKey, appVersion) {
 				encryptionKey,
 				appVersion,
 			);
-			bundleApiFiles();
+			await bundleApiFiles();
 			processDir(join(SRC, "assets"), join(DIST, "assets"));
 
 			for (const dir of EXTRA_COPY_DIRS) {

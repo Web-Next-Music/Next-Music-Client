@@ -41,6 +41,9 @@ importers:
       ws:
         specifier: ^8.21.3
         version: 8.21.3
+      zod:
+        specifier: ^4.5.2
+        version: 4.5.2
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.8
@@ -72,6 +75,9 @@ importers:
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
+      lit:
+        specifier: ^3.3.3
+        version: 3.3.3
       sass:
         specifier: ^1.102.0
         version: 1.102.0
@@ -2074,6 +2080,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.5.2:
+    resolution: {integrity: sha512-XkYXCol10+ba/6F/cueWV+TezUeOqXW0hdeJt5CdXjTYeAgAQg5N03RQdJ80mhfFE72+pblvYMW4wy2Qp4Qbrg==}
+
 snapshots:
 
   '@biomejs/biome@2.5.8':
@@ -4038,3 +4047,5 @@ snapshots:
       fd-slicer: 1.1.0
 
   yocto-queue@0.1.0: {}
+
+  zod@4.5.2: {}

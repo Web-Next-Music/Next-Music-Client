@@ -1,7 +1,8 @@
-import { app, ipcMain, powerSaveBlocker, BrowserWindow } from "electron";
+import { app, powerSaveBlocker, BrowserWindow } from "electron";
 import WebSocket from "ws";
 import https from "https";
 import { getConfig, saveConfig } from "../configManager.js";
+import { registerHandlers, on } from "../ipc/registry.js";
 import {
 	getValidDiscordAccessToken,
 	hasDiscordIdentity,
@@ -75,18 +76,12 @@ export function joinByInvite(code) {
 	const invite = parseInvite(code) ?? parseInvite(inviteCodeFromUrl(code));
 	if (!invite) return { ok: false, reason: "bad-code" };
 
-	const config = getConfig();
-	const la = (config.alpha ??= {}).listenAlong ?? {};
-
-	config.alpha.listenAlong = {
-		...la,
+	patchListenAlongConfig({
 		enable: true,
 		host: invite.host,
 		port: invite.port,
 		roomId: invite.roomId,
-	};
-
-	saveConfig(config);
+	});
 	refreshListenAlong();
 
 	return { ok: true, ...invite };
@@ -156,7 +151,6 @@ function readSettings() {
 
 	return {
 		enable: !!la.enable,
-		blackIsland: !!la.blackIsland,
 		host: la.host || "",
 		port: la.port || "",
 		roomId: la.roomId || "",
@@ -190,13 +184,9 @@ function certPins() {
 }
 
 function saveCertPin(key, fingerprint) {
-	const config = getConfig();
-	const la = (config.alpha ??= {}).listenAlong ?? {};
-	config.alpha.listenAlong = {
-		...la,
-		certPins: { ...(la.certPins || {}), [key]: fingerprint },
-	};
-	saveConfig(config);
+	patchListenAlongConfig({
+		certPins: { ...certPins(), [key]: fingerprint },
+	});
 }
 
 function checkAdminAccess(host, port, token) {
@@ -511,10 +501,7 @@ function open() {
 			roster.clear();
 			chatHistory = [];
 			settings.roomId = "";
-			const config = getConfig();
-			const la = config?.alpha?.listenAlong ?? {};
-			config.alpha.listenAlong = { ...la, roomId: "" };
-			saveConfig(config);
+			patchListenAlongConfig({ roomId: "" });
 			setStatus({
 				isHost: false,
 				hostId: null,
@@ -528,10 +515,7 @@ function open() {
 			if (msg.roomId) pushDiscordProfile();
 			if (msg.roomId && msg.roomId !== settings.roomId) {
 				settings.roomId = msg.roomId;
-				const config = getConfig();
-				const la = config?.alpha?.listenAlong ?? {};
-				config.alpha.listenAlong = { ...la, roomId: msg.roomId };
-				saveConfig(config);
+				patchListenAlongConfig({ roomId: msg.roomId });
 			}
 
 			setStatus({
@@ -767,13 +751,7 @@ async function discordSignIn() {
 		});
 
 		if (result.ok) {
-			const config = getConfig();
-			const la = config?.alpha?.listenAlong ?? {};
-			config.alpha.listenAlong = {
-				...la,
-				discordSession: result.token,
-			};
-			saveConfig(config);
+			patchListenAlongConfig({ discordSession: result.token });
 			settings = readSettings();
 			pushDiscordProfile();
 		}
@@ -797,49 +775,41 @@ export function refreshDiscordIdentity() {
 	setStatus({});
 }
 
+function patchListenAlongConfig(patch) {
+	const config = getConfig();
+	const la = (config.alpha ??= {}).listenAlong ?? {};
+	config.alpha.listenAlong = { ...la, ...patch };
+	saveConfig(config);
+}
+
 function registerIpc() {
-	if (!ipcMain.listenerCount("la:get-config")) {
-		ipcMain.handle("la:get-config", () => ({
+	registerHandlers({
+		"la:get-config": () => ({
 			enable: !!settings?.enable,
-			blackIsland: !!settings?.blackIsland,
 			roomId: settings?.roomId || "",
 			chatHistory,
 			...publicStatus(),
-		}));
-	}
+		}),
 
-	if (!ipcMain.listenerCount("la:invite")) {
-		ipcMain.handle("la:invite", () => buildInviteUrl());
-	}
+		"la:invite": () => buildInviteUrl(),
+		"la:join": (_event, code) => joinByInvite(code),
 
-	if (!ipcMain.listenerCount("la:join")) {
-		ipcMain.handle("la:join", (_event, code) => joinByInvite(code));
-	}
-
-	if (!ipcMain.listenerCount("la:connect")) {
-		ipcMain.handle("la:connect", () => {
+		"la:connect": () => {
 			manuallyDisconnected = false;
 			reconnectDelay = RECONNECT_MIN_MS;
 			clearTimers();
 			if (!ws) open();
 			return publicStatus();
-		});
-	}
-
-	if (!ipcMain.listenerCount("la:disconnect")) {
-		ipcMain.handle("la:disconnect", () => {
+		},
+		"la:disconnect": () => {
 			manuallyDisconnected = true;
 			close();
 			return publicStatus();
-		});
-	}
+		},
 
-	if (!ipcMain.listenerCount("la:discord-signin")) {
-		ipcMain.handle("la:discord-signin", () => discordSignIn());
-	}
+		"la:discord-signin": () => discordSignIn(),
 
-	if (!ipcMain.listenerCount("la:create-room")) {
-		ipcMain.handle("la:create-room", async (_event, name) => {
+		"la:create-room": async (_event, name) => {
 			if (!hasDiscordIdentity()) {
 				return {
 					ok: false,
@@ -848,10 +818,7 @@ function registerIpc() {
 			}
 
 			if (ws?.readyState !== WebSocket.OPEN) {
-				const config = getConfig();
-				const la = config?.alpha?.listenAlong ?? {};
-				config.alpha.listenAlong = { ...la, enable: true };
-				saveConfig(config);
+				patchListenAlongConfig({ enable: true });
 
 				manuallyDisconnected = false;
 				settings = readSettings();
@@ -900,27 +867,21 @@ function registerIpc() {
 
 			await waitUntil(() => !!settings.roomId, 3000);
 			return { ok: true, roomId: settings.roomId || null };
-		});
-	}
+		},
 
-	if (!ipcMain.listenerCount("la:leave-room")) {
-		ipcMain.handle("la:leave-room", () => {
+		"la:leave-room": () => {
 			if (ws?.readyState !== WebSocket.OPEN || !settings.roomId) {
 				return { ok: false };
 			}
 			send({ type: "leave_room" });
 			return { ok: true };
-		});
-	}
+		},
 
-	if (!ipcMain.listenerCount("la:set-room-name")) {
-		ipcMain.on("la:set-room-name", (_event, name) => {
+		"la:set-room-name": on((_event, name) => {
 			send({ type: "set_room_name", name: String(name || "").trim() });
-		});
-	}
+		}),
 
-	if (!ipcMain.listenerCount("la:list-rooms")) {
-		ipcMain.handle("la:list-rooms", async () => {
+		"la:list-rooms": async () => {
 			if (!settings?.host) {
 				return { ok: false, reason: "Set a server address first" };
 			}
@@ -944,18 +905,13 @@ function registerIpc() {
 			});
 
 			return { ok: true, rooms };
-		});
-	}
+		},
 
-	if (!ipcMain.listenerCount("la:join-room")) {
-		ipcMain.handle("la:join-room", async (_event, roomId) => {
+		"la:join-room": async (_event, roomId) => {
 			if (!roomId) return { ok: false, reason: "No room id given" };
 
 			if (ws?.readyState !== WebSocket.OPEN) {
-				const config = getConfig();
-				const la = config?.alpha?.listenAlong ?? {};
-				config.alpha.listenAlong = { ...la, enable: true };
-				saveConfig(config);
+				patchListenAlongConfig({ enable: true });
 
 				manuallyDisconnected = false;
 				settings = readSettings();
@@ -994,18 +950,13 @@ function registerIpc() {
 			});
 
 			if (result.ok) {
-				const config = getConfig();
-				const la = config?.alpha?.listenAlong ?? {};
-				config.alpha.listenAlong = { ...la, roomId };
-				saveConfig(config);
+				patchListenAlongConfig({ roomId });
 			}
 
 			return result;
-		});
-	}
+		},
 
-	if (!ipcMain.listenerCount("la:send")) {
-		ipcMain.on("la:send", (_event, message) => {
+		"la:send": on((_event, message) => {
 			if (!message || typeof message.type !== "string") return;
 
 			if (!HOST_ONLY_TYPES.has(message.type)) {
@@ -1016,8 +967,8 @@ function registerIpc() {
 			if (!status.isHost) return;
 
 			send(message);
-		});
-	}
+		}),
+	});
 }
 
 export function startListenAlong() {
