@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell } from "electron";
 import { checkGitHubStar } from "./lib/githubStarAuth.js";
 import { joinByInvite, inviteCodeFromUrl } from "./lib/listenAlong/service.js";
-import { loadConfig } from "./lib/configManager.js";
+import { loadConfig, getConfig } from "./lib/configManager.js";
 import path from "path";
 
 // ESM __dirname fix
@@ -17,7 +17,11 @@ const { nextMusicDirectory, addonsDirectory, configFilePath } = getPaths();
 // Services
 import { createTray } from "./lib/tray.js";
 import { initUpdater } from "./lib/update/index.js";
-import { presenceService, initSiteRPC } from "./lib/richPresence.js";
+import {
+	presenceService,
+	initSiteRPC,
+	updateActivity,
+} from "./lib/richPresence.js";
 import { createWindow } from "./lib/window/mainWindow/createWindow.js";
 import { setupSplashScreen } from "./lib/splashScreen.js";
 import { setupStoreIpc } from "./lib/storePage/storeIpc.js";
@@ -81,7 +85,39 @@ if (process.defaultApp) {
 	app.setAsDefaultProtocolClient("nextmusic");
 }
 
+function rpcDataFromUrl(url) {
+	let parsed;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return null;
+	}
+
+	if (parsed.protocol !== "nextmusic:") return null;
+	if (
+		parsed.hostname !== "rpc" &&
+		parsed.pathname.replace(/\//g, "") !== "rpc"
+	)
+		return null;
+
+	const data = parsed.searchParams.get("data");
+	if (!data) return null;
+
+	try {
+		return JSON.parse(Buffer.from(data, "base64url").toString("utf-8"));
+	} catch {
+		return null;
+	}
+}
+
 function handleDeepLink(url) {
+	const rpcData = rpcDataFromUrl(url);
+	if (rpcData) {
+		if (getConfig()?.programSettings?.richPresence?.enable)
+			updateActivity(rpcData);
+		return;
+	}
+
 	const code = inviteCodeFromUrl(url);
 	if (!code) return;
 
