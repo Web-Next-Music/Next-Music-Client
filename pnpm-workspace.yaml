@@ -8,3 +8,15 @@ enableGlobalVirtualStore: false
 verifyDepsBeforeRun: false
 minimumReleaseAgeExclude:
   - ws@8.21.0
+  - "@biomejs/biome@2.5.15"
+  - "@biomejs/cli-darwin-arm64@2.5.15"
+  - "@biomejs/cli-darwin-x64@2.5.15"
+  - "@biomejs/cli-linux-arm64-musl@2.5.15"
+  - "@biomejs/cli-linux-arm64@2.5.15"
+  - "@biomejs/cli-linux-x64-musl@2.5.15"
+  - "@biomejs/cli-linux-x64@2.5.15"
+  - "@biomejs/cli-win32-arm64@2.5.15"
+  - "@biomejs/cli-win32-x64@2.5.15"
+  - dotenv@18.0.5
+  - electron@44.5.1
+  - sass@1.105.1
