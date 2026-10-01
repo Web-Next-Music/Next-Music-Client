@@ -11,13 +11,13 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
 
   > <blockquote><strong>Important:</strong> Some features are adapted from <a href="https://github.com/PulseSync-LLC/PulseSync-client">PulseSync Client</a> to provide compatibility with themes and addons originally developed for <a href="https://pulsesync.dev/">PulseSync</a>.
   
-  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3b36ee6a-22a7-4beb-83ca-7411a0fdb619" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/8913717d-f5ae-44e5-b393-759a192dc0c4" />
 </details>
 
 <details>
   <summary>Discord Rich Presence</summary>
-  
-  <img width="337" height="890" alt="image" src="https://github.com/user-attachments/assets/afe8945c-590a-4252-953e-169c9eab6ceb" />
+
+  <img width="422" height="728" alt="image" src="https://github.com/user-attachments/assets/ead8b583-fad2-4294-86d8-07a7af4b3809" />
 </details>
 
 <details>
@@ -41,12 +41,9 @@ https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
   
   > It can be enabled in the settings.
 
-  <img width="629" height="458" alt="image" src="https://github.com/user-attachments/assets/c90e9bbe-7e77-4f58-804b-2bfc743321e1" />
+  <img width="854" height="609" alt="image" src="https://github.com/user-attachments/assets/a94ef6c6-6160-4c3c-b433-906190524e33" />
 
-  <img width="301" height="148" alt="image_2026-02-25_11-42-33" src="https://github.com/user-attachments/assets/8a62ac93-c270-47a4-9b4a-1be81aebd7ba" />
-
-  <img width="249" height="67" alt="image" src="https://github.com/user-attachments/assets/dbaf5ee9-70ee-4f0f-9d52-1f744c48061e" />
-
+  <img width="1292" height="822" alt="image" src="https://github.com/user-attachments/assets/1656b3c6-13cc-482c-ad03-af3d3a08a129" />
 </details>
 
 <details>
@@ -110,7 +107,7 @@ https://github.com/user-attachments/assets/73bf3536-d59c-4be5-a53c-0ff38f3844d1
 
 > Allows overriding Yandex Music experiments and enabling unavailable features.
 
-  <img width="810" height="545" alt="image" src="https://github.com/user-attachments/assets/375ea00c-094f-45bc-b4da-70cd3d9f5dd8" />
+  <img width="854" height="609" alt="image" src="https://github.com/user-attachments/assets/47c54f4e-1da9-4836-96ed-ef117d1a1370" />
 </details>
 
 ## Installation
@@ -133,7 +130,7 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 
 ## To change the program settings, open the program settings in tray lol.
 
-<img width="810" height="545" alt="image" src="https://github.com/user-attachments/assets/61a74b20-8ac2-40b8-9e0f-aae3e4ae8efa" />
+<img width="854" height="609" alt="image" src="https://github.com/user-attachments/assets/6653245c-6302-4ae6-b693-31423a5e09f5" />
 
 ## Recomended Scripts
 
