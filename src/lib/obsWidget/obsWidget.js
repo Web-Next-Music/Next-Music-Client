@@ -1,6 +1,6 @@
 import fs from "fs";
 import http from "http";
-import WebSocket from "ws";
+import { WebSocketServer } from "ws";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -88,7 +88,7 @@ export function startServer(options = {}) {
 		log(`HTTP server listening on http://${host}:${port}`);
 	});
 
-	wss = new WebSocket.Server({ server });
+	wss = new WebSocketServer({ server });
 
 	wss.on("connection", (ws) => {
 		if (lastData) ws.send(JSON.stringify(lastData));
