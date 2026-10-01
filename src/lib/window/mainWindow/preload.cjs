@@ -1,3 +1,11 @@
+// r128NormalizationPatcher below is borrowed from PulseSync Mod:
+// https://github.com/PulseSync-LLC/PulseSync-mod
+// Its setR128Gain derives the gain from Yandex Music's own r128
+// metadata ({ i, tp }) as min(TARGET_LUFS - i, -tp) dB. PulseSync
+// patches the site bundle directly; here the gain node is inserted
+// into the same graph at runtime, by wrapping
+// createMediaElementSource before the site boots.
+
 "use strict";
 
 const { contextBridge, ipcRenderer } = require("electron");
@@ -475,6 +483,120 @@ function ynisonDeviceNamePatcher(appName) {
 	window.WebSocket = PatchedWebSocket;
 }
 
+function r128NormalizationPatcher() {
+	const TARGET_LUFS = -14;
+	const nodes = new Set();
+	let enabled = true;
+	let lastR128 = null;
+
+	function gainFor(r128) {
+		if (!enabled) return 1;
+
+		const integrated = Number(r128?.i);
+		if (!Number.isFinite(integrated)) return 1;
+
+		let db = TARGET_LUFS - integrated;
+		const truePeak = Number(r128?.tp);
+		if (Number.isFinite(truePeak)) db = Math.min(db, -truePeak);
+
+		const value = 10 ** (db / 20);
+		return Number.isFinite(value) && value > 0 ? value : 1;
+	}
+
+	function setGain(rec, value) {
+		try {
+			rec.gain.gain.setValueAtTime(value, rec.ctx.currentTime);
+			return true;
+		} catch {
+			nodes.delete(rec);
+			return false;
+		}
+	}
+
+	function apply(r128, element) {
+		if (r128) lastR128 = r128;
+		const value = gainFor(r128 ?? lastR128);
+
+		let applied = 0;
+		if (element) {
+			for (const rec of nodes) {
+				if (rec.element === element && setGain(rec, value)) applied++;
+			}
+		}
+
+		if (!applied) {
+			for (const rec of nodes) setGain(rec, value);
+		}
+
+		return value;
+	}
+
+	function attach(ctx, source, element) {
+		const gain = ctx.createGain();
+		gain.gain.value = gainFor(lastR128);
+
+		const rec = { ctx, source, gain, element, linked: false };
+		nodes.add(rec);
+
+		const nativeConnect = source.connect.bind(source);
+		const nativeDisconnect = source.disconnect.bind(source);
+
+		source.connect = (destination, ...rest) => {
+			if (!rec.linked) {
+				nativeConnect(gain);
+				rec.linked = true;
+			}
+			return gain.connect(destination, ...rest);
+		};
+
+		source.disconnect = (...args) => {
+			try {
+				gain.disconnect(...args);
+			} catch {}
+
+			if (args.length === 0) {
+				try {
+					nativeDisconnect();
+				} catch {}
+				rec.linked = false;
+			}
+		};
+	}
+
+	function patchPrototype(proto) {
+		const original = proto?.createMediaElementSource;
+		if (typeof original !== "function" || original.__nmcR128) return;
+
+		const patched = function createMediaElementSource(element) {
+			const source = original.call(this, element);
+			try {
+				attach(this, source, element);
+			} catch {}
+			return source;
+		};
+		patched.__nmcR128 = true;
+
+		proto.createMediaElementSource = patched;
+	}
+
+	patchPrototype(window.AudioContext?.prototype);
+	if (
+		window.webkitAudioContext &&
+		window.webkitAudioContext !== window.AudioContext
+	) {
+		patchPrototype(window.webkitAudioContext.prototype);
+	}
+
+	window.__nmcR128 = {
+		apply,
+		setEnabled: (next) => {
+			enabled = next !== false;
+			return apply();
+		},
+		nodeCount: () => nodes.size,
+	};
+}
+
 function injectIntoMainWorld(code) {
 	const inject = () => {
 		const script = document.createElement("script");
@@ -504,6 +626,10 @@ injectIntoMainWorld(
 injectIntoMainWorld(
 	`(${ynisonDeviceNamePatcher.toString()})(${JSON.stringify(YNISON_DEVICE_NAME)});`,
 );
+
+if (process.argv.includes("--nmc-r128")) {
+	injectIntoMainWorld(`(${r128NormalizationPatcher.toString()})();`);
+}
 
 contextBridge.exposeInMainWorld("nmcRPC", {
 	send: (data) => ipcRenderer.send("rpc:site-data", data),

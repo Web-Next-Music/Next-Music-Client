@@ -1,68 +1,51 @@
+// Volume normalization is borrowed from PulseSync Mod:
+// https://github.com/PulseSync-LLC/PulseSync-mod
+// Ported from its setR128Gain, which reads Yandex Music's own r128
+// metadata ({ i, tp }) and derives the gain as
+// min(TARGET_LUFS - i, -tp) dB. PulseSync patches the site bundle
+// directly; here the gain node is inserted at runtime by
+// r128NormalizationPatcher in mainWindow/preload.cjs, and this script
+// only feeds it the current track's r128 values.
+
 (function () {
 	"use strict";
 
-	const targetRMS = 0.015; // target loudness level
-	const minGain = 0.015; // start nearly silent
-	const maxGain = 10; // maximum gain
-	const smoothing = 0.015; // EMA for RMS
-	const attack = 0.001; // rate of gain increase (slower)
-	const release = 0.2; // rate of gain decrease (faster)
+	const UNKNOWN_R128 = { i: 0, tp: 0 };
+	const WAIT_INTERVAL_MS = 250;
+	const WAIT_ATTEMPTS = 120;
 
-	const OriginalAudioContext = window.AudioContext;
-	window.AudioContext = function (...args) {
-		const ctx = new OriginalAudioContext(...args);
+	function readR128(api) {
+		const track = api.getCurrentTrack?.();
+		const r128 = track?.r128;
+		if (!r128 || !Number.isFinite(Number(r128.i))) return UNKNOWN_R128;
+		return r128;
+	}
 
-		const originalCreateGain = ctx.createGain.bind(ctx);
-		ctx.createGain = function () {
-			const gainNode = originalCreateGain();
-			gainNode.gain.value = minGain;
+	function start(api) {
+		const r128 = window.__nmcR128;
+		r128.setEnabled(true);
 
-			const analyser = ctx.createAnalyser();
-			analyser.fftSize = 2048;
-			const dataArray = new Uint8Array(analyser.fftSize);
-
-			gainNode.connect(analyser);
-			analyser.connect(ctx.destination);
-
-			let avgRMS = 0;
-
-			function getRMS() {
-				analyser.getByteTimeDomainData(dataArray);
-				let sum = 0;
-				for (let i = 0; i < dataArray.length; i++) {
-					const val = (dataArray[i] - 128) / 128;
-					sum += val * val;
-				}
-				return Math.sqrt(sum / dataArray.length);
-			}
-
-			function normalize() {
-				const rms = getRMS();
-				avgRMS = smoothing * rms + (1 - smoothing) * avgRMS;
-
-				let desiredGain = targetRMS / (avgRMS || 0.0001);
-				desiredGain = Math.max(minGain, Math.min(maxGain, desiredGain));
-
-				if (desiredGain > gainNode.gain.value) {
-					gainNode.gain.value +=
-						(desiredGain - gainNode.gain.value) * attack;
-				} else {
-					gainNode.gain.value +=
-						(desiredGain - gainNode.gain.value) * release;
-				}
-
-				requestAnimationFrame(normalize);
-			}
-
-			setTimeout(normalize, 50);
-
-			return gainNode;
+		const applyCurrent = () => {
+			r128.apply(readR128(api), api.getActiveAudioElement?.() ?? null);
 		};
 
-		return ctx;
-	};
+		api.onTrackChange(applyCurrent);
+		api.onAudioEvent?.((event) => {
+			if (event?.type === "playing" || event?.type === "attach") {
+				applyCurrent();
+			}
+		});
+		applyCurrent();
+	}
 
-	console.log(
-		"Page-wide audio normalizer active (asymmetric gain: fast down, slow up)",
-	);
+	let attempts = 0;
+	const timer = setInterval(() => {
+		const api = window.nextmusicApi;
+		if (window.__nmcR128 && typeof api?.onTrackChange === "function") {
+			clearInterval(timer);
+			start(api);
+			return;
+		}
+		if (++attempts >= WAIT_ATTEMPTS) clearInterval(timer);
+	}, WAIT_INTERVAL_MS);
 })();

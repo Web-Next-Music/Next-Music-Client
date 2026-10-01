@@ -51,6 +51,15 @@
 		flex-direction: column;
 		align-items: stretch;
 	}
+
+	&:has(> .pulsesync-notice) {
+		flex-wrap: wrap;
+
+		> .pulsesync-notice {
+			flex: 1 0 100%;
+			margin-bottom: 0;
+		}
+	}
 }
 
 .lbl {

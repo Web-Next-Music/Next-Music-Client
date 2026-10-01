@@ -306,6 +306,7 @@ window.nextmusicApi = {
 			listener(p?.id ?? null),
 		) ?? (() => {}),
 
+	getActiveAudioElement,
 	getAudioTime: () => getActiveAudioElement()?.currentTime ?? null,
 	onAudioEvent: (listener) => observeAudioElement(listener),
 

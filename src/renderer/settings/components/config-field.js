@@ -3,6 +3,7 @@ import { state } from "../modules/state.js";
 import { getPath, setPath, keepSelectValue } from "../modules/utils.js";
 import { fieldName, fieldDesc, t } from "../modules/i18n.js";
 import { scheduleSave } from "../modules/dirty.js";
+import { FIELD_NOTICES } from "../modules/notice.js";
 
 class ConfigField extends LitElement {
 	static properties = {
@@ -127,7 +128,9 @@ class ConfigField extends LitElement {
 	render() {
 		if (!this.node) return nothing;
 		const desc = fieldDesc(this.#path);
+		const notice = FIELD_NOTICES[this.#path]?.();
 		return html`
+			${notice ?? nothing}
 			<div class="lbl">
 				<div class="lbl-name">${fieldName(this.#path)}</div>
 				${desc ? html`<div class="lbl-desc">${desc}</div>` : nothing}

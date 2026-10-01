@@ -40,6 +40,7 @@ interface NextmusicTrack {
 	trackUrl: string;
 	durationMs: number | null;
 	contentWarning: string | null;
+	r128: { i: number; tp: number } | null;
 }
 
 interface NextmusicPlayerState {
@@ -226,6 +227,7 @@ interface NextmusicApi {
 		listener: (playerId: string | null) => void,
 	): NextmusicUnsubscribe;
 
+	getActiveAudioElement(): HTMLMediaElement | null;
 	getAudioTime(): number | null;
 	onAudioEvent(
 		listener: (event: Event, audio: HTMLAudioElement) => void,

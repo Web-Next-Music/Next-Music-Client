@@ -5,6 +5,7 @@ import { renderExperimentsPanel } from "./experiments.js";
 import { buildGitHubStarBlock } from "./github.js";
 import { buildDiscordSignInBlock } from "./discord.js";
 import { getPath } from "./utils.js";
+import { buildPulsesyncNotice } from "./notice.js";
 import "../components/config-field.js";
 
 function el(tag, className, text) {
@@ -106,52 +107,6 @@ export function buildSchema() {
 	}
 
 	return tabs;
-}
-
-function buildPulsesyncNotice() {
-	const notice = document.createElement("div");
-	notice.className = "pulsesync-notice";
-
-	const strong = document.createElement("strong");
-	strong.textContent = t("settings.pulsesyncNotice.title", "Important:");
-	notice.append(strong, document.createTextNode(" "));
-
-	const links = {
-		client: {
-			label: "PulseSync Client",
-			href: "https://github.com/PulseSync-LLC/PulseSync-client",
-		},
-		project: {
-			label: "PulseSync",
-			href: "https://pulsesync.dev/",
-		},
-	};
-
-	const template = t(
-		"settings.pulsesyncNotice.text",
-		"Some features are adapted from {client} to provide compatibility with themes and addons originally developed for {project}.",
-	);
-
-	template.split(/(\{[a-z]+\})/g).forEach((part) => {
-		const match = part.match(/^\{([a-z]+)\}$/);
-		const link = match && links[match[1]];
-		if (link) {
-			const a = document.createElement("a");
-			a.href = link.href;
-			a.textContent = link.label;
-			a.target = "_blank";
-			a.rel = "noopener noreferrer";
-			a.addEventListener("click", (e) => {
-				e.preventDefault();
-				window.electronAPI?.openExternal?.(link.href);
-			});
-			notice.append(a);
-		} else if (part) {
-			notice.append(document.createTextNode(part));
-		}
-	});
-
-	return notice;
 }
 
 function isStarGated(path) {

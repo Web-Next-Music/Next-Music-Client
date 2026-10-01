@@ -144,6 +144,7 @@
 			"exposeNetwork": "Allow other devices on your network to reach the widget on port 4091",
 			"alwaysExpandedPlayer": "Expands the Yandex Music player panel",
 			"disableAutoZoom": "Disables automatic scaling of the Yandex Music interface",
+			"volumeNormalization": "Levels track loudness to a single target (−14 LUFS) using Yandex Music metadata",
 			"antiSelect": "Disable text selection everywhere, except for synchronized lyrics",
 			"ugcShare": "Allow UGC tracks to be shared",
 			"downloader": "Allows downloading tracks",
@@ -183,6 +184,10 @@
 		"pulsesyncNotice": {
 			"title": "Important:",
 			"text": "Some features are adapted from {client} to provide compatibility with themes and addons originally developed for {project}."
+		},
+		"volumeNormalizationNotice": {
+			"title": "Volume Normalization:",
+			"text": "The normalization implementation is borrowed from {mod}."
 		}
 	}
 }

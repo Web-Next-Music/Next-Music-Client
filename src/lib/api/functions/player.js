@@ -685,6 +685,7 @@ function getCurrentTrack() {
 		trackUrl: `https://music.yandex.ru/track/${meta.id}`,
 		durationMs: meta.durationMs ?? null,
 		contentWarning: meta.contentWarning ?? null,
+		r128: meta.r128 ?? null,
 	};
 }
 

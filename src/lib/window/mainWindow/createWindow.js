@@ -115,6 +115,7 @@ export function createWindow(config) {
 			backgroundThrottling: !config?.alpha?.listenAlong?.enable,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
+				...(config?.alpha?.volumeNormalization ? ["--nmc-r128"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,
 			],
 			preload: path.join(__dirname, "preload.cjs"),
