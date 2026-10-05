@@ -1,0 +1,19 @@
+.PlayerBar_root__cXUnU {
+	position: relative;
+	isolation: isolate;
+}
+
+#nmc-visualizer-clip {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	z-index: -1;
+	pointer-events: none;
+}
+
+#nmc-visualizer-canvas {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}

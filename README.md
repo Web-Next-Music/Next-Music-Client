@@ -103,6 +103,14 @@ https://github.com/user-attachments/assets/73bf3536-d59c-4be5-a53c-0ff38f3844d1
 </details>
 
 <details>
+  <summary>Visualizer</summary>
+  <blockquote><strong>Important:</strong> This mod has been adapted from <a href="https://github.com/crmne/spotifast">Spotifast</blockquote>
+
+  <img width="1324" height="141" alt="image" src="https://github.com/user-attachments/assets/91bf0d0f-85ac-407b-91c0-79f0c98776e8" />
+
+</details>
+
+<details>
   <summary>Yandex Experiments Override</summary>
 
 > Allows overriding Yandex Music experiments and enabling unavailable features.
@@ -141,6 +149,7 @@ https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
 ## Credits
 - **[PulseSync Mod](https://github.com/PulseSync-LLC/PulseSync-mod/)**
 - **[PulseSync Client](https://github.com/PulseSync-LLC/PulseSync-client/)**
+- **[Spotifast](https://github.com/crmne/spotifast)**
 
 # Discord Server - Click on the image below
 

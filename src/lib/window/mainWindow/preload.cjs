@@ -597,6 +597,53 @@ function r128NormalizationPatcher() {
 	};
 }
 
+function visualizerPatcher() {
+	const taps = new Map();
+	let active = null;
+
+	function patchPrototype(proto) {
+		const original = proto?.createMediaElementSource;
+		if (typeof original !== "function" || original.__nmcVis) return;
+
+		const patched = function createMediaElementSource(element) {
+			const source = original.call(this, element);
+			try {
+				const analyser = this.createAnalyser();
+				analyser.fftSize = 1024;
+				analyser.smoothingTimeConstant = 0;
+				source.connect(analyser);
+				taps.set(element, analyser);
+
+				const markActive = () => {
+					active = analyser;
+				};
+				element.addEventListener("playing", markActive);
+				element.addEventListener("timeupdate", markActive);
+			} catch {}
+			return source;
+		};
+		patched.__nmcVis = true;
+
+		proto.createMediaElementSource = patched;
+	}
+
+	patchPrototype(window.AudioContext?.prototype);
+	if (
+		window.webkitAudioContext &&
+		window.webkitAudioContext !== window.AudioContext
+	) {
+		patchPrototype(window.webkitAudioContext.prototype);
+	}
+
+	window.__nmcVis = {
+		getAnalyser: (element) => {
+			if (element) return taps.get(element) ?? null;
+			return active ?? taps.values().next().value ?? null;
+		},
+		nodeCount: () => taps.size,
+	};
+}
+
 function injectIntoMainWorld(code) {
 	const inject = () => {
 		const script = document.createElement("script");
@@ -629,6 +676,10 @@ injectIntoMainWorld(
 
 if (process.argv.includes("--nmc-r128")) {
 	injectIntoMainWorld(`(${r128NormalizationPatcher.toString()})();`);
+}
+
+if (process.argv.includes("--nmc-vis")) {
+	injectIntoMainWorld(`(${visualizerPatcher.toString()})();`);
 }
 
 contextBridge.exposeInMainWorld("nmcRPC", {

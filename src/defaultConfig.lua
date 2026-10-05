@@ -44,6 +44,7 @@ local config = {
 		lrclib = false,
 		disableAutoZoom = false,
 		antiSelect = false,
+		visualizer = false,
 		language = "en",
 	},
 	alpha = {

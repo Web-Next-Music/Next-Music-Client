@@ -74,6 +74,23 @@ export function buildVolumeNormalizationNotice() {
 	});
 }
 
+export function buildVisualizerNotice() {
+	return buildNotice({
+		titleKey: "settings.visualizerNotice.title",
+		titleFallback: "Visualizer:",
+		textKey: "settings.visualizerNotice.text",
+		textFallback:
+			"The spectrum visualizer implementation is borrowed from {mod}.",
+		links: {
+			mod: {
+				label: "Spotifast",
+				href: "https://github.com/crmne/spotifast",
+			},
+		},
+	});
+}
+
 export const FIELD_NOTICES = {
 	"alpha.volumeNormalization": buildVolumeNormalizationNotice,
+	"programSettings.visualizer": buildVisualizerNotice,
 };

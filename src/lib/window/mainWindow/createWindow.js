@@ -116,6 +116,7 @@ export function createWindow(config) {
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
 				...(config?.alpha?.volumeNormalization ? ["--nmc-r128"] : []),
+				...(config?.programSettings?.visualizer ? ["--nmc-vis"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,
 			],
 			preload: path.join(__dirname, "preload.cjs"),

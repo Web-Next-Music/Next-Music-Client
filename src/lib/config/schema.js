@@ -64,6 +64,7 @@ export const ConfigSchema = z
 			lrclib: bool,
 			disableAutoZoom: bool,
 			antiSelect: bool,
+			visualizer: bool,
 			language: str,
 		}),
 		alpha: z.object({

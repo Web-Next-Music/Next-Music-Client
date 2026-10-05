@@ -65,4 +65,12 @@ export const injectList = [
 		file: "volumeNormalization.js",
 		condition: (config) => config?.alpha?.volumeNormalization,
 	},
+	{
+		file: "visualizer.css",
+		condition: (config) => config?.programSettings?.visualizer,
+	},
+	{
+		file: "visualizer.js",
+		condition: (config) => config?.programSettings?.visualizer,
+	},
 ];
