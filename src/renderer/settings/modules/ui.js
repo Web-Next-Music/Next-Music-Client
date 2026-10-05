@@ -5,7 +5,7 @@ import { renderExperimentsPanel } from "./experiments.js";
 import { buildGitHubStarBlock } from "./github.js";
 import { buildDiscordSignInBlock } from "./discord.js";
 import { getPath } from "./utils.js";
-import { buildPulsesyncNotice } from "./notice.js";
+import { getBadge, GROUP_BADGE_KEY } from "./notice.js";
 import "../components/config-field.js";
 
 function el(tag, className, text) {
@@ -149,12 +149,13 @@ function renderGroup(node, container, depth) {
 	head.append(
 		el("span", isCard ? "group-card-title" : "sec-title-label", title),
 	);
+	const groupBadge = getBadge(GROUP_BADGE_KEY(node.key));
+	if (groupBadge) head.append(groupBadge);
 	const toggle = mkToggle(enableField.path);
 	toggle.classList.add("group-head-toggle");
 	head.append(toggle);
 
 	const body = el("div", isCard ? "group-card-body" : "sec-body-wrap");
-	if (node.key === "addons") body.append(buildPulsesyncNotice());
 
 	const applyDisabled = () => {
 		body.classList.toggle(

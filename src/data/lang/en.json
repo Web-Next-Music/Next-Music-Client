@@ -183,17 +183,9 @@
 		},
 		"starGate": "Star the project on GitHub to unlock",
 		"starProject": "Star Project",
-		"pulsesyncNotice": {
-			"title": "Important:",
-			"text": "Some features are adapted from {client} to provide compatibility with themes and addons originally developed for {project}."
-		},
-		"volumeNormalizationNotice": {
-			"title": "Volume Normalization:",
-			"text": "The normalization implementation is borrowed from {mod}."
-		},
-		"visualizerNotice": {
-			"title": "Visualizer:",
-			"text": "The spectrum visualizer implementation is borrowed from {mod}."
+		"creditTooltip": {
+			"pulsesync": "Part or all of this feature is borrowed from PulseSync. Click to open the project's source code",
+			"spotifast": "Part or all of this feature is borrowed from Spotifast. Click to open the project's source code"
 		}
 	}
 }

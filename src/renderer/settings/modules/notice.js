@@ -1,96 +1,90 @@
 import { t } from "./i18n.js";
+import pulsesyncIcon from "../../../assets/badges/pulsesync.svg";
+import spotifastIcon from "../../../assets/badges/spotifast.svg";
 
-export function buildNotice({
-	titleKey,
-	titleFallback,
-	textKey,
-	textFallback,
-	links,
-}) {
-	const notice = document.createElement("div");
-	notice.className = "pulsesync-notice";
+const TIP_MARGIN = 8;
+const TIP_GAP = 8;
 
-	const strong = document.createElement("strong");
-	strong.textContent = t(titleKey, titleFallback);
-	notice.append(strong, document.createTextNode(" "));
+function positionTip(wrap, tip) {
+	const r = wrap.getBoundingClientRect();
+	const tw = tip.offsetWidth;
+	const th = tip.offsetHeight;
 
-	const template = t(textKey, textFallback);
+	let left = r.left + r.width / 2 - tw / 2;
+	left = Math.min(
+		Math.max(left, TIP_MARGIN),
+		window.innerWidth - tw - TIP_MARGIN,
+	);
 
-	template.split(/(\{[a-z]+\})/g).forEach((part) => {
-		const match = part.match(/^\{([a-z]+)\}$/);
-		const link = match && links[match[1]];
-		if (link) {
-			const a = document.createElement("a");
-			a.href = link.href;
-			a.textContent = link.label;
-			a.target = "_blank";
-			a.rel = "noopener noreferrer";
-			a.addEventListener("click", (e) => {
-				e.preventDefault();
-				window.electronAPI?.openExternal?.(link.href);
-			});
-			notice.append(a);
-		} else if (part) {
-			notice.append(document.createTextNode(part));
+	let top = r.top - th - TIP_GAP;
+	if (top < TIP_MARGIN) top = r.bottom + TIP_GAP;
+
+	tip.style.left = `${left}px`;
+	tip.style.top = `${top}px`;
+}
+
+function buildCreditIcon({ icon, label, href, tooltipKey, tooltipFallback }) {
+	const wrap = document.createElement("span");
+	wrap.className = "credit-icon";
+	wrap.tabIndex = 0;
+	wrap.setAttribute("role", "button");
+	wrap.setAttribute("aria-label", label);
+
+	const img = document.createElement("img");
+	img.src = icon;
+	img.alt = "";
+	wrap.append(img);
+
+	const tip = document.createElement("span");
+	tip.className = "credit-icon-tip";
+	tip.textContent = t(tooltipKey, tooltipFallback);
+	wrap.append(tip);
+
+	const show = () => positionTip(wrap, tip);
+	wrap.addEventListener("mouseenter", show);
+	wrap.addEventListener("focus", show);
+
+	const open = () => window.electronAPI?.openExternal?.(href);
+	wrap.addEventListener("click", open);
+	wrap.addEventListener("keydown", (e) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			open();
 		}
 	});
 
-	return notice;
+	return wrap;
 }
 
-export function buildPulsesyncNotice() {
-	return buildNotice({
-		titleKey: "settings.pulsesyncNotice.title",
-		titleFallback: "Important:",
-		textKey: "settings.pulsesyncNotice.text",
-		textFallback:
-			"Some features are adapted from {client} to provide compatibility with themes and addons originally developed for {project}.",
-		links: {
-			client: {
-				label: "PulseSync Client",
-				href: "https://github.com/PulseSync-LLC/PulseSync-client",
-			},
-			project: {
-				label: "PulseSync",
-				href: "https://pulsesync.dev/",
-			},
-		},
-	});
-}
-
-export function buildVolumeNormalizationNotice() {
-	return buildNotice({
-		titleKey: "settings.volumeNormalizationNotice.title",
-		titleFallback: "Volume Normalization:",
-		textKey: "settings.volumeNormalizationNotice.text",
-		textFallback:
-			"The normalization implementation is borrowed from {mod}.",
-		links: {
-			mod: {
-				label: "PulseSync Mod",
-				href: "https://github.com/PulseSync-LLC/PulseSync-mod",
-			},
-		},
-	});
-}
-
-export function buildVisualizerNotice() {
-	return buildNotice({
-		titleKey: "settings.visualizerNotice.title",
-		titleFallback: "Visualizer:",
-		textKey: "settings.visualizerNotice.text",
-		textFallback:
-			"The spectrum visualizer implementation is borrowed from {mod}.",
-		links: {
-			mod: {
-				label: "Spotifast",
-				href: "https://github.com/crmne/spotifast",
-			},
-		},
-	});
-}
-
-export const FIELD_NOTICES = {
-	"alpha.volumeNormalization": buildVolumeNormalizationNotice,
-	"programSettings.visualizer": buildVisualizerNotice,
+const SOURCES = {
+	pulsesync: {
+		icon: pulsesyncIcon,
+		label: "PulseSync",
+		href: "https://github.com/PulseSync-LLC/PulseSync-mod",
+		tooltipKey: "settings.creditTooltip.pulsesync",
+		tooltipFallback:
+			"Part of this feature's code is borrowed from PulseSync. Click to open the project's source code.",
+	},
+	spotifast: {
+		icon: spotifastIcon,
+		label: "Spotifast",
+		href: "https://github.com/crmne/spotifast",
+		tooltipKey: "settings.creditTooltip.spotifast",
+		tooltipFallback:
+			"Part of this feature's code is borrowed from Spotifast. Click to open the project's source code.",
+	},
 };
+
+export const GROUP_BADGE_KEY = (groupKey) => `group:${groupKey}`;
+
+const BADGES = {
+	[GROUP_BADGE_KEY("addons")]: "pulsesync",
+	"alpha.volumeNormalization": "pulsesync",
+	"programSettings.alwaysExpandedPlayer": "pulsesync",
+	"programSettings.visualizer": "spotifast",
+};
+
+export function getBadge(path) {
+	const sourceKey = BADGES[path];
+	return sourceKey ? buildCreditIcon(SOURCES[sourceKey]) : undefined;
+}

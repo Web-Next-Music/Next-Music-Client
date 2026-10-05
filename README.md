@@ -21,7 +21,7 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
 </details>
 
 <details>
-  <summary>Volume normalization (Experimental)</summary>
+  <summary>Volume normalization (Alpha)</summary>
   <blockquote><strong>Important:</strong> This mod has been adapted from <a href="https://github.com/PulseSync-LLC/PulseSync-mod/">PulseSync Mod.</blockquote>
 </details>
 
@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
 </details>
 
 <details>
-  <summary>Listen Along (Experimental)</summary>
+  <summary>Listen Along (Alpha)</summary>
   
   > It can be enabled in the settings.
 
