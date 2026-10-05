@@ -18,9 +18,20 @@ import {
 	API_FUNCTION_SUBMODULES,
 } from "../lib/api/order.js";
 import { transpileJsx } from "../lib/jsx/transform.js";
+import { injectList } from "../injectList.js";
 
 const SRC = "src";
 const DIST = "dist";
+
+const INJECT_COMPOSITES = injectList.filter(
+	(item) => item.type === "js-composite",
+);
+
+const COMPOSITE_SOURCE_FILES = new Set(
+	INJECT_COMPOSITES.flatMap((item) =>
+		item.parts.map((part) => join(SRC, "inject", item.folder, part)),
+	),
+);
 
 const EXTRA_COPY_DIRS = ["src/data"];
 const RENDERER_BASE = join(SRC, "renderer");
@@ -129,6 +140,8 @@ export function processDir(
 	if (!existsSync(srcDir)) return;
 
 	for (const file of walk(srcDir)) {
+		if (COMPOSITE_SOURCE_FILES.has(file)) continue;
+
 		const ext = extname(file);
 		const outFile = file.replace(srcDir, distDir);
 		mkdirSync(dirname(outFile), { recursive: true });
@@ -236,6 +249,27 @@ async function bundleApiFiles() {
 	console.log("[build] API bundle written to", join(outDir, "bundle.js"));
 }
 
+function composeInjectFiles() {
+	const outDir = join(DIST, "inject");
+	mkdirSync(outDir, { recursive: true });
+
+	for (const item of INJECT_COMPOSITES) {
+		const source = item.parts
+			.map((part) =>
+				readFileSync(join(SRC, "inject", item.folder, part), "utf-8"),
+			)
+			.join("\n");
+
+		const result = esbuild.transformSync(source, {
+			minify: true,
+			target: "es2022",
+		});
+
+		writeFileSync(join(outDir, item.file), result.code);
+		console.log("[build] Inject composite written to", item.file);
+	}
+}
+
 export function createElectronAssetsPlugin(encryptionKey, appVersion) {
 	return {
 		name: "electron-build",
@@ -251,6 +285,7 @@ export function createElectronAssetsPlugin(encryptionKey, appVersion) {
 				encryptionKey,
 				appVersion,
 			);
+			composeInjectFiles();
 
 			const lameAllSrc = readFileSync(
 				join("node_modules", "lamejs", "lame.all.js"),

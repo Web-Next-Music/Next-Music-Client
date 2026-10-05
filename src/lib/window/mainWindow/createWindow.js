@@ -16,7 +16,7 @@ import {
 } from "../../api/order.js";
 import { fileURLToPath } from "url";
 import path from "path";
-import injector from "../../injector.js";
+import injector from "../../injector/index.js";
 import { transpileJsx } from "../../jsx/transform.js";
 import fs from "fs";
 
@@ -115,7 +115,9 @@ export function createWindow(config) {
 			backgroundThrottling: !config?.alpha?.listenAlong?.enable,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
-				...(config?.programSettings?.volumeNormalization ? ["--nmc-r128"] : []),
+				...(config?.programSettings?.volumeNormalization
+					? ["--nmc-r128"]
+					: []),
 				...(config?.programSettings?.visualizer ? ["--nmc-vis"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,
 			],

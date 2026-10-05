@@ -8,7 +8,10 @@
 			"!dist/**",
 			"!release/**",
 			"!graphify-out/**",
-			"!pnpm-lock.yaml"
+			"!pnpm-lock.yaml",
+			"!src/inject/listenAlong/*.js",
+			"!src/inject/downloader/*.js",
+			"!src/inject/visualizer/*.js"
 		]
 	},
 	"formatter": {
