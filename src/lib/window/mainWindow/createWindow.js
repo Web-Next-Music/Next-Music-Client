@@ -115,7 +115,7 @@ export function createWindow(config) {
 			backgroundThrottling: !config?.alpha?.listenAlong?.enable,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
-				...(config?.alpha?.volumeNormalization ? ["--nmc-r128"] : []),
+				...(config?.programSettings?.volumeNormalization ? ["--nmc-r128"] : []),
 				...(config?.programSettings?.visualizer ? ["--nmc-vis"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,
 			],

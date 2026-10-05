@@ -79,7 +79,7 @@ export const GROUP_BADGE_KEY = (groupKey) => `group:${groupKey}`;
 
 const BADGES = {
 	[GROUP_BADGE_KEY("addons")]: "pulsesync",
-	"alpha.volumeNormalization": "pulsesync",
+	"programSettings.volumeNormalization": "pulsesync",
 	"programSettings.alwaysExpandedPlayer": "pulsesync",
 	"programSettings.visualizer": "spotifast",
 };

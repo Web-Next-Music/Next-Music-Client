@@ -40,7 +40,8 @@ local config = {
 		downloader = true,
 		alwaysExpandedPlayer = false,
 		ugcShare = true,
-		fastPlay = true,
+        fastPlay = true,
+		volumeNormalization = false,
 		lrclib = false,
 		disableAutoZoom = false,
 		antiSelect = false,
@@ -48,7 +49,6 @@ local config = {
 		language = "en",
 	},
 	alpha = {
-		volumeNormalization = false,
 		listenAlong = {
 			enable = false,
 			host = "127.0.0.1",

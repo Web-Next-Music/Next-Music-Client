@@ -61,6 +61,7 @@ export const ConfigSchema = z
 			alwaysExpandedPlayer: bool,
 			ugcShare: bool,
 			fastPlay: bool,
+			volumeNormalization: bool,
 			lrclib: bool,
 			disableAutoZoom: bool,
 			antiSelect: bool,
@@ -68,7 +69,6 @@ export const ConfigSchema = z
 			language: str,
 		}),
 		alpha: z.object({
-			volumeNormalization: bool,
 			listenAlong: z
 				.object({
 					enable: bool,
