@@ -201,8 +201,39 @@ body {
 	background: #fff;
 	color: #000;
 
-	&:hover {
+	&:hover:not(:disabled) {
 		opacity: 0.85;
+	}
+
+	&:disabled {
+		cursor: default;
+	}
+
+	&.update_btn--filling,
+	&.update_btn--installing {
+		position: relative;
+		overflow: hidden;
+		isolation: isolate;
+		background: #2a2a2a;
+		color: #fff;
+	}
+
+	&.update_btn--filling::before {
+		content: "";
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: var(--p, 0%);
+		background: #fff;
+		transition: width 0.2s ease;
+	}
+
+	&.update_btn--filling .update_btn_label {
+		position: relative;
+		mix-blend-mode: difference;
+	}
+
+	&.update_btn--installing {
+		color: #b3b3b3;
 	}
 }
 

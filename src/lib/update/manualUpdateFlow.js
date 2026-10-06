@@ -102,6 +102,41 @@ export async function presentUpdate(version) {
 	});
 }
 
+export async function forceUpdate() {
+	state.manualMode = true;
+	state.gateResolved = true;
+	state.presented = false;
+	state.started = false;
+	state.installType = detectInstallType();
+	registerIpc();
+
+	let loader = getLoader();
+	if (!loader) {
+		loader = createLoaderWindow();
+		global.loaderWindow = loader;
+		state.createdManualLoader = true;
+	}
+
+	try {
+		const release = await fetchLatestRelease();
+		const latest = release?.tag_name || release?.name;
+		if (!latest) {
+			noUpdate();
+			return;
+		}
+		state.releaseInfo = release;
+		if (isElectronUpdaterType(state.installType)) {
+			await runElectronUpdaterCheck();
+			if (!state.presented) await presentUpdate(latest);
+			return;
+		}
+		await presentUpdate(latest);
+	} catch (err) {
+		console.error("[Updater] forced update failed:", err);
+		noUpdate();
+	}
+}
+
 export function onStart() {
 	if (state.started) return;
 	state.started = true;

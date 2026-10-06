@@ -11,6 +11,7 @@ if (api) {
 	const progressBar = document.getElementById("update_progress_bar");
 	const confirmBtn = document.getElementById("update_confirm");
 	const cancelBtn = document.getElementById("update_cancel");
+	const confirmLabel = document.getElementById("update_confirm_label");
 
 	let strings = {};
 
@@ -20,10 +21,28 @@ if (api) {
 		progressEl.hidden = true;
 	}
 
-	function showProgress() {
-		actionsEl.hidden = true;
-		statusEl.hidden = false;
-		progressEl.hidden = false;
+	function resetButton() {
+		confirmBtn.classList.remove(
+			"update_btn--filling",
+			"update_btn--installing",
+		);
+		confirmBtn.disabled = false;
+		confirmBtn.style.removeProperty("--p");
+		cancelBtn.hidden = false;
+		confirmLabel.textContent = strings.update || "Update";
+	}
+
+	function setPercent(pct) {
+		confirmBtn.classList.add("update_btn--filling");
+		confirmBtn.style.setProperty("--p", `${pct}%`);
+		confirmLabel.textContent = `${pct}%`;
+	}
+
+	function setInstalling(text) {
+		confirmBtn.classList.remove("update_btn--filling");
+		confirmBtn.classList.add("update_btn--installing");
+		confirmBtn.style.setProperty("--p", "100%");
+		confirmLabel.textContent = text || strings.installing || "Installing…";
 	}
 
 	api.onAvailable(({ version, strings: s }) => {
@@ -31,7 +50,7 @@ if (api) {
 
 		titleEl.textContent = strings.available || "Update available";
 		versionEl.textContent = version ? `v${version}` : "";
-		confirmBtn.textContent = strings.update || "Update";
+		resetButton();
 		cancelBtn.textContent = strings.cancel || "Cancel";
 
 		showActions();
@@ -39,26 +58,22 @@ if (api) {
 		updateView.hidden = false;
 	});
 
-	api.onProgress(({ percent, bytesPerSecond }) => {
-		showProgress();
-
+	api.onProgress(({ percent }) => {
 		const pct = Math.max(0, Math.min(100, Math.round(percent || 0)));
-		progressBar.style.width = `${pct}%`;
-
-		const tmpl = strings.downloading || "Downloading… {percent}% · {speed}";
-		statusEl.textContent = tmpl
-			.replace("{percent}", String(pct))
-			.replace("{speed}", formatSpeed(bytesPerSecond));
+		if (pct >= 100) {
+			setInstalling(strings.installing);
+			return;
+		}
+		setPercent(pct);
 	});
 
 	api.onStatus(({ text }) => {
-		showProgress();
-		if (text) statusEl.textContent = text;
+		if (!text || text === strings.preparing) return;
+		setInstalling(text);
 	});
 
 	api.onError(({ message }) => {
-		showActions();
-		progressBar.style.width = "0%";
+		resetButton();
 		statusEl.hidden = false;
 		statusEl.textContent = `${strings.error || "Update failed"}${
 			message ? `: ${message}` : ""
@@ -66,9 +81,10 @@ if (api) {
 	});
 
 	confirmBtn.addEventListener("click", () => {
-		progressBar.style.width = "0%";
-		showProgress();
-		statusEl.textContent = strings.preparing || "Preparing…";
+		statusEl.hidden = true;
+		cancelBtn.hidden = true;
+		confirmBtn.disabled = true;
+		setPercent(0);
 		api.start();
 	});
 

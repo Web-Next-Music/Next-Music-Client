@@ -1,2 +1,5 @@
 export { initUpdater } from "./autoUpdater.js";
-export { checkForUpdates } from "./manualUpdateFlow.js";
+export {
+	checkForUpdates,
+	forceUpdate,
+} from "./manualUpdateFlow.js";

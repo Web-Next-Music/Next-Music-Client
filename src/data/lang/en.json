@@ -12,7 +12,8 @@
 		"info": "Info",
 		"checkUpdates": "Check updates",
 		"restart": "Restart",
-		"quit": "Quit"
+		"quit": "Quit",
+		"runUpdate": "Run update"
 	},
 	"updater": {
 		"title": "Update available",

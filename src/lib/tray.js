@@ -1,8 +1,8 @@
 import { Tray, Menu, shell, BrowserWindow, nativeImage, app } from "electron";
 import { registerHandlers, on, sync } from "./ipc/registry.js";
-import { checkForUpdates } from "./update/index.js";
+import { checkForUpdates, forceUpdate } from "./update/index.js";
 import { getCurrentVersionWV } from "./getAppVersion.js";
-import { getTrayIconPath, getPaths } from "../config.js";
+import { getTrayIconPath, getPaths, isDev } from "../config.js";
 import { getConfig } from "./configManager.js";
 import { getBuiltinExperimentState } from "./experiments/builtinExperiments.js";
 import { initLanguages, t } from "./langManager.js";
@@ -117,6 +117,15 @@ function buildContextMenu(nextMusicDirectory, addonsDirectory, configFilePath) {
 				app.quit();
 			},
 		},
+		{ type: "separator" },
+		...(isDev
+			? [
+					{
+						label: t("tray.runUpdate"),
+						click: () => forceUpdate(),
+					},
+				]
+			: []),
 	]);
 }
 
