@@ -1,4 +1,15 @@
 window.nextmusicApi = {
+	visualizer: {
+		setAccentColor(color) {
+			window.__nmcVisualizerAccentColor = color;
+			return window.__nmcVisualizerApplyAccent?.(color) ?? true;
+		},
+		clearAccentColor() {
+			delete window.__nmcVisualizerAccentColor;
+			window.__nmcVisualizerClearAccent?.();
+		},
+	},
+
 	ContainerId,
 
 	getSettings(name) {
