@@ -35,12 +35,6 @@
 			}
 		],
 		"files": ["dist/**/*", "package.json"],
-		"extraResources": [
-			{
-				"from": "src/assets/addon-types",
-				"to": "addon-types"
-			}
-		],
 		"directories": {
 			"buildResources": "src/assets",
 			"output": "release"

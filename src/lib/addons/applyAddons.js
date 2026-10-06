@@ -21,7 +21,6 @@ import {
 	scriptExtension,
 	transpileAddonScript,
 } from "./transpile.js";
-import { syncAddonTypings } from "./typings.js";
 
 const { addonsDirectory } = getPaths();
 
@@ -130,7 +129,6 @@ async function applyAddons(mainWindow) {
 
 	console.log("Loading addons…");
 	setActiveAddonsWindow(mainWindow);
-	syncAddonTypings();
 
 	await startAssetServer();
 	startAddonCssLiveUpdates();
