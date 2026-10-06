@@ -242,6 +242,11 @@ interface NextmusicApi {
 	togglePause(): void;
 	next(): void;
 	prev(): void;
+
+	visualizer?: {
+		setAccentColor(color: string): void;
+		clearAccentColor(): void;
+	};
 }
 
 interface Window {
