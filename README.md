@@ -9,8 +9,8 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
 <details>
   <summary>Themes & addons</summary>
 
-  > <blockquote><strong>Important:</strong> Some features are adapted from <a href="https://github.com/PulseSync-LLC/PulseSync-client">PulseSync Client</a> to provide compatibility with themes and addons originally developed for <a href="https://pulsesync.dev/">PulseSync</a>.
-  
+> <blockquote><strong>Important:</strong> Some features are adapted from <a href="https://github.com/PulseSync-LLC/PulseSync-client">PulseSync Client</a> to provide compatibility with themes and addons originally developed for <a href="https://pulsesync.dev/">PulseSync</a>.
+
   <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/8913717d-f5ae-44e5-b393-759a192dc0c4" />
 </details>
 
@@ -27,9 +27,9 @@ Web client for Yandex Music with support for themes, addons and Discord Rich Pre
 
 <details>
   <summary>OBS widget</summary>
-  
-  > It can be enabled in the settings. It opens at `localhost:4091`
-  
+
+> It can be enabled in the settings. It opens at `localhost:4091`
+
   <img width="757" height="623" alt="image" src="https://github.com/user-attachments/assets/f11c325d-4bc1-4544-ad8e-7e0e923e2dfd" />
 
 https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
@@ -38,8 +38,8 @@ https://github.com/user-attachments/assets/7c25dd85-3f55-43a6-bd19-6e9a2dd1491a
 
 <details>
   <summary>Listen Along (Alpha)</summary>
-  
-  > It can be enabled in the settings.
+
+> It can be enabled in the settings.
 
   <img width="854" height="609" alt="image" src="https://github.com/user-attachments/assets/a94ef6c6-6160-4c3c-b433-906190524e33" />
 
@@ -147,6 +147,7 @@ Download the package from the [releases page](https://github.com/Web-Next-Music/
 https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
 
 ## Credits
+
 - **[PulseSync Mod](https://github.com/PulseSync-LLC/PulseSync-mod/)**
 - **[PulseSync Client](https://github.com/PulseSync-LLC/PulseSync-client/)**
 - **[Spotifast](https://github.com/crmne/spotifast)**

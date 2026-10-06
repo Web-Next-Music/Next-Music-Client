@@ -541,8 +541,7 @@ function open() {
 				pendingJoinRoom = null;
 			}
 		} else if (msg.type === "auth_result") {
-			if (!msg.ok)
-				console.warn("[ListenAlong] Auth rejected:", msg.message);
+			if (!msg.ok) console.warn("[ListenAlong] Auth rejected:", msg.message);
 			setStatus({ isHost: !!msg.isHost, isCreator: !!msg.isCreator });
 			if (pendingCreateRoom) {
 				const { resolve } = pendingCreateRoom;

@@ -1,3 +1,4 @@
+(function () {
 	const visualizer = createVisualizer();
 
 	window.__nmcVisualizerApplyAccent = (color) =>

@@ -33,11 +33,7 @@ function loadLanguage(langCode) {
 			currentLang = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 			return true;
 		} catch (error) {
-			console.error(
-				"[InfoV2] Failed to parse language file:",
-				filePath,
-				error,
-			);
+			console.error("[InfoV2] Failed to parse language file:", filePath, error);
 		}
 	}
 
@@ -103,9 +99,7 @@ const buttonActions = {
 
 	...(!initPayload.hasStarred && {
 		githubRepoBtn: () =>
-			shell.openExternal(
-				"https://github.com/Web-Next-Music/Next-Music-Client",
-			),
+			shell.openExternal("https://github.com/Web-Next-Music/Next-Music-Client"),
 	}),
 };
 

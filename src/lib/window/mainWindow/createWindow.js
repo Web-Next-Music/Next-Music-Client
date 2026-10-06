@@ -115,9 +115,7 @@ export function createWindow(config) {
 			backgroundThrottling: !config?.alpha?.listenAlong?.enable,
 			additionalArguments: [
 				...(titleBarEnabled ? ["--nmc-titlebar"] : []),
-				...(config?.programSettings?.volumeNormalization
-					? ["--nmc-r128"]
-					: []),
+				...(config?.programSettings?.volumeNormalization ? ["--nmc-r128"] : []),
 				...(config?.programSettings?.visualizer ? ["--nmc-vis"] : []),
 				`--nmc-experiments=${JSON.stringify(mergeAddonExperiments(resolveBuiltinExperiments(config?.experiments ?? {})))}`,
 			],
@@ -140,14 +138,12 @@ export function createWindow(config) {
 	return mainWindow;
 
 	function setupCSP() {
-		session.defaultSession.webRequest.onHeadersReceived(
-			(details, callback) => {
-				const headers = details.responseHeaders || {};
-				delete headers["content-security-policy"];
-				delete headers["Content-Security-Policy"];
-				callback({ responseHeaders: headers });
-			},
-		);
+		session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+			const headers = details.responseHeaders || {};
+			delete headers["content-security-policy"];
+			delete headers["Content-Security-Policy"];
+			callback({ responseHeaders: headers });
+		});
 	}
 
 	function setupTitleBarEvents() {
@@ -224,9 +220,7 @@ export function createWindow(config) {
 				cachedApiJs = fs.readFileSync(apiBundleFile, "utf-8");
 			} else {
 				const parts = await Promise.all(
-					API_FUNCTIONS_ORDER.map((name) =>
-						readApiFunctionSource(name),
-					),
+					API_FUNCTIONS_ORDER.map((name) => readApiFunctionSource(name)),
 				);
 				const mainJs = fs.readFileSync(apiMainFile, "utf-8");
 				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;
@@ -257,8 +251,8 @@ export function createWindow(config) {
 			config.windowSettings?.titleBar?.nextText?.enable === true;
 		const showYandexMusicVersion =
 			showNextText &&
-			config.windowSettings?.titleBar?.nextText
-				?.displayYandexMusicVersion === true;
+			config.windowSettings?.titleBar?.nextText?.displayYandexMusicVersion ===
+				true;
 
 		const titleBarConfig = {
 			showNextText,

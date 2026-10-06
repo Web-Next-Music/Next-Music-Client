@@ -9,8 +9,7 @@ function makeAnalyserState(bands) {
 }
 
 function stepAnalyser(state, columns, now) {
-	let elapsed =
-		state.lastTime == null ? 1 / 60 : (now - state.lastTime) / 1000;
+	let elapsed = state.lastTime == null ? 1 / 60 : (now - state.lastTime) / 1000;
 	elapsed = Math.min(elapsed, 0.25);
 	state.lastTime = now;
 

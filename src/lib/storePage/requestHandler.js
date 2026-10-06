@@ -125,9 +125,7 @@ async function checkUpdate(name, subUrl, token, force) {
 
 		const m =
 			normalized &&
-			normalized.match(
-				/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
-			);
+			normalized.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/);
 
 		if (!m) return { name, hasUpdate: false };
 		const [, owner, repo] = m;
@@ -135,12 +133,7 @@ async function checkUpdate(name, subUrl, token, force) {
 		const localTag = getLocalReleaseTag(name);
 
 		if (localTag) {
-			const nmRelease = await getLatestNmRelease(
-				owner,
-				repo,
-				token,
-				force,
-			);
+			const nmRelease = await getLatestNmRelease(owner, repo, token, force);
 			if (!nmRelease) return { name, hasUpdate: false };
 
 			return {
@@ -189,8 +182,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 				`https://api.github.com/repos/${CLIENT_REPO_OWNER}/${CLIENT_REPO_NAME}/tags?per_page=100`,
 				{ token, ttl: CONTENTS_TTL },
 			);
-			if (status !== 200 || !Array.isArray(data))
-				return json({ tags: [] });
+			if (status !== 200 || !Array.isArray(data)) return json({ tags: [] });
 
 			return json({ tags: data.map((t) => t.name).filter(Boolean) });
 		} catch {
@@ -328,8 +320,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 						/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
 					);
 
-				if (!m)
-					throw new Error("Cannot parse submodule URL: " + subUrl);
+				if (!m) throw new Error("Cannot parse submodule URL: " + subUrl);
 				const [, subOwner, subRepo] = m;
 
 				const cacheKey = `${subOwner}/${subRepo}`;
@@ -339,12 +330,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 				const hasCachedRelease = !!releaseCache[releaseCacheKey];
 
 				try {
-					nmRelease = await getLatestNmRelease(
-						subOwner,
-						subRepo,
-						token,
-						true,
-					);
+					nmRelease = await getLatestNmRelease(subOwner, subRepo, token, true);
 				} catch {
 					apiAvailable = false;
 				}
@@ -377,11 +363,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 							true,
 						);
 						if (sha)
-							fs.writeFileSync(
-								path.join(dest, ".git-commit"),
-								sha,
-								"utf8",
-							);
+							fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
 					} catch {}
 				}
 
@@ -436,8 +418,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 
 			const results = await pLimit(
 				items.map(
-					(it) => () =>
-						checkUpdate(it.name, it.subUrl, token, !!force),
+					(it) => () => checkUpdate(it.name, it.subUrl, token, !!force),
 				),
 				6,
 			);
@@ -473,9 +454,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const { languagesDirectory } = getPaths();
 			const config = getConfig();
 			const langCode =
-				config?.programSettings?.language ||
-				getCurrentLangCode() ||
-				"en";
+				config?.programSettings?.language || getCurrentLangCode() || "en";
 
 			const langFile = path.join(languagesDirectory, `${langCode}.json`);
 			const enFile = path.join(languagesDirectory, "en.json");
@@ -483,10 +462,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const buf = readStatic(langFile) || readStatic(enFile);
 			if (!buf) return json({ error: "Language file not found" }, 404);
 
-			return text(
-				buf.toString("utf8"),
-				"application/json; charset=utf-8",
-			);
+			return text(buf.toString("utf8"), "application/json; charset=utf-8");
 		} catch (e) {
 			return json({ error: e.message }, 500);
 		}
@@ -495,8 +471,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 	if (method === "POST" && urlPath === "/api/open-url") {
 		try {
 			const { url } = JSON.parse(await getBody());
-			if (!url || !url.startsWith("https://"))
-				throw new Error("Invalid URL");
+			if (!url || !url.startsWith("https://")) throw new Error("Invalid URL");
 			await shell.openExternal(url);
 			return json({ ok: true });
 		} catch (e) {
@@ -506,8 +481,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 
 	if (method === "POST" && urlPath === "/api/reload") {
 		try {
-			const mainWin =
-				findMainWindow() || BrowserWindow.getAllWindows()[0];
+			const mainWin = findMainWindow() || BrowserWindow.getAllWindows()[0];
 
 			if (mainWin) mainWin.webContents.reload();
 
@@ -525,11 +499,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) return json({ exists: false });
-			const filePath = path.join(
-				addonsDirectory,
-				raw,
-				"handleEvents.json",
-			);
+			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
 
 			return json({ exists: fs.existsSync(filePath), path: filePath });
 		} catch (e) {
@@ -545,11 +515,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(
-				addonsDirectory,
-				raw,
-				"handleEvents.json",
-			);
+			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");
@@ -571,11 +537,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(
-				addonsDirectory,
-				raw,
-				"handleEvents.json",
-			);
+			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");
@@ -596,11 +558,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(
-				addonsDirectory,
-				raw,
-				"handleEvents.json",
-			);
+			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");

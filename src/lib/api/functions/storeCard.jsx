@@ -1,15 +1,7 @@
 function createStoreButton(React) {
 	return function StoreButton(props) {
-		const {
-			variant,
-			icon,
-			label,
-			title,
-			disabled,
-			busy,
-			iconOnly,
-			onClick,
-		} = props;
+		const { variant, icon, label, title, disabled, busy, iconOnly, onClick } =
+			props;
 
 		const classes = ["btn"];
 		if (variant) classes.push("btn-" + variant);
@@ -89,8 +81,7 @@ function useHasSettings(React, item) {
 
 function createStoreCard(React, StoreButton) {
 	return function StoreCard(props) {
-		const { item, section, hasUpdate, onAction, onReadme, onSettings } =
-			props;
+		const { item, section, hasUpdate, onAction, onReadme, onSettings } = props;
 
 		const [logo, setLogo] = useCardLogo(React, item);
 		const [busy, setBusy] = React.useState("");
@@ -129,9 +120,7 @@ function createStoreCard(React, StoreButton) {
 				<StoreButton
 					key="update"
 					variant="primary"
-					label={
-						busy === "update" ? t("btnUpdating") : t("btnUpdate")
-					}
+					label={busy === "update" ? t("btnUpdating") : t("btnUpdate")}
 					busy={busy === "update"}
 					disabled={!!busy}
 					onClick={() => run("update")}
@@ -146,16 +135,10 @@ function createStoreCard(React, StoreButton) {
 					variant={item.enabled ? "on" : "off"}
 					iconOnly={compactToggle}
 					icon={
-						compactToggle
-							? item.enabled
-								? "disable"
-								: "enable"
-							: undefined
+						compactToggle ? (item.enabled ? "disable" : "enable") : undefined
 					}
 					label={item.enabled ? t("btnDisable") : t("btnEnable")}
-					title={
-						item.enabled ? t("tooltipDisable") : t("tooltipEnable")
-					}
+					title={item.enabled ? t("tooltipDisable") : t("tooltipEnable")}
 					busy={busy === "toggle"}
 					disabled={!!busy}
 					onClick={() => run("toggle")}
@@ -166,11 +149,7 @@ function createStoreCard(React, StoreButton) {
 				<StoreButton
 					key="download"
 					variant="primary"
-					label={
-						busy === "download"
-							? t("btnDownloading")
-							: t("btnDownload")
-					}
+					label={busy === "download" ? t("btnDownloading") : t("btnDownload")}
 					busy={busy === "download"}
 					disabled={!!busy}
 					onClick={() => run("download")}
@@ -236,9 +215,7 @@ function createStoreCard(React, StoreButton) {
 				className="nmc-sub"
 				onClick={(event) => {
 					event.preventDefault();
-					openUrlExternal(
-						"https://github.com/" + repo.owner + "/" + repo.repo,
-					);
+					openUrlExternal("https://github.com/" + repo.owner + "/" + repo.repo);
 				}}
 			>
 				{repo.owner + " / " + repo.repo}

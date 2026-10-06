@@ -33,8 +33,7 @@
 				bar.appendChild(label);
 
 				(function trySetVersion() {
-					const ver =
-						window.nextmusicApi?.getCurrentYandexMusicVersion();
+					const ver = window.nextmusicApi?.getCurrentYandexMusicVersion();
 					if (ver) {
 						label.textContent = `Yandex Music ${ver}`;
 					} else {

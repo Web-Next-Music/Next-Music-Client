@@ -169,8 +169,7 @@ function searchFiber(fiber, cls, depth = 0) {
 		let state = fiber.memoizedState;
 
 		while (state) {
-			if (state.memoizedState instanceof cls)
-				found.push(state.memoizedState);
+			if (state.memoizedState instanceof cls) found.push(state.memoizedState);
 			state = state.next;
 		}
 
@@ -216,11 +215,9 @@ function readActionTemplate(container, ownId) {
 		});
 		if (!button) continue;
 
-		const icon = getComponentFromElement(
-			btn.querySelector("svg"),
-			isIconType,
-			{ maxDepth: 6 },
-		);
+		const icon = getComponentFromElement(btn.querySelector("svg"), isIconType, {
+			maxDepth: 6,
+		});
 		if (!icon) continue;
 
 		const buttonProps = { ...button.props };

@@ -12,8 +12,7 @@ export function markdownContext(url) {
 export function resolveRelativeUrls(html, base) {
 	if (!base) return html;
 	return html.replace(/\b(src|href)="([^"]*)"/gi, (full, attr, value) => {
-		if (!value || /^(https?:|data:|mailto:|#|\/\/)/i.test(value))
-			return full;
+		if (!value || /^(https?:|data:|mailto:|#|\/\/)/i.test(value)) return full;
 		try {
 			return `${attr}="${new URL(value, base).href}"`;
 		} catch {

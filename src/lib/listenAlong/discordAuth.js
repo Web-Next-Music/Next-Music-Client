@@ -253,8 +253,9 @@ function getAuthResult(codeChallenge, codeVerifier) {
 			try {
 				const tokens = await exchangeCodeForToken(code, codeVerifier);
 
-				const { username, displayName, avatarUrl } =
-					await fetchDiscordProfile(tokens.accessToken);
+				const { username, displayName, avatarUrl } = await fetchDiscordProfile(
+					tokens.accessToken,
+				);
 
 				res.writeHead(200, {
 					"Content-Type": "text/html; charset=utf-8",
@@ -279,8 +280,7 @@ function getAuthResult(codeChallenge, codeVerifier) {
 					});
 				}
 			} catch (err) {
-				const message =
-					err instanceof Error ? err.message : String(err);
+				const message = err instanceof Error ? err.message : String(err);
 
 				res.writeHead(200, {
 					"Content-Type": "text/html; charset=utf-8",

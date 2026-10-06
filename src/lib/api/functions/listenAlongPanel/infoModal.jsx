@@ -71,11 +71,7 @@ function LaInfoModal(props) {
 	const hasRange = !!(state.minClientVersion || state.maxClientVersion);
 	const rangeTags = hasRange
 		? (tags || []).filter((tag) =>
-				laVersionInRange(
-					tag,
-					state.minClientVersion,
-					state.maxClientVersion,
-				),
+				laVersionInRange(tag, state.minClientVersion, state.maxClientVersion),
 			)
 		: [];
 
@@ -91,10 +87,7 @@ function LaInfoModal(props) {
 	} else if (rangeTags.length === 0) {
 		supportedClients = (
 			<span className="nmc-la-info-modal-empty">
-				{laVersionRangeText(
-					state.minClientVersion,
-					state.maxClientVersion,
-				)}
+				{laVersionRangeText(state.minClientVersion, state.maxClientVersion)}
 			</span>
 		);
 	} else {
@@ -138,9 +131,7 @@ function LaInfoModal(props) {
 				<hr className="nmc-la-info-modal-divider" />
 				<div className="nmc-la-info-modal-meta">
 					<div className="nmc-la-info-modal-meta-row">
-						<span className="nmc-la-info-modal-meta-label">
-							Version
-						</span>
+						<span className="nmc-la-info-modal-meta-label">Version</span>
 						<span>{state.serverVersion || "—"}</span>
 					</div>
 					<div className="nmc-la-info-modal-meta-row">

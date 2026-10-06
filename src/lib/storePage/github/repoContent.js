@@ -238,14 +238,7 @@ export async function getFolderMeta(
 export async function getCatalog(owner, repo, section, token, force = false) {
 	const rootPaths = await repoTree(owner, repo, token, force);
 
-	const items = await getSection(
-		owner,
-		repo,
-		section,
-		token,
-		force,
-		rootPaths,
-	);
+	const items = await getSection(owner, repo, section, token, force, rootPaths);
 
 	return pLimit(
 		items.map((f) => async () => ({

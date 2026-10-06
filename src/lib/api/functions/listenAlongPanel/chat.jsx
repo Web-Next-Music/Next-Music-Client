@@ -44,10 +44,7 @@ function LaPanelChat(props) {
 
 	return (
 		<div className="nmc-la-panel-col nmc-la-panel-chat">
-			<div
-				className="nmc-la-panel-chat-list nmc-la-panel-scroll"
-				ref={listRef}
-			>
+			<div className="nmc-la-panel-chat-list nmc-la-panel-scroll" ref={listRef}>
 				{messages.length ? (
 					messages.map((m, i) => {
 						const author = avatarsById.get(m.discordUserId) ?? {
@@ -64,10 +61,7 @@ function LaPanelChat(props) {
 						};
 						const link = parseTrackLink(m.text);
 						return (
-							<div
-								key={`${m.ts}-${i}`}
-								className="nmc-la-panel-chat-msg"
-							>
+							<div key={`${m.ts}-${i}`} className="nmc-la-panel-chat-msg">
 								{laAvatarEl(
 									h,
 									{ ...author, hostColor: state.hostColor },
@@ -78,20 +72,14 @@ function LaPanelChat(props) {
 										<span
 											className="who"
 											style={
-												author.isHost
-													? { color: state.hostColor }
-													: undefined
+												author.isHost ? { color: state.hostColor } : undefined
 											}
 										>
 											{author.name}
 										</span>
-										<span className="time">
-											{formatChatTime(m.ts)}
-										</span>
+										<span className="time">{formatChatTime(m.ts)}</span>
 									</div>
-									<div className="nmc-la-panel-chat-msg-text">
-										{m.text}
-									</div>
+									<div className="nmc-la-panel-chat-msg-text">{m.text}</div>
 									{link ? (
 										<LaTrackWidget
 											React={React}
@@ -106,9 +94,7 @@ function LaPanelChat(props) {
 						);
 					})
 				) : (
-					<div className="nmc-la-panel-chat-empty">
-						No messages yet
-					</div>
+					<div className="nmc-la-panel-chat-empty">No messages yet</div>
 				)}
 			</div>
 			<div className="nmc-la-panel-chat-input-row">

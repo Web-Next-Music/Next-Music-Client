@@ -51,10 +51,7 @@ function collectChangedPaths(prevValue, nextValue, basePath = "") {
 		return basePath ? [basePath] : [];
 	}
 
-	const keys = new Set([
-		...Object.keys(prevValue),
-		...Object.keys(nextValue),
-	]);
+	const keys = new Set([...Object.keys(prevValue), ...Object.keys(nextValue)]);
 	const changedPaths = [];
 
 	for (const key of keys) {
@@ -79,10 +76,7 @@ export function configChangeNeedsRestart(
 	nextConfig,
 	builtinExperimentNames = [],
 ) {
-	const changedPaths = collectChangedPaths(
-		prevConfig ?? {},
-		nextConfig ?? {},
-	);
+	const changedPaths = collectChangedPaths(prevConfig ?? {}, nextConfig ?? {});
 	const builtinSet = new Set(builtinExperimentNames);
 
 	let needRestart = false;

@@ -94,10 +94,7 @@ function rpcDataFromUrl(url) {
 	}
 
 	if (parsed.protocol !== "nextmusic:") return null;
-	if (
-		parsed.hostname !== "rpc" &&
-		parsed.pathname.replace(/\//g, "") !== "rpc"
-	)
+	if (parsed.hostname !== "rpc" && parsed.pathname.replace(/\//g, "") !== "rpc")
 		return null;
 
 	const data = parsed.searchParams.get("data");

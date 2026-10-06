@@ -56,9 +56,7 @@ function isNotifyFn(fn) {
 	const src = fnBody(fn);
 	const keys = firstDestructureKeys(src);
 	return (
-		/\bmessage\b/.test(keys) &&
-		/\boptions\b/.test(keys) &&
-		/toast/.test(src)
+		/\bmessage\b/.test(keys) && /\boptions\b/.test(keys) && /toast/.test(src)
 	);
 }
 
@@ -136,10 +134,7 @@ function findMods(require) {
 				if (!errorToastComponent && isErrorToastComponent(fn)) {
 					errorToastComponent = fn;
 				}
-				if (
-					!notificationCopyComponent &&
-					isNotificationCopyComponent(fn)
-				) {
+				if (!notificationCopyComponent && isNotificationCopyComponent(fn)) {
 					notificationCopyComponent = fn;
 				}
 			}
@@ -281,9 +276,7 @@ function dismissToast(notificationId) {
 		(require) => {
 			const { notificationMod } = findMods(require);
 			if (!notificationMod) {
-				console.warn(
-					"[nextmusicApi] notificationMod not found for dismiss",
-				);
+				console.warn("[nextmusicApi] notificationMod not found for dismiss");
 				return;
 			}
 			notificationMod.dismiss({ notificationId, forceClose: true });

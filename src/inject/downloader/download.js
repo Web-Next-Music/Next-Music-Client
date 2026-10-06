@@ -45,11 +45,7 @@ async function downloadTrack(track, onProgress) {
 		const cover = await coverPromise;
 		const id3Tag = await buildId3Tag(track, cover);
 		let audioStart = 0;
-		if (
-			audioBuf[0] === 0x49 &&
-			audioBuf[1] === 0x44 &&
-			audioBuf[2] === 0x33
-		) {
+		if (audioBuf[0] === 0x49 && audioBuf[1] === 0x44 && audioBuf[2] === 0x33) {
 			const existingSize =
 				((audioBuf[6] & 0x7f) << 21) |
 				((audioBuf[7] & 0x7f) << 14) |

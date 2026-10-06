@@ -193,9 +193,7 @@ export function renderExperimentsPanel(panel) {
 	searchInp.addEventListener("input", () => {
 		const q = searchInp.value.toLowerCase().trim();
 		rowsWrap.querySelectorAll(".experiments-row").forEach((row) => {
-			const n = row
-				.querySelector(".experiments-name")
-				.value.toLowerCase();
+			const n = row.querySelector(".experiments-name").value.toLowerCase();
 			row.classList.toggle("hidden", q !== "" && !n.includes(q));
 		});
 	});

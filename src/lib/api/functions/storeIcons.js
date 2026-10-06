@@ -19,9 +19,7 @@ function storeIcon(React, name, props) {
 	if (!markup) return null;
 	return React.createElement("span", {
 		...props,
-		className: props?.className
-			? "nmc-icon " + props.className
-			: "nmc-icon",
+		className: props?.className ? "nmc-icon " + props.className : "nmc-icon",
 		dangerouslySetInnerHTML: { __html: markup },
 	});
 }

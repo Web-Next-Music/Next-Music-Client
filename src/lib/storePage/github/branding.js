@@ -24,9 +24,7 @@ export function rawUrl(owner, repo, filePath) {
 
 export function pickImgPath(paths) {
 	const named = paths.find(
-		(p) =>
-			/^(image|icon|logo|preview)\./i.test(p.split("/").pop()) &&
-			isImg(p),
+		(p) => /^(image|icon|logo|preview)\./i.test(p.split("/").pop()) && isImg(p),
 	);
 
 	return named || paths.find((p) => isImg(p)) || null;

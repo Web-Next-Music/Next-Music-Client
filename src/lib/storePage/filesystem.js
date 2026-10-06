@@ -36,9 +36,8 @@ export function invalidateAddonsDir() {
 export function findRawEntry(name) {
 	const needle = name.toLowerCase();
 	return (
-		readAddonsDir().find(
-			(n) => n.replace(/^!/, "").toLowerCase() === needle,
-		) || null
+		readAddonsDir().find((n) => n.replace(/^!/, "").toLowerCase() === needle) ||
+		null
 	);
 }
 
@@ -47,8 +46,7 @@ export function getLocalReleaseTag(addonName) {
 		const raw = findRawEntry(addonName) || addonName;
 
 		const tagFile = path.join(addonsDirectory, raw, ".git-release");
-		if (fs.existsSync(tagFile))
-			return fs.readFileSync(tagFile, "utf8").trim();
+		if (fs.existsSync(tagFile)) return fs.readFileSync(tagFile, "utf8").trim();
 
 		return null;
 	} catch {
@@ -82,15 +80,9 @@ export function getLocalCommitHash(addonName) {
 			...refPath.split("/"),
 		);
 
-		if (fs.existsSync(refFile))
-			return fs.readFileSync(refFile, "utf8").trim();
+		if (fs.existsSync(refFile)) return fs.readFileSync(refFile, "utf8").trim();
 
-		const packedRefs = path.join(
-			addonsDirectory,
-			raw,
-			".git",
-			"packed-refs",
-		);
+		const packedRefs = path.join(addonsDirectory, raw, ".git", "packed-refs");
 		if (fs.existsSync(packedRefs)) {
 			const lines = fs.readFileSync(packedRefs, "utf8").split("\n");
 			for (const line of lines) {
@@ -163,15 +155,12 @@ export function getCustomEntries(knownNames) {
 
 				if (isDir) {
 					const files = fs.readdirSync(fullPath);
-					const isImgFile = (f) =>
-						/\.(png|jpe?g|gif|webp|svg)$/i.test(f);
+					const isImgFile = (f) => /\.(png|jpe?g|gif|webp|svg)$/i.test(f);
 
 					function pickImgFile(list) {
 						return (
 							list.find(
-								(f) =>
-									/^(image|icon|logo|preview)\./i.test(f) &&
-									isImgFile(f),
+								(f) => /^(image|icon|logo|preview)\./i.test(f) && isImgFile(f),
 							) ||
 							list.find((f) => isImgFile(f)) ||
 							null
@@ -186,9 +175,7 @@ export function getCustomEntries(knownNames) {
 								try {
 									return (
 										/^branding$/i.test(item) &&
-										fs
-											.statSync(path.join(dirPath, item))
-											.isDirectory()
+										fs.statSync(path.join(dirPath, item)).isDirectory()
 									);
 								} catch {
 									return false;
@@ -201,10 +188,7 @@ export function getCustomEntries(knownNames) {
 								try {
 									const itemPath = path.join(dirPath, item);
 									if (fs.statSync(itemPath).isDirectory()) {
-										const r = findBrandingDir(
-											itemPath,
-											depth + 1,
-										);
+										const r = findBrandingDir(itemPath, depth + 1);
 										if (r) return r;
 									}
 								} catch {}
@@ -223,10 +207,7 @@ export function getCustomEntries(knownNames) {
 								try {
 									const itemPath = path.join(dirPath, item);
 									if (fs.statSync(itemPath).isDirectory()) {
-										const r = findLogoInDir(
-											itemPath,
-											depth + 1,
-										);
+										const r = findLogoInDir(itemPath, depth + 1);
 										if (r) return r;
 									}
 								} catch {}
@@ -255,15 +236,10 @@ export function getCustomEntries(knownNames) {
 						for (const sub of files) {
 							try {
 								const subPath = path.join(fullPath, sub);
-								if (!fs.statSync(subPath).isDirectory())
-									continue;
+								if (!fs.statSync(subPath).isDirectory()) continue;
 
 								const subFiles = fs.readdirSync(subPath);
-								if (
-									subFiles.some((f) =>
-										/\.(css|js|json)$/i.test(f),
-									)
-								) {
+								if (subFiles.some((f) => /\.(css|js|json)$/i.test(f))) {
 									const found = pickImgFile(subFiles);
 									if (found) {
 										logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;

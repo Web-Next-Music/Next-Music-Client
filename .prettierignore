@@ -1,0 +1,9 @@
+node_modules/
+dist/
+pnpm-lock.yaml
+.openclaude/
+.claude/
+.codex/
+src/inject/downloader/button.js
+src/inject/downloader/utils.js
+src/inject/visualizer/bootstrap.js

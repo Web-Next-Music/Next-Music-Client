@@ -195,11 +195,7 @@ function handleMessage(msg) {
 			break;
 
 		case "client_joined":
-			upsertAvatar(
-				msg.discordUserId,
-				msg.avatarUrl || null,
-				msg.name || null,
-			);
+			upsertAvatar(msg.discordUserId, msg.avatarUrl || null, msg.name || null);
 			break;
 
 		case "client_left":
@@ -207,11 +203,7 @@ function handleMessage(msg) {
 			break;
 
 		case "avatar":
-			upsertAvatar(
-				msg.discordUserId,
-				msg.avatarUrl || null,
-				msg.name || null,
-			);
+			upsertAvatar(msg.discordUserId, msg.avatarUrl || null, msg.name || null);
 			break;
 
 		case "error":

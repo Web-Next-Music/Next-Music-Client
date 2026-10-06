@@ -59,8 +59,7 @@ function laAvatarEl(h, a, size) {
 						justifyContent: "center",
 						fontSize: "11px",
 						fontWeight: 600,
-						background:
-							"var(--ym-controls-color-secondary-default-enabled)",
+						background: "var(--ym-controls-color-secondary-default-enabled)",
 					},
 				},
 				(a.name || "?")[0].toUpperCase(),
@@ -142,16 +141,10 @@ function LaPanelRoster(props) {
 					<div className="nmc-la-panel-roster-divider" />
 				) : null}
 				<div className={`nmc-la-panel-user${a.isHost ? " host" : ""}`}>
-					{laAvatarEl(
-						h,
-						{ ...a, hostColor: state.hostColor },
-						"28px",
-					)}
+					{laAvatarEl(h, { ...a, hostColor: state.hostColor }, "28px")}
 					<span
 						className="nmc-la-panel-user-name"
-						style={
-							a.isHost ? { color: state.hostColor } : undefined
-						}
+						style={a.isHost ? { color: state.hostColor } : undefined}
 					>
 						{a.name}
 					</span>
@@ -164,9 +157,7 @@ function LaPanelRoster(props) {
 						title="More"
 						onClick={(event) => {
 							event.stopPropagation();
-							setOpenMenuFor((cur) =>
-								cur === a.id ? null : a.id,
-							);
+							setOpenMenuFor((cur) => (cur === a.id ? null : a.id));
 						}}
 					>
 						{LaMoreIcon(h)}
@@ -195,9 +186,7 @@ function LaPanelRoster(props) {
 				{LaPeopleIcon(h)}
 				{avatars.length}
 			</div>
-			<div className="nmc-la-panel-roster-list nmc-la-panel-scroll">
-				{rows}
-			</div>
+			<div className="nmc-la-panel-roster-list nmc-la-panel-scroll">{rows}</div>
 		</div>
 	);
 }

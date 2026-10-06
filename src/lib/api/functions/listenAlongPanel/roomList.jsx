@@ -41,11 +41,7 @@ function LaPanelRoomList(props) {
 			<div className="nmc-la-panel-room-list-title">Join a room</div>
 			{rooms.map((room) => (
 				<div key={room.roomId} className="nmc-la-panel-room-list-item">
-					<LaRoomListCover
-						key="cover"
-						React={React}
-						trackId={room.trackId}
-					/>
+					<LaRoomListCover key="cover" React={React} trackId={room.trackId} />
 					<span className="nmc-la-panel-room-list-item-name">
 						{room.roomName || room.roomId}
 					</span>
@@ -207,11 +203,7 @@ function LaPanelSidebar(props) {
 		<div className="nmc-la-panel-col nmc-la-panel-sidebar">
 			<div
 				className="nmc-la-panel-sidebar-status"
-				title={
-					state.connected
-						? "Disconnect from server"
-						: "Connect to server"
-				}
+				title={state.connected ? "Disconnect from server" : "Connect to server"}
 				onClick={() => handlers.onToggleConnect?.()}
 			>
 				{state.serverCover ? (
@@ -231,9 +223,7 @@ function LaPanelSidebar(props) {
 						style={{ background: state.color }}
 					/>
 				)}
-				<span className="nmc-la-panel-sidebar-status-text">
-					{state.text}
-				</span>
+				<span className="nmc-la-panel-sidebar-status-text">{state.text}</span>
 				{state.serverVersion ? (
 					<button
 						type="button"

@@ -45,11 +45,7 @@ async function waitForExperimentsApplied(webContents) {
 
 	while (Date.now() < deadline) {
 		try {
-			if (
-				await webContents.executeJavaScript(
-					"!!window.__nmcExperimentsDone",
-				)
-			)
+			if (await webContents.executeJavaScript("!!window.__nmcExperimentsDone"))
 				return;
 		} catch {}
 		await new Promise((r) => setTimeout(r, EXPERIMENTS_POLL_MS));
@@ -96,9 +92,7 @@ function dedupeAddonScripts(scripts) {
 	}
 
 	return [...best.values()].sort((a, b) =>
-		relativeAddonPath(a.filePath).localeCompare(
-			relativeAddonPath(b.filePath),
-		),
+		relativeAddonPath(a.filePath).localeCompare(relativeAddonPath(b.filePath)),
 	);
 }
 
@@ -121,9 +115,7 @@ async function applyAddons(mainWindow) {
 	}
 
 	if (!mainWindow) {
-		console.error(
-			"[Addons] mainWindow is not provided - aborting applyAddons",
-		);
+		console.error("[Addons] mainWindow is not provided - aborting applyAddons");
 		return;
 	}
 
@@ -197,10 +189,7 @@ async function applyAddons(mainWindow) {
 			try {
 				content = await fetchWithTimeout(url);
 			} catch (err) {
-				console.error(
-					`[Addons] Failed to fetch '${url}':`,
-					err.message,
-				);
+				console.error(`[Addons] Failed to fetch '${url}':`, err.message);
 				return;
 			}
 
@@ -232,9 +221,7 @@ async function applyAddons(mainWindow) {
 					url,
 				);
 			} else {
-				console.warn(
-					`[Addons] Unknown file type for online addon: ${url}`,
-				);
+				console.warn(`[Addons] Unknown file type for online addon: ${url}`);
 			}
 		}),
 	);

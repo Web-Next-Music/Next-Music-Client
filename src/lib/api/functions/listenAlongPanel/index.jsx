@@ -41,8 +41,7 @@ function LaPanel() {
 			<div
 				className="nmc-la-panel-bg"
 				onClick={(event) => {
-					if (event.target === event.currentTarget)
-						handlers.onClose?.();
+					if (event.target === event.currentTarget) handlers.onClose?.();
 				}}
 			>
 				<div
@@ -77,11 +76,7 @@ function LaPanel() {
 								handlers={sidebarHandlers}
 							/>
 							<div className="nmc-la-panel-col nmc-la-panel-chat-outer">
-								<LaNowPlayingBar
-									key="nowplaying"
-									React={React}
-									state={state}
-								/>
+								<LaNowPlayingBar key="nowplaying" React={React} state={state} />
 								<LaPanelChat
 									key="chat"
 									React={React}

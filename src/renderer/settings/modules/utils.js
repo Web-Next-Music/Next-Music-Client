@@ -1,7 +1,5 @@
 export function getPath(obj, path) {
-	return path
-		.split(".")
-		.reduce((o, k) => (o != null ? o[k] : undefined), obj);
+	return path.split(".").reduce((o, k) => (o != null ? o[k] : undefined), obj);
 }
 
 export function setPath(obj, path, value) {
@@ -23,9 +21,7 @@ export function keepSelectValue(sel) {
 			const item = e
 				.composedPath()
 				.find(
-					(el) =>
-						el?.tagName &&
-						el.tagName.toLowerCase() === "mdui-menu-item",
+					(el) => el?.tagName && el.tagName.toLowerCase() === "mdui-menu-item",
 				);
 			if (!item || !item.value || item.value !== sel.value) return;
 			e.stopImmediatePropagation();

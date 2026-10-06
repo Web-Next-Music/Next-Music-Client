@@ -59,33 +59,21 @@ function replaceDefinesPlugin() {
 						/__ENCRYPTION_KEY__/g,
 						JSON.stringify(ENCRYPTION_KEY_VALUE),
 					);
-					code = code.replace(
-						/__APP_VERSION__/g,
-						JSON.stringify(APP_VERSION),
-					);
+					code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
 					return code;
 				}
 			}
 		},
 		transform(code, id) {
-			if (
-				id.includes("src/inject/") &&
-				code.includes("__ENCRYPTION_KEY__")
-			) {
+			if (id.includes("src/inject/") && code.includes("__ENCRYPTION_KEY__")) {
 				code = code.replace(
 					/__ENCRYPTION_KEY__/g,
 					JSON.stringify(ENCRYPTION_KEY_VALUE),
 				);
 				return { code };
 			}
-			if (
-				id.includes("src/inject/") &&
-				code.includes("__APP_VERSION__")
-			) {
-				code = code.replace(
-					/__APP_VERSION__/g,
-					JSON.stringify(APP_VERSION),
-				);
+			if (id.includes("src/inject/") && code.includes("__APP_VERSION__")) {
+				code = code.replace(/__APP_VERSION__/g, JSON.stringify(APP_VERSION));
 				return { code };
 			}
 		},
@@ -133,52 +121,16 @@ function copyListenAlongCallback() {
 		closeBundle() {
 			const files = [
 				[
-					join(
-						"src",
-						"lib",
-						"listenAlong",
-						"callback",
-						"callback.html",
-					),
-					join(
-						"dist",
-						"lib",
-						"listenAlong",
-						"callback",
-						"callback.html",
-					),
+					join("src", "lib", "listenAlong", "callback", "callback.html"),
+					join("dist", "lib", "listenAlong", "callback", "callback.html"),
 				],
 				[
-					join(
-						"src",
-						"lib",
-						"listenAlong",
-						"callback",
-						"callback.css",
-					),
-					join(
-						"dist",
-						"lib",
-						"listenAlong",
-						"callback",
-						"callback.css",
-					),
+					join("src", "lib", "listenAlong", "callback", "callback.css"),
+					join("dist", "lib", "listenAlong", "callback", "callback.css"),
 				],
 				[
-					join(
-						"src",
-						"assets",
-						"listen-along",
-						"callback",
-						"bg.webp",
-					),
-					join(
-						"dist",
-						"assets",
-						"listen-along",
-						"callback",
-						"bg.webp",
-					),
+					join("src", "assets", "listen-along", "callback", "bg.webp"),
+					join("dist", "assets", "listen-along", "callback", "bg.webp"),
 				],
 			];
 			for (const [from, to] of files) {

@@ -17,10 +17,7 @@ export function copyBundledLanguages(languagesDirectory) {
 	}
 
 	if (!fs.existsSync(BUNDLED_LANG_DIR)) {
-		console.warn(
-			"[Lang] Bundled lang directory not found:",
-			BUNDLED_LANG_DIR,
-		);
+		console.warn("[Lang] Bundled lang directory not found:", BUNDLED_LANG_DIR);
 		return;
 	}
 
@@ -41,10 +38,7 @@ export function copyBundledLanguages(languagesDirectory) {
 
 			if (!srcContent.equals(destContent)) {
 				fs.copyFileSync(src, dest);
-				console.log(
-					"[Lang] Updated language file (content mismatch):",
-					file,
-				);
+				console.log("[Lang] Updated language file (content mismatch):", file);
 			}
 		}
 	}
@@ -71,11 +65,7 @@ export function loadLanguage(languagesDirectory, langCode) {
 			console.log("[Lang] Loaded language:", langCode);
 			return true;
 		} catch (err) {
-			console.error(
-				"[Lang] Failed to parse language file:",
-				filePath,
-				err,
-			);
+			console.error("[Lang] Failed to parse language file:", filePath, err);
 		}
 	}
 

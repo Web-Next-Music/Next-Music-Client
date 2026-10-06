@@ -75,10 +75,7 @@ function createNavItem(React, list, initialTemplate, label, onOpen) {
 		const [template, setTemplate] = React.useState(initialTemplate);
 		const [selected, setSelected] = React.useState(isStoreRoute());
 
-		React.useEffect(
-			() => onRouteChange(() => setSelected(isStoreRoute())),
-			[],
-		);
+		React.useEffect(() => onRouteChange(() => setSelected(isStoreRoute())), []);
 
 		React.useEffect(() => {
 			const sourceLi = initialTemplate.sourceLi;

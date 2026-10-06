@@ -11,9 +11,7 @@ import { injectJsText } from "./runtime/injectJsText.js";
 
 function readComposite(folder, parts) {
 	return parts
-		.map((part) =>
-			fs.readFileSync(path.join(injectDir, folder, part), "utf8"),
-		)
+		.map((part) => fs.readFileSync(path.join(injectDir, folder, part), "utf8"))
 		.join("\n");
 }
 
@@ -60,9 +58,7 @@ function buildItemFragment(item, config) {
 
 	if (type === "css-scoped") {
 		const rawCss = fs.readFileSync(fullPath, "utf8");
-		const cssText = item.transform
-			? item.transform(rawCss, config)
-			: rawCss;
+		const cssText = item.transform ? item.transform(rawCss, config) : rawCss;
 		injectScript = serializeInvocation(
 			injectScopedCssText,
 			cssText,
@@ -72,11 +68,7 @@ function buildItemFragment(item, config) {
 	} else if (type === "css") {
 		injectScript = serializeInvocation(injectCssFile, fullPath);
 	} else if (type === "js") {
-		injectScript = serializeInvocation(
-			injectJsFile,
-			fullPath,
-			ENCRYPTION_KEY,
-		);
+		injectScript = serializeInvocation(injectJsFile, fullPath, ENCRYPTION_KEY);
 	} else {
 		return null;
 	}
@@ -88,9 +80,7 @@ function buildItemFragment(item, config) {
 }
 
 export function buildFragments(config, appVersion) {
-	const fragments = [
-		`window.__APP_VERSION__ = ${JSON.stringify(appVersion)};`,
-	];
+	const fragments = [`window.__APP_VERSION__ = ${JSON.stringify(appVersion)};`];
 	const injected = [];
 
 	for (const item of injectList) {

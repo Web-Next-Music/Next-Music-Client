@@ -62,10 +62,7 @@ function watchEntityForCustomTrack(entity, trackId) {
 }
 
 function updateCustomTrackDuration(trackId, durationMs) {
-	const normalizedDurationMs = Math.max(
-		0,
-		Math.round(Number(durationMs) || 0),
-	);
+	const normalizedDurationMs = Math.max(0, Math.round(Number(durationMs) || 0));
 	if (!normalizedDurationMs) return;
 
 	const customMeta = _customTrackMetaMap.get(String(trackId));
@@ -112,10 +109,7 @@ function playUgcTrack(payload) {
 
 function playCustomTrack(trackData) {
 	const id = String(trackData.id);
-	const durationMs = Math.max(
-		0,
-		Math.round(Number(trackData.durationMs) || 0),
-	);
+	const durationMs = Math.max(0, Math.round(Number(trackData.durationMs) || 0));
 
 	_customTrackMap.set(id, {
 		url: trackData.url,

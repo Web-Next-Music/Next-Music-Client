@@ -16,8 +16,7 @@ export function detectInstallType() {
 
 	if (hasCommand("pacman")) return "pacman";
 	if (hasCommand("dpkg") || hasCommand("apt-get")) return "deb";
-	if (hasCommand("rpm") || hasCommand("dnf") || hasCommand("yum"))
-		return "rpm";
+	if (hasCommand("rpm") || hasCommand("dnf") || hasCommand("yum")) return "rpm";
 
 	return "unknown";
 }

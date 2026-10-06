@@ -1,4 +1,4 @@
-(async () => {
+async () => {
 	const LA = window.nmcListenAlong;
 
 	if (!LA) {
@@ -67,4 +67,4 @@
 	const ugcByTrackId = new Map();
 	let lastSentQueue = null;
 	let lastAppliedQueue = null;
-
+};

@@ -27,9 +27,7 @@ function isPlaybackControllerLike(obj) {
 // only place that knows which one is currently in charge.
 function findPlaybackController() {
 	const root = document.getElementById("__next") || document.body;
-	const fiberKey = Object.keys(root).find((k) =>
-		k.startsWith("__reactFiber"),
-	);
+	const fiberKey = Object.keys(root).find((k) => k.startsWith("__reactFiber"));
 	if (!fiberKey) return null;
 
 	const visited = new Set();
@@ -90,9 +88,7 @@ function refreshPlayers() {
 	}
 
 	const root = document.getElementById("__next") || document.body;
-	const fiberKey = Object.keys(root).find((k) =>
-		k.startsWith("__reactFiber"),
-	);
+	const fiberKey = Object.keys(root).find((k) => k.startsWith("__reactFiber"));
 	if (!fiberKey) return [];
 
 	const found = [];
@@ -102,8 +98,7 @@ function refreshPlayers() {
 		if (isPlayerLike(fiber.stateNode)) found.push(fiber.stateNode);
 		let state = fiber.memoizedState;
 		while (state) {
-			if (isPlayerLike(state.memoizedState))
-				found.push(state.memoizedState);
+			if (isPlayerLike(state.memoizedState)) found.push(state.memoizedState);
 			state = state.next;
 		}
 		function searchObj(obj, visited = new Set()) {
@@ -160,9 +155,7 @@ function getActivePlayer() {
 			(p) => p.playbackState?.playerState?.status?.value === "playing",
 		) ??
 		players.find(
-			(p) =>
-				(p.playbackState?.playerState?.progress?.value?.position ?? 0) >
-				0,
+			(p) => (p.playbackState?.playerState?.progress?.value?.position ?? 0) > 0,
 		) ??
 		getMainPlayer()
 	);
@@ -395,10 +388,7 @@ function applyCustomTrackToQueue(id, queue) {
 	const entityList = queue.playerQueue.queueState.entityList.value;
 	for (let i = 0; i < entityList.length; i++) {
 		const ent = entityList[i]?.entity;
-		if (
-			ent &&
-			(ent.entityData?.meta?.id === id || ent._customTrackId === id)
-		) {
+		if (ent && (ent.entityData?.meta?.id === id || ent._customTrackId === id)) {
 			watchEntityForCustomTrack(ent, id);
 			ent._customTrackId = id;
 			return i;
@@ -473,10 +463,7 @@ function playTrackById(trackId) {
 				player.setEntityByIndex(idx);
 				player.play();
 			} else {
-				console.warn(
-					"[nextmusicApi] Track not found in queue:",
-					trackId,
-				);
+				console.warn("[nextmusicApi] Track not found in queue:", trackId);
 			}
 		} catch (err) {
 			console.warn(
@@ -606,8 +593,7 @@ function applyIncomingQueue(entries, currentIndex) {
 
 		if (currentId != null) {
 			const newIdx = newList.findIndex(
-				(entity) =>
-					String(entity?.entity?.entityData?.meta?.id) === currentId,
+				(entity) => String(entity?.entity?.entityData?.meta?.id) === currentId,
 			);
 			if (newIdx !== -1) pq.queueState.index.value = newIdx;
 		}

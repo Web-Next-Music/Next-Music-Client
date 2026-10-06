@@ -50,10 +50,7 @@ function loadFilesFromDirectory(directory, extension, callback) {
 				if (info.isDirectory) {
 					if (isIgnoredDirectory(entry.name)) continue;
 
-					if (
-						directory === addonsDirectory &&
-						!ADDON_DIRS.has(entry.name)
-					) {
+					if (directory === addonsDirectory && !ADDON_DIRS.has(entry.name)) {
 						ADDON_DIRS.set(entry.name, fullPath);
 						console.log(
 							`[Assets] Pre-registered addon: ${entry.name} → ${fullPath}`,
@@ -72,9 +69,7 @@ function loadFilesFromDirectory(directory, extension, callback) {
 						continue;
 					}
 
-					pending.push(
-						loadFilesFromDirectory(fullPath, extension, callback),
-					);
+					pending.push(loadFilesFromDirectory(fullPath, extension, callback));
 					continue;
 				}
 

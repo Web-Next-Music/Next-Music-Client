@@ -28,9 +28,7 @@ function getShareableTrack() {
 		if (track.artistNames?.[0]) ugc.a = track.artistNames[0];
 		if (track.coverUrl) ugc.c = track.coverUrl;
 
-		const trackId = id.startsWith(UGC_PREFIX)
-			? id
-			: UGC_PREFIX + fnv1a(url);
+		const trackId = id.startsWith(UGC_PREFIX) ? id : UGC_PREFIX + fnv1a(url);
 		ugcByTrackId.set(trackId, ugc);
 
 		return { trackId, ugc };

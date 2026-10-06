@@ -34,8 +34,7 @@ function fetchLinkMeta(link) {
 	const promise = fetch(url)
 		.then((res) => (res.ok ? res.json() : null))
 		.then((json) => {
-			const data =
-				link.type === "track" ? json?.result?.[0] : json?.result;
+			const data = link.type === "track" ? json?.result?.[0] : json?.result;
 			if (!data) return null;
 
 			if (link.type === "track") {
@@ -140,8 +139,7 @@ function LaNowPlayingBar(props) {
 
 	if (!trackId || resolvedMeta === null) return null;
 
-	const durationSec =
-		(localDurationMs ?? resolvedMeta?.durationMs ?? 0) / 1000;
+	const durationSec = (localDurationMs ?? resolvedMeta?.durationMs ?? 0) / 1000;
 	const ratio = durationSec > 0 ? Math.min(1, position / durationSec) : 0;
 
 	return (
@@ -167,21 +165,11 @@ function LaNowPlayingBar(props) {
 				title={playing ? "Playing" : "Paused"}
 			>
 				{playing ? (
-					<svg
-						width={12}
-						height={12}
-						viewBox="0 0 16 16"
-						fill="currentColor"
-					>
+					<svg width={12} height={12} viewBox="0 0 16 16" fill="currentColor">
 						<path d="M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z" />
 					</svg>
 				) : (
-					<svg
-						width={12}
-						height={12}
-						viewBox="0 0 16 16"
-						fill="currentColor"
-					>
+					<svg width={12} height={12} viewBox="0 0 16 16" fill="currentColor">
 						<path d="M4 2.5v11l10-5.5-10-5.5z" />
 					</svg>
 				)}
@@ -241,12 +229,7 @@ function LaTrackWidget(props) {
 					title={isPlaying ? "Pause" : "Play"}
 					onClick={() => onPlay?.(meta.trackId)}
 				>
-					<svg
-						width={12}
-						height={12}
-						viewBox="0 0 16 16"
-						fill="currentColor"
-					>
+					<svg width={12} height={12} viewBox="0 0 16 16" fill="currentColor">
 						{isPlaying ? (
 							<path d="M4 2.5h3v11H4v-11zm5 0h3v11H9v-11z" />
 						) : (

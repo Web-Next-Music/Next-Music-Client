@@ -5,8 +5,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 const initialTabArg = process.argv.find((a) => a.startsWith("--nmc-tab="));
 
 if (process.argv.includes("--nmc-condemned")) {
-	const applyClass = () =>
-		document.documentElement.classList.add("condemned");
+	const applyClass = () => document.documentElement.classList.add("condemned");
 
 	if (document.documentElement) {
 		applyClass();

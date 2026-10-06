@@ -112,9 +112,7 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 					);
 					const replacement = JSON.stringify(merged);
 					result =
-						result.slice(0, objStart) +
-						replacement +
-						result.slice(objEnd);
+						result.slice(0, objStart) + replacement + result.slice(objEnd);
 					from = objStart + replacement.length;
 				} catch {
 					from = markerAt + marker.length;
@@ -155,10 +153,7 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 			get() {
 				return function (...items) {
 					items.forEach(patchItem);
-					return (nativePush || Array.prototype.push).apply(
-						arr,
-						items,
-					);
+					return (nativePush || Array.prototype.push).apply(arr, items);
 				};
 			},
 			set(fn) {
@@ -173,8 +168,7 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 				return arr;
 			},
 			set(next) {
-				if (Array.isArray(next) && next !== arr)
-					next.forEach(patchItem);
+				if (Array.isArray(next) && next !== arr) next.forEach(patchItem);
 			},
 		});
 	}
@@ -363,10 +357,7 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 			}
 		}
 		for (const name in storeOverrides) {
-			patched[name] = buildEntry(
-				storeOverrides[name],
-				data[name] || template,
-			);
+			patched[name] = buildEntry(storeOverrides[name], data[name] || template);
 		}
 		appliedKeys = Object.keys(storeOverrides);
 
@@ -442,8 +433,7 @@ function ynisonDeviceNamePatcher(appName) {
 	}
 
 	function patchStateMessage(data) {
-		if (typeof data !== "string" || data.indexOf("device") === -1)
-			return data;
+		if (typeof data !== "string" || data.indexOf("device") === -1) return data;
 
 		try {
 			const message = JSON.parse(data);

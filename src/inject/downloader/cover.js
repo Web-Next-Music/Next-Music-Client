@@ -18,9 +18,7 @@ async function fetchAndResizeCover(coverUrl) {
 			try {
 				const canvas = document.createElement("canvas");
 				canvas.width = canvas.height = COVER_SIZE;
-				canvas
-					.getContext("2d")
-					.drawImage(img, 0, 0, COVER_SIZE, COVER_SIZE);
+				canvas.getContext("2d").drawImage(img, 0, 0, COVER_SIZE, COVER_SIZE);
 				canvas.toBlob(
 					(blob) => {
 						if (!blob) {
@@ -31,8 +29,7 @@ async function fetchAndResizeCover(coverUrl) {
 						reader.onloadend = () => {
 							const bin = atob(reader.result.split(",")[1]);
 							const data = new Uint8Array(bin.length);
-							for (let i = 0; i < bin.length; i++)
-								data[i] = bin.charCodeAt(i);
+							for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
 							resolve({ data, mime: "image/jpeg" });
 						};
 						reader.onerror = () => resolve(null);

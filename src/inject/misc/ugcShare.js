@@ -29,10 +29,7 @@
 		if (!trackKey) return;
 
 		const now = Date.now();
-		if (
-			trackKey === lastPlayedToken &&
-			now - lastPlayTime < PLAY_COOLDOWN_MS
-		) {
+		if (trackKey === lastPlayedToken && now - lastPlayTime < PLAY_COOLDOWN_MS) {
 			return;
 		}
 
@@ -103,10 +100,7 @@
 
 		const url = buildNmUrl(currentTrack);
 		if (!url) {
-			api.showErrorToast(
-				"Error: play the track first",
-				api.ContainerId.ERROR,
-			);
+			api.showErrorToast("Error: play the track first", api.ContainerId.ERROR);
 			return;
 		}
 

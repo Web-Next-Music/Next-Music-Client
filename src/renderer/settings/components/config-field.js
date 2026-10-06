@@ -131,15 +131,13 @@ class ConfigField extends LitElement {
 		const notice = getBadge(this.#path);
 		return html`
 			<div class="lbl">
-				<div class="lbl-name">
-					${fieldName(this.#path)}${notice ?? nothing}
-				</div>
+				<div class="lbl-name">${fieldName(this.#path)}${notice ?? nothing}</div>
 				${desc ? html`<div class="lbl-desc">${desc}</div>` : nothing}
 				${
 					this.gated
 						? html`<div class="star-gate-notice">
-							${t("settings.starGate")}
-						</div>`
+								${t("settings.starGate")}
+							</div>`
 						: nothing
 				}
 			</div>

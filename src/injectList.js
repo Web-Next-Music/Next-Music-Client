@@ -76,8 +76,7 @@ export const injectList = [
 		type: "css-scoped",
 		styleId: "listenAlongNoAutoZoom",
 		condition: (config) => config?.alpha?.listenAlong?.enable,
-		transform: (cssText) =>
-			cssText.replace(":root {", "#nm-la-panel-host {"),
+		transform: (cssText) => cssText.replace(":root {", "#nm-la-panel-host {"),
 	},
 	{
 		file: "misc/obsWidget.js",

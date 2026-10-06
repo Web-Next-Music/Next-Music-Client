@@ -117,9 +117,7 @@ export function cachedGet(url, opts = {}) {
 	const pending = inflight.get(key);
 	if (pending) return pending;
 
-	const request = fetchWithCache(url, opts).finally(() =>
-		inflight.delete(key),
-	);
+	const request = fetchWithCache(url, opts).finally(() => inflight.delete(key));
 
 	inflight.set(key, request);
 	return request;

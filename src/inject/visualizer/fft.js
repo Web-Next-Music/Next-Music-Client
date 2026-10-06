@@ -75,8 +75,7 @@ class Fft {
 
 		for (let i = 0; i < out.length; i++) {
 			out[i] =
-				Math.sqrt(real[i] * real[i] + imaginary[i] * imaginary[i]) *
-				SPEC_SCALE;
+				Math.sqrt(real[i] * real[i] + imaginary[i] * imaginary[i]) * SPEC_SCALE;
 		}
 	}
 }

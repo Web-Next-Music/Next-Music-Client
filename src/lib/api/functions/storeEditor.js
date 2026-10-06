@@ -126,9 +126,7 @@ function createEditorModal(React, StoreButton) {
 						setStatus("");
 					} catch (err) {
 						setInvalid(true);
-						setStatus(
-							t("statusInvalidJson", { message: err.message }),
-						);
+						setStatus(t("statusInvalidJson", { message: err.message }));
 					}
 				});
 
@@ -173,11 +171,7 @@ function createEditorModal(React, StoreButton) {
 						{ className: "nmc-modal-title" },
 						t("modalEditorTitle", { name }),
 					),
-					h(
-						"div",
-						{ className: "nmc-modal-badge" },
-						t("modalEditorBadge"),
-					),
+					h("div", { className: "nmc-modal-badge" }, t("modalEditorBadge")),
 				),
 				h(
 					"div",

@@ -28,9 +28,7 @@ async function fetchUpdates(loaded) {
 	);
 
 	const items = [...(loaded.addons || []), ...(loaded.themes || [])]
-		.filter(
-			(i) => i.submodule && i.subUrl && installedNames.has(lower(i.name)),
-		)
+		.filter((i) => i.submodule && i.subUrl && installedNames.has(lower(i.name)))
 		.map((i) => ({ name: i.name, subUrl: i.subUrl }));
 
 	if (!items.length) return {};
@@ -208,9 +206,7 @@ function renderSearch(components, query, setQuery) {
 	const { React, SearchInput } = components;
 
 	const onQuery = (value) =>
-		setQuery(
-			typeof value === "string" ? value : (value?.target?.value ?? ""),
-		);
+		setQuery(typeof value === "string" ? value : (value?.target?.value ?? ""));
 
 	if (!SearchInput) {
 		return (
@@ -289,10 +285,7 @@ function createStoreApp(components) {
 
 		const onReadme = React.useCallback((item) => setReadme(item), []);
 
-		const onSettings = React.useCallback(
-			(item) => setEditor(item.name),
-			[],
-		);
+		const onSettings = React.useCallback((item) => setEditor(item.name), []);
 
 		const modals = [
 			editor ? (
@@ -327,10 +320,7 @@ function createStoreApp(components) {
 		const banners = [];
 		if (rateLimit) {
 			banners.push(
-				renderBanner(
-					"rate",
-					t("statusRateLimited", { minutes: rateLimit }),
-				),
+				renderBanner("rate", t("statusRateLimited", { minutes: rateLimit })),
 			);
 		}
 		if (restartNeeded) {
@@ -343,9 +333,7 @@ function createStoreApp(components) {
 						variant="primary"
 						label={t("btnRestart")}
 						onClick={() => {
-							storeJson("POST", "/api/reload", {}).catch(
-								() => {},
-							);
+							storeJson("POST", "/api/reload", {}).catch(() => {});
 						}}
 					/>,
 				),
@@ -358,9 +346,7 @@ function createStoreApp(components) {
 		} else if (!items.length) {
 			body = (
 				<div className="nmc-empty">
-					{needle
-						? t("searchNoResults", { query })
-						: t("statusEmptyInstalled")}
+					{needle ? t("searchNoResults", { query }) : t("statusEmptyInstalled")}
 				</div>
 			);
 		} else {
@@ -417,8 +403,7 @@ function createStoreRoot(initialComponents) {
 
 			const refreshed = getSiteComponents({ refresh: true });
 			if (
-				missingOptionalSlots(refreshed) !==
-				missingOptionalSlots(components)
+				missingOptionalSlots(refreshed) !== missingOptionalSlots(components)
 			) {
 				setComponents({ ...refreshed });
 			}
@@ -429,10 +414,7 @@ function createStoreRoot(initialComponents) {
 			[components],
 		);
 
-		React.useEffect(
-			() => onRouteChange(() => setActive(isStoreRoute())),
-			[],
-		);
+		React.useEffect(() => onRouteChange(() => setActive(isStoreRoute())), []);
 
 		React.useEffect(() => {
 			const main = findContentArea();

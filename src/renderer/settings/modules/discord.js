@@ -43,9 +43,7 @@ export function buildDiscordSignInBlock(onRefresh) {
 	actRow.className = "gh-star-actions";
 
 	async function doConnect() {
-		actRow
-			.querySelectorAll("mdui-button")
-			.forEach((b) => (b.disabled = true));
+		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = true));
 		errLine.hidden = true;
 
 		const result = await window.electronAPI?.connectDiscord?.();
@@ -65,9 +63,7 @@ export function buildDiscordSignInBlock(onRefresh) {
 	}
 
 	async function doDisconnect() {
-		actRow
-			.querySelectorAll("mdui-button")
-			.forEach((b) => (b.disabled = true));
+		actRow.querySelectorAll("mdui-button").forEach((b) => (b.disabled = true));
 		await window.electronAPI?.disconnectDiscord?.();
 
 		state.DISCORD_HAS_TOKEN = false;

@@ -52,10 +52,7 @@ function startAssetServer(port = 2007) {
 			let parsed;
 
 			try {
-				parsed = new URL(
-					req.url,
-					`http://127.0.0.1:${assetServerPort}`,
-				);
+				parsed = new URL(req.url, `http://127.0.0.1:${assetServerPort}`);
 			} catch {
 				return send(400, "Bad URL");
 			}
@@ -69,10 +66,7 @@ function startAssetServer(port = 2007) {
 
 				if (!relFile) return send(400, "Bad filename encoding");
 
-				const filePath = safeResolve(
-					APP_ASSETS_DIR,
-					...relFile.split("/"),
-				);
+				const filePath = safeResolve(APP_ASSETS_DIR, ...relFile.split("/"));
 
 				if (!filePath) return send(400, "Invalid path");
 				if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
@@ -108,17 +102,13 @@ function startAssetServer(port = 2007) {
 				if (!addonDir) return send(404, `Addon '${name}' not found`);
 
 				const assetsRoot = findAssetsDir(addonDir);
-				if (!assetsRoot)
-					return send(404, "Assets folder not found for addon");
+				if (!assetsRoot) return send(404, "Assets folder not found for addon");
 
 				const safeFileName = path.basename(fileName);
 				const filePath = findFileRecursive(assetsRoot, safeFileName);
 
 				if (!filePath)
-					return send(
-						404,
-						`File '${safeFileName}' not found in assets`,
-					);
+					return send(404, `File '${safeFileName}' not found in assets`);
 
 				if (!filePath.startsWith(assetsRoot + path.sep)) {
 					return send(403, "Forbidden");
@@ -148,10 +138,7 @@ function startAssetServer(port = 2007) {
 					try {
 						fs.mkdirSync(assetsRoot, { recursive: true });
 					} catch (err) {
-						console.error(
-							"[download_asset] Cannot create assets dir:",
-							err,
-						);
+						console.error("[download_asset] Cannot create assets dir:", err);
 						return send(500, "Cannot create assets directory");
 					}
 				}
@@ -168,8 +155,7 @@ function startAssetServer(port = 2007) {
 						return send(400, "Invalid JSON body");
 					}
 
-					if (!url || typeof url !== "string")
-						return send(400, "Missing url");
+					if (!url || typeof url !== "string") return send(400, "Missing url");
 
 					if (!fileName || typeof fileName !== "string")
 						return send(400, "Missing fileName");
@@ -179,10 +165,7 @@ function startAssetServer(port = 2007) {
 					const destPath = safeResolve(assetsRoot, safeFileName);
 
 					if (!destPath)
-						return send(
-							400,
-							"Invalid fileName (traversal detected)",
-						);
+						return send(400, "Invalid fileName (traversal detected)");
 					try {
 						const controller = new AbortController();
 						const timer = setTimeout(
@@ -201,15 +184,10 @@ function startAssetServer(port = 2007) {
 						}
 
 						if (!fetchRes.ok) {
-							return send(
-								502,
-								`Fetch failed: HTTP ${fetchRes.status}`,
-							);
+							return send(502, `Fetch failed: HTTP ${fetchRes.status}`);
 						}
 
-						const buffer = Buffer.from(
-							await fetchRes.arrayBuffer(),
-						);
+						const buffer = Buffer.from(await fetchRes.arrayBuffer());
 						fs.writeFileSync(destPath, buffer);
 						console.log(
 							`[download_asset] Saved '${safeFileName}' → ${destPath}`,
@@ -227,8 +205,7 @@ function startAssetServer(port = 2007) {
 						);
 					} catch (err) {
 						console.error("[download_asset] Error:", err);
-						if (!res.headersSent)
-							send(500, `Download error: ${err.message}`);
+						if (!res.headersSent) send(500, `Download error: ${err.message}`);
 					}
 				});
 				return;
@@ -295,10 +272,7 @@ function startAssetServer(port = 2007) {
 		});
 
 		server.on("error", (err) => {
-			console.error(
-				`[Assets] Server error on port ${port}:`,
-				err.message,
-			);
+			console.error(`[Assets] Server error on port ${port}:`, err.message);
 			resolve(port);
 		});
 

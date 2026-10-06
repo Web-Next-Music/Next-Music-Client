@@ -40,9 +40,7 @@ function serializeValue(value, indent) {
 
 		const pad = "\t".repeat(indent + 1);
 		const lines = keys.map((key) => {
-			const left = IDENT_RE.test(key)
-				? key
-				: `["${escapeLuaString(key)}"]`;
+			const left = IDENT_RE.test(key) ? key : `["${escapeLuaString(key)}"]`;
 
 			return `${pad}${left} = ${serializeValue(value[key], indent + 1)},`;
 		});
@@ -74,12 +72,7 @@ class LuaReader {
 		while (this.pos < this.text.length) {
 			const char = this.text[this.pos];
 
-			if (
-				char === " " ||
-				char === "\t" ||
-				char === "\n" ||
-				char === "\r"
-			) {
+			if (char === " " || char === "\t" || char === "\n" || char === "\r") {
 				this.pos++;
 				continue;
 			}
@@ -170,9 +163,7 @@ class LuaReader {
 			return Number(match[0]);
 		}
 
-		throw new Error(
-			`Unexpected value at position ${this.pos} in Lua config`,
-		);
+		throw new Error(`Unexpected value at position ${this.pos} in Lua config`);
 	}
 
 	readTable() {

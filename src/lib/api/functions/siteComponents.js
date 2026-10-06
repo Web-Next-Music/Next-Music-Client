@@ -21,9 +21,7 @@ function hasKeys(src, ...words) {
 
 function typeSource(type) {
 	const fn =
-		typeof type === "function"
-			? type
-			: (type?.render ?? type?.type ?? null);
+		typeof type === "function" ? type : (type?.render ?? type?.type ?? null);
 	return typeof fn === "function" ? fnBody(fn) : "";
 }
 
@@ -73,8 +71,7 @@ const MODULE_SLOTS = {
 	ReactDOMClient: { module: (m) => typeof m.createRoot === "function" },
 	ReactDOMPortal: { module: (m) => typeof m.createPortal === "function" },
 	JsxRuntime: {
-		module: (m) =>
-			typeof m.jsx === "function" && typeof m.jsxs === "function",
+		module: (m) => typeof m.jsx === "function" && typeof m.jsxs === "function",
 		raw: true,
 	},
 	TabCarousel: {
@@ -140,9 +137,7 @@ function scanModules(found) {
 	const req = getAppRequire();
 	if (!req?.m) return;
 
-	const pending = Object.entries(MODULE_SLOTS).filter(
-		([name]) => !found[name],
-	);
+	const pending = Object.entries(MODULE_SLOTS).filter(([name]) => !found[name]);
 	if (!pending.length) return;
 
 	for (const id of Object.keys(req.m)) {
@@ -176,8 +171,7 @@ function scanModules(found) {
 				} catch {
 					continue;
 				}
-				const fn =
-					typeof value === "function" ? value : value && value.render;
+				const fn = typeof value === "function" ? value : value && value.render;
 				if (typeof fn === "function" && slot.export(fn)) {
 					found[name] = value;
 					break;

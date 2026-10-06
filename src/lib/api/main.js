@@ -42,9 +42,7 @@ window.nextmusicApi = {
 					return { value: pick(item.input, def), default: def };
 				}
 				case "text": {
-					const button = Array.isArray(item.buttons)
-						? item.buttons[0]
-						: null;
+					const button = Array.isArray(item.buttons) ? item.buttons[0] : null;
 					const def = pick(
 						button?.defaultParameter ?? item.defaultParameter,
 						"",
@@ -228,18 +226,14 @@ window.nextmusicApi = {
 		);
 		if (!res.ok) {
 			const text = await res.text();
-			throw new Error(
-				`[downloadAsset] Server error ${res.status}: ${text}`,
-			);
+			throw new Error(`[downloadAsset] Server error ${res.status}: ${text}`);
 		}
 		return res.json();
 	},
 
 	nextText(text) {
 		if (window.__nmcTitleBarConfig?.showYandexMusicVersion) {
-			console.warn(
-				"nextText ignored: Yandex Music version mode is enabled",
-			);
+			console.warn("nextText ignored: Yandex Music version mode is enabled");
 			return;
 		}
 		const el = document.querySelector(".TitleBar_nextText");
@@ -290,10 +284,7 @@ window.nextmusicApi = {
 	},
 
 	onStatusChange: (listener) =>
-		observeActivePlayer(
-			(p) => p.playbackState?.playerState?.status,
-			listener,
-		),
+		observeActivePlayer((p) => p.playbackState?.playerState?.status, listener),
 	onProgressChange: (listener) =>
 		observeActivePlayer(
 			(p) => p.playbackState?.playerState?.progress,

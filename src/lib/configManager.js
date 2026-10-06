@@ -61,8 +61,7 @@ function splitConfig(fullConfig) {
 	}
 
 	for (const key of SECRET_KEYS) {
-		if (!(key in secrets))
-			secrets[key] = structuredClone(defaultConfig[key]);
+		if (!(key in secrets)) secrets[key] = structuredClone(defaultConfig[key]);
 	}
 
 	return { settings, secrets };

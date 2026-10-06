@@ -128,8 +128,7 @@ function panelState() {
 		? {
 				id: getShareableTrack()?.trackId ?? null,
 				playing: isPlayingNow() === true,
-				position:
-					window.nextmusicApi?.getState?.()?.progress?.position ?? 0,
+				position: window.nextmusicApi?.getState?.()?.progress?.position ?? 0,
 				serverTime: Date.now(),
 				ugc: null,
 			}
@@ -146,9 +145,7 @@ function panelState() {
 	return {
 		dot: notConfigured ? "disconnected" : view.dot,
 		color: notConfigured ? "#888" : view.color,
-		text: notConfigured
-			? "Not connected"
-			: view.text || serverDisplayName(),
+		text: notConfigured ? "Not connected" : view.text || serverDisplayName(),
 		serverVersion: notConfigured ? null : connection.serverVersion,
 		serverDescription: notConfigured ? null : connection.serverDescription,
 		serverCover: notConfigured ? null : connection.serverCover,

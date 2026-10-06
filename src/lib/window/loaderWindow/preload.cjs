@@ -3,8 +3,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 if (process.argv.includes("--nmc-condemned")) {
-	const applyClass = () =>
-		document.documentElement.classList.add("condemned");
+	const applyClass = () => document.documentElement.classList.add("condemned");
 
 	if (document.documentElement) {
 		applyClass();

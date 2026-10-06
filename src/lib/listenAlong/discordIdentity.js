@@ -71,8 +71,7 @@ export async function ensureDiscordProfile() {
 }
 
 export async function connectDiscordIdentity() {
-	const { tokens, username, displayName, avatarUrl } =
-		await getDiscordTokens();
+	const { tokens, username, displayName, avatarUrl } = await getDiscordTokens();
 
 	patchConfig((c) => {
 		c.discord = { ...tokens };

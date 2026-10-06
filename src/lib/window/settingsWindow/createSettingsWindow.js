@@ -80,10 +80,7 @@ export function createSettingsWindow(options = {}) {
 	if (settingsWindow && !settingsWindow.isDestroyed()) {
 		settingsWindow.focus();
 		if (options.tab) {
-			settingsWindow.webContents.send(
-				"settings:activate-tab",
-				options.tab,
-			);
+			settingsWindow.webContents.send("settings:activate-tab", options.tab);
 		}
 		return;
 	}
@@ -105,9 +102,7 @@ export function createSettingsWindow(options = {}) {
 		show: false,
 		center: true,
 		roundedCorners: true,
-		backgroundColor: nativeTheme.shouldUseDarkColors
-			? "#0d1117"
-			: "#f4f6f6",
+		backgroundColor: nativeTheme.shouldUseDarkColors ? "#0d1117" : "#f4f6f6",
 		webPreferences: {
 			preload: path.join(__dirname, "preload.cjs"),
 			contextIsolation: true,

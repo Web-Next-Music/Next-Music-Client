@@ -79,9 +79,7 @@ function createPortalFeature(config) {
 		if (useSiteContext) {
 			root = renderInSiteContext(element, host, {
 				onError: (err) =>
-					onError
-						? onError(err)
-						: console.error(`[${id}] render failed:`, err),
+					onError ? onError(err) : console.error(`[${id}] render failed:`, err),
 			});
 		} else {
 			root = ReactDOMClient.createRoot(host);

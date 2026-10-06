@@ -72,25 +72,18 @@ registerHandlers({
 				const tm = s.match(/time=(\d{2}):(\d{2}):(\d{2}\.\d*)/);
 				if (tm && duration > 0 && !sender.isDestroyed()) {
 					const cur = +tm[1] * 3600 + +tm[2] * 60 + +tm[3];
-					sender.send(
-						"nmc:convert-progress",
-						Math.min(cur / duration, 0.99),
-					);
+					sender.send("nmc:convert-progress", Math.min(cur / duration, 0.99));
 				}
 			});
 
 			ff.on("error", () => resolve(null));
 			ff.on("close", (code) =>
-				resolve(
-					code === 0 && chunks.length ? Buffer.concat(chunks) : null,
-				),
+				resolve(code === 0 && chunks.length ? Buffer.concat(chunks) : null),
 			);
 
 			// Errors here (e.g. EPIPE when ffmpeg exits early) are surfaced via
 			// the 'error'/'close' handlers above, which settle the promise.
-			writeBufferToStream(ff.stdin, Buffer.from(audioData)).catch(
-				() => {},
-			);
+			writeBufferToStream(ff.stdin, Buffer.from(audioData)).catch(() => {});
 		});
 	},
 });
@@ -116,10 +109,7 @@ export default function registerEvents(mainWindow) {
 			return await connectGitHubDeviceFlow(
 				(info) => sender?.webContents.send("github:device-code", info),
 				(secondsLeft) =>
-					sender?.webContents.send(
-						"github:device-progress",
-						secondsLeft,
-					),
+					sender?.webContents.send("github:device-progress", secondsLeft),
 			);
 		},
 		"github:disconnect": () => {

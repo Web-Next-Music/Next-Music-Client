@@ -20,8 +20,8 @@
 		"build:rpm": "vite build && vite build --mode main && cross-env pnpm_config_verify_deps_before_run=false electron-builder --linux rpm --publish never",
 		"build:all": "vite build && vite build --mode main && cross-env pnpm_config_verify_deps_before_run=false electron-builder --win --linux --publish never",
 		"start": "electron dist/index.js",
-		"format": "biome format --write .",
-		"format:check": "biome check .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"lint": "biome lint ."
 	},
 	"build": {
@@ -34,7 +34,10 @@
 				"repo": "Next-Music-Client"
 			}
 		],
-		"files": ["dist/**/*", "package.json"],
+		"files": [
+			"dist/**/*",
+			"package.json"
+		],
 		"directories": {
 			"buildResources": "src/assets",
 			"output": "release"
@@ -44,7 +47,9 @@
 			"target": [
 				{
 					"target": "nsis",
-					"arch": ["x64"]
+					"arch": [
+						"x64"
+					]
 				}
 			],
 			"icon": "src/assets/nm-icons/icon-256.png",
@@ -52,7 +57,12 @@
 		},
 		"linux": {
 			"artifactName": "${name}_${version}_${arch}.${ext}",
-			"target": ["AppImage", "deb", "pacman", "rpm"],
+			"target": [
+				"AppImage",
+				"deb",
+				"pacman",
+				"rpm"
+			],
 			"category": "Audio",
 			"maintainer": "Diramix <39developer@diram1x.ru>",
 			"icon": "src/assets/nm-icons/icon-256.png",
@@ -64,17 +74,30 @@
 			}
 		},
 		"pacman": {
-			"depends": ["gtk3", "libnotify", "nss", "libxss", "glibc"],
+			"depends": [
+				"gtk3",
+				"libnotify",
+				"nss",
+				"libxss",
+				"glibc"
+			],
 			"artifactName": "${name}_${version}_${arch}.pkg.tar.zst"
 		},
 		"rpm": {
-			"depends": ["gtk3", "libnotify", "nss", "libXScrnSaver"],
+			"depends": [
+				"gtk3",
+				"libnotify",
+				"nss",
+				"libXScrnSaver"
+			],
 			"artifactName": "${name}_${version}_${arch}.${ext}"
 		},
 		"protocols": [
 			{
 				"name": "Next Music",
-				"schemes": ["nextmusic"]
+				"schemes": [
+					"nextmusic"
+				]
 			}
 		]
 	},
@@ -91,7 +114,6 @@
 	},
 	"homepage": "https://github.com/Web-Next-Music/Next-Music-Client#readme",
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.15",
 		"codemirror": "^5.65.21",
 		"concurrently": "^10.0.5",
 		"cross-env": "^10.1.0",
@@ -118,6 +140,7 @@
 		"electron-updater": "^6.8.9",
 		"lamejs": "^1.2.1",
 		"mdui": "^2.1.5",
+		"prettier": "^3.9.9",
 		"sucrase": "^3.35.1",
 		"ws": "^8.22.0",
 		"zod": "^4.6.5"

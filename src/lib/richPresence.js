@@ -160,9 +160,7 @@ function updateActivity(data) {
 	const listenAlongUrl = listenAlongButton ? buildInviteUrl() : null;
 
 	const laStatus = getListenAlongStatus();
-	const partySize = laStatus.connected
-		? 1 + (laStatus.peers?.length ?? 0)
-		: 0;
+	const partySize = laStatus.connected ? 1 + (laStatus.peers?.length ?? 0) : 0;
 	const partyField =
 		laStatus.connected && partySize > 0
 			? {
@@ -186,9 +184,7 @@ function updateActivity(data) {
 	}
 
 	if (githubButton && !userHasStarred) {
-		console.log(
-			"[RPC] GitHub button ignored - user has not starred the repo",
-		);
+		console.log("[RPC] GitHub button ignored - user has not starred the repo");
 	}
 
 	const activityObject = {
@@ -197,9 +193,7 @@ function updateActivity(data) {
 		details: title,
 		state: artist,
 		largeImageKey: img,
-		...(resolvedLargeImageUrl
-			? { largeImageUrl: resolvedLargeImageUrl }
-			: {}),
+		...(resolvedLargeImageUrl ? { largeImageUrl: resolvedLargeImageUrl } : {}),
 		statusDisplayType: 1,
 		instance: false,
 		...detailsUrlField,
@@ -236,9 +230,7 @@ function updateActivity(data) {
 
 	const timestampDiff =
 		lastActivity?.startTimestamp != null
-			? Math.abs(
-					activityObject.startTimestamp - lastActivity.startTimestamp,
-				)
+			? Math.abs(activityObject.startTimestamp - lastActivity.startTimestamp)
 			: Infinity;
 
 	if (hasChanged) {

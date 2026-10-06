@@ -35,11 +35,7 @@ body {
 	padding: 10px;
 	border-radius: 12px;
 	box-sizing: border-box;
-	background-color: color-mix(
-		in srgb,
-		var(--track-color, #141414) 70%,
-		black
-	);
+	background-color: color-mix(in srgb, var(--track-color, #141414) 70%, black);
 	border: var(--nm-obs-border);
 	transition: background-color 0.3s ease-in;
 }

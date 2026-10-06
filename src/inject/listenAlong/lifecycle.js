@@ -1,3 +1,4 @@
+(function () {
 	function startObserver() {
 		if (observerStarted) return;
 		observerStarted = true;
@@ -33,9 +34,7 @@
 		if (typeof api?.onTrackChange === "function") {
 			api.onTrackChange(() => onTrack());
 		} else {
-			console.warn(
-				"Listen Along: onTrackChange unavailable, polling only",
-			);
+			console.warn("Listen Along: onTrackChange unavailable, polling only");
 		}
 
 		trackObserverTimer = setInterval(onTrack, 1000);
