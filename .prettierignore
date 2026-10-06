@@ -7,3 +7,4 @@ pnpm-lock.yaml
 src/inject/downloader/button.js
 src/inject/downloader/utils.js
 src/inject/visualizer/bootstrap.js
+src/inject/visualizer/startup.js
