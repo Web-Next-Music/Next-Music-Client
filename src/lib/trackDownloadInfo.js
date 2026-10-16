@@ -27,10 +27,12 @@ async function getClientDownloadInfo(trackId) {
 				typeof container.get === "function"
 			) {
 				try {
-					return await container.get("TracksResource").getStorageData(
-						{ trackId },
-						{ signal: AbortSignal.timeout(20000) },
-					);
+					return await container
+						.get("TracksResource")
+						.getStorageData(
+							{ trackId },
+							{ signal: AbortSignal.timeout(20000) },
+						);
 				} catch (error) {
 					throw new Error(
 						`Music download-info failed${error.statusCode ? ` (HTTP ${error.statusCode})` : ""}; check track availability and subscription`,
@@ -40,7 +42,9 @@ async function getClientDownloadInfo(trackId) {
 			fiber = fiber.return;
 		}
 	}
-	throw new Error("Music client session unavailable: wait for the page to load");
+	throw new Error(
+		"Music client session unavailable: wait for the page to load",
+	);
 }
 
 export function selectMp3(data) {

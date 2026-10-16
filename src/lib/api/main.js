@@ -204,7 +204,6 @@ window.nextmusicApi = {
 		return meta ? (_mp3UrlMap.get(String(meta.id)) ?? null) : null;
 	},
 
-
 	getCurrentTrackCodec() {
 		const meta = getCurrentMeta();
 		return meta ? (_codecMap.get(String(meta.id)) ?? "mp3") : "mp3";

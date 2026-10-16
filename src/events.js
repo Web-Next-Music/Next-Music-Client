@@ -12,12 +12,11 @@ import {
 } from "./lib/trackDownloadInfo.js";
 
 export default function registerEvents(mainWindow) {
-
 	const win = () => global.mainWindow ?? mainWindow;
 
 	registerHandlers({
 		"nmc:track-download-info": resolveTrackDownload,
-				"nmc:track-download-audio": downloadTrackAudio,
+		"nmc:track-download-audio": downloadTrackAudio,
 		"nmc-minimize": on(() => win().minimize()),
 		"nmc-maximize": on(() => {
 			if (win().isMaximized()) win().unmaximize();
