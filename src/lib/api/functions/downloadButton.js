@@ -16,25 +16,25 @@ function NmDownloadButton({ React }) {
 		"aria-label": "Download track",
 		icon: React.createElement(Icon, DL_ICON),
 		spinner: busy
-			? React.createElement("span", { className: "nm-dl-spinner" })
+			? React.createElement(
+					React.Fragment,
+					null,
+					React.createElement("span", { className: "nm-dl-spinner" }),
+					React.createElement("span", { id: "nm-dl-progress-track" }),
+					React.createElement("span", {
+						id: "nm-dl-progress-fill",
+						style: {
+							width: `${Math.min((state.progress ?? 0) * 100, 100)}%`,
+						},
+					}),
+				)
 			: undefined,
 		onClick: _dlOnClick,
 	});
 
 	if (!busy) return button;
 
-	return React.createElement(
-		"span",
-		{ id: "nm-dl-progress-wrap" },
-		button,
-		React.createElement("span", { id: "nm-dl-progress-track" }),
-		React.createElement("span", {
-			id: "nm-dl-progress-fill",
-			style: {
-				width: `${Math.min((state.progress ?? 0) * 100, 100)}%`,
-			},
-		}),
-	);
+	return React.createElement("span", { id: "nm-dl-progress-wrap" }, button);
 }
 
 const _dlFeature = createPortalFeature({

@@ -281,20 +281,6 @@ export function createElectronAssetsPlugin(encryptionKey, appVersion) {
 			);
 			composeInjectFiles();
 
-			const lameAllSrc = readFileSync(
-				join("node_modules", "lamejs", "lame.all.js"),
-				"utf8",
-			);
-			const lameResult = esbuild.transformSync(lameAllSrc, {
-				minify: true,
-				target: "es2022",
-			});
-			writeFileSync(
-				join(DIST, "inject", "lamejs.js"),
-				lameResult.code.replace(/\n/g, " ").trimEnd() +
-					"\nwindow.lamejs=lamejs;\n",
-			);
-
 			processDir(
 				join(SRC, "lib"),
 				join(DIST, "lib"),

@@ -138,7 +138,6 @@
 		"@fontsource/syne": "^5.3.0",
 		"@xhayper/discord-rpc": "^1.5.1",
 		"electron-updater": "^6.8.9",
-		"lamejs": "^1.2.1",
 		"mdui": "^2.1.5",
 		"prettier": "^3.9.9",
 		"sucrase": "^3.35.1",

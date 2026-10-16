@@ -17,9 +17,9 @@
 		});
 
 		try {
-			await downloadTrack(currentTrack, (phase, ratio) => {
+			await downloadTrack(currentTrack, (_phase, ratio) => {
 				window.nextmusicApi.updateDownloadButtonState({
-					phase: phase === "convert" ? "converting" : "downloading",
+					phase: "downloading",
 					progress: ratio,
 				});
 			});

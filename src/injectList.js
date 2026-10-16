@@ -14,22 +14,14 @@ export const injectList = [
 		condition: (config) => config?.programSettings?.fastPlay,
 	},
 	{
-		file: "lamejs.js",
-		condition: (config) => config?.programSettings?.downloader,
-	},
-	{
 		file: "downloader.js",
 		type: "js-composite",
 		folder: "downloader",
 		parts: [
 			"utils.js",
 			"track-info.js",
-			"format-detect.js",
-			"crypto.js",
 			"cover.js",
-			"m4a-meta.js",
 			"id3.js",
-			"mp3-encode.js",
 			"download.js",
 			"button.js",
 		],

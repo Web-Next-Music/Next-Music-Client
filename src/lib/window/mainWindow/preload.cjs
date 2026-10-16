@@ -672,6 +672,13 @@ if (process.argv.includes("--nmc-vis")) {
 	injectIntoMainWorld(`(${visualizerPatcher.toString()})();`);
 }
 
+contextBridge.exposeInMainWorld("nmcDownloader", {
+	getTrackAudio: (trackId) =>
+		ipcRenderer.invoke("nmc:track-download-audio", trackId),
+	getTrackFileInfo: (trackId) =>
+		ipcRenderer.invoke("nmc:track-download-info", trackId),
+});
+
 contextBridge.exposeInMainWorld("nmcRPC", {
 	send: (data) => ipcRenderer.send("rpc:site-data", data),
 });
