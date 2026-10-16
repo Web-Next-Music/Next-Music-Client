@@ -18,5 +18,5 @@ minimumReleaseAgeExclude:
   - "@biomejs/cli-win32-arm64@2.5.15"
   - "@biomejs/cli-win32-x64@2.5.15"
   - dotenv@18.0.5
-  - electron@44.5.1
-  - sass@1.105.1
+  - electron@44.5.1 || 44.8.0
+  - sass@1.105.1 || 1.105.2
