@@ -109,8 +109,10 @@ function createVisualizer() {
 		if (!canvas || !container) return;
 		const rect = container.getBoundingClientRect();
 		const dpr = window.devicePixelRatio || 1;
-		canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-		canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+		const width = Math.max(1, Math.floor(rect.width * dpr));
+		const height = Math.max(1, Math.floor(rect.height * dpr));
+		if (canvas.width !== width) canvas.width = width;
+		if (canvas.height !== height) canvas.height = height;
 		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 		const radius = getComputedStyle(container).borderRadius;
