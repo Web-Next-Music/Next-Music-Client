@@ -56,6 +56,7 @@ export const ConfigSchema = z
 				enable: bool,
 				exposeNetwork: bool,
 			}),
+			playwright: bool,
 			checkUpdates: bool,
 			downloader: bool,
 			alwaysExpandedPlayer: bool,

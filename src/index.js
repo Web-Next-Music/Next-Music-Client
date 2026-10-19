@@ -3,6 +3,7 @@ import { checkGitHubStar } from "./lib/githubStarAuth.js";
 import { joinByInvite, inviteCodeFromUrl } from "./lib/listenAlong/service.js";
 import { loadConfig, getConfig } from "./lib/configManager.js";
 import path from "path";
+import inspector from "node:inspector";
 import { installConsolePills } from "./lib/consolePills.js";
 
 installConsolePills(!!process.stdout.isTTY);
@@ -56,6 +57,27 @@ const disabledFeatures = [
 ];
 
 const startupConfig = loadConfig();
+const playwrightEnabled =
+	!app.isPackaged || startupConfig?.programSettings?.playwright === true;
+
+if (playwrightEnabled) {
+	app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
+	app.commandLine.appendSwitch("remote-debugging-port", "9222");
+	console.warn(
+		"[Playwright] Local automation enabled at http://127.0.0.1:9222. Trusted clients only; access includes signed-in pages.",
+	);
+}
+
+if (!app.isPackaged && !inspector.url()) {
+	try {
+		inspector.open(9229, "127.0.0.1", false);
+	} catch (error) {
+		console.error(
+			"[Playwright] Failed to enable main-process inspector:",
+			error,
+		);
+	}
+}
 const listenAlongEnabled = !!startupConfig?.alpha?.listenAlong?.enable;
 
 const enabledFeatures = [];

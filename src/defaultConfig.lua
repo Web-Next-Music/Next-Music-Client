@@ -46,7 +46,8 @@ local config = {
 		disableAutoZoom = false,
 		antiSelect = false,
 		visualizer = false,
-		language = "en",
+        language = "en",
+		playwright = false,
 	},
 	alpha = {
 		listenAlong = {
