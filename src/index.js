@@ -3,6 +3,9 @@ import { checkGitHubStar } from "./lib/githubStarAuth.js";
 import { joinByInvite, inviteCodeFromUrl } from "./lib/listenAlong/service.js";
 import { loadConfig, getConfig } from "./lib/configManager.js";
 import path from "path";
+import { installConsolePills } from "./lib/consolePills.js";
+
+installConsolePills(!!process.stdout.isTTY);
 
 // ESM __dirname fix
 import { fileURLToPath } from "url";

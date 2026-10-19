@@ -1,4 +1,5 @@
 import fs from "fs";
+import { installConsolePills } from "../consolePills.js";
 import path from "path";
 import { injectList } from "../../injectList.js";
 import { injectDir, isDev, resolveInjectPath } from "./paths.js";
@@ -80,7 +81,10 @@ function buildItemFragment(item, config) {
 }
 
 export function buildFragments(config, appVersion) {
-	const fragments = [`window.__APP_VERSION__ = ${JSON.stringify(appVersion)};`];
+	const fragments = [
+		serializeInvocation(installConsolePills),
+		`window.__APP_VERSION__ = ${JSON.stringify(appVersion)};`,
+	];
 	const injected = [];
 
 	for (const item of injectList) {
