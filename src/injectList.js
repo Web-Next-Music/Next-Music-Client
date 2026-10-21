@@ -2,6 +2,9 @@
 
 export const injectList = [
 	{
+		file: "misc/hideAds.css",
+	},
+	{
 		file: "misc/alwaysExpandedPlayer.css",
 		condition: (config) => config?.programSettings?.alwaysExpandedPlayer,
 	},
