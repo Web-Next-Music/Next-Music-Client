@@ -602,6 +602,65 @@ function visualizerPatcher() {
 				analyser.fftSize = 1024;
 				analyser.smoothingTimeConstant = 0;
 				source.connect(analyser);
+
+				const output = this.createGain();
+				const nativeConnect = source.connect.bind(source);
+				const nativeDisconnect = source.disconnect.bind(source);
+				let volume = element.volume;
+				let muted = element.muted;
+				const updateVolume = () => {
+					output.gain.setValueAtTime(muted ? 0 : volume, this.currentTime);
+				};
+				updateVolume();
+				element.volume = 1;
+				element.muted = false;
+				Object.defineProperties(element, {
+					volume: {
+						configurable: true,
+						get: () => volume,
+						set: (value) => {
+							const next = Number(value);
+							if (!Number.isFinite(next)) {
+								throw new TypeError("Volume must be finite");
+							}
+							if (next < 0 || next > 1) {
+								throw new DOMException(
+									"Volume must be between 0 and 1",
+									"IndexSizeError",
+								);
+							}
+							if (volume === next) return;
+							volume = next;
+							updateVolume();
+							queueMicrotask(() =>
+								element.dispatchEvent(new Event("volumechange")),
+							);
+						},
+					},
+					muted: {
+						configurable: true,
+						get: () => muted,
+						set: (value) => {
+							const next = Boolean(value);
+							if (muted === next) return;
+							muted = next;
+							updateVolume();
+							queueMicrotask(() =>
+								element.dispatchEvent(new Event("volumechange")),
+							);
+						},
+					},
+				});
+
+				nativeConnect(output);
+				source.connect = (destination, ...rest) =>
+					output.connect(destination, ...rest);
+				source.disconnect = (...args) => {
+					if (args[0] === analyser) {
+						return nativeDisconnect(...args);
+					}
+					return output.disconnect(...args);
+				};
 				taps.set(element, analyser);
 
 				const markActive = () => {
