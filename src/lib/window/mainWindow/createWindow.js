@@ -183,7 +183,15 @@ export function createWindow(config) {
 
 	function setupLoadHandlers() {
 		mainWindow.webContents.on("did-finish-load", () => {
-			if (!isOnYandexMusic()) return;
+			if (!isOnYandexMusic()) {
+				if (
+					mainWindow.webContents.getURL().includes("/fallback/fallback.html")
+				) {
+					closeLoaderWindow();
+					if (!startMinimized) mainWindow.show();
+				}
+				return;
+			}
 
 			injector(mainWindow, config);
 
@@ -287,9 +295,18 @@ export function createWindow(config) {
 		validatedURL,
 		isMainFrame,
 	) {
-		if (isMainFrame) {
-			loadRendererPage(mainWindow, "fallback/fallback.html");
+		if (!isMainFrame || errorCode === -3) return;
+
+		console.error("[Startup] Main page failed to load:", {
+			errorCode,
+			errorDescription,
+		});
+		if (validatedURL.includes("/fallback/fallback.html")) {
+			closeLoaderWindow();
+			if (!startMinimized) mainWindow.show();
+			return;
 		}
+		loadRendererPage(mainWindow, "fallback/fallback.html");
 	}
 
 	function setupInitialVisibility() {

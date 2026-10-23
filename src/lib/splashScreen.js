@@ -46,7 +46,12 @@ export function setupSplashScreen(mainWindow, targetUrl) {
 			.executeJavaScript(`document.body.classList.add("fade-out");`)
 			.catch(console.error);
 
-		setTimeout(() => mainWindow.loadURL(targetUrl), FADE_DURATION);
+		setTimeout(() => {
+			if (mainWindow.isDestroyed()) return;
+			mainWindow.loadURL(targetUrl).catch((error) => {
+				console.error("[Startup] Failed to load Yandex Music:", error.code);
+			});
+		}, FADE_DURATION);
 	}
 
 	mainWindow.webContents.once("did-finish-load", () => {

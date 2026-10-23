@@ -58,6 +58,16 @@ body {
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
+
+	a {
+		background-color: #2bfdf4;
+		text-decoration: none;
+		color: #000;
+		border: 1px solid #fff;
+		border-radius: 16px;
+		padding: 10px 20px;
+		margin-top: 20px;
+	}
 }
 
 .next_logo {

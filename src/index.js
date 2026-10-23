@@ -233,7 +233,9 @@ app.whenReady().then(() => {
 	) {
 		setupSplashScreen(mainWindow, targetUrl);
 	} else {
-		mainWindow.loadURL(targetUrl);
+		mainWindow.loadURL(targetUrl).catch((error) => {
+			console.error("[Startup] Failed to load Yandex Music:", error.code);
+		});
 	}
 
 	// Addons store page
