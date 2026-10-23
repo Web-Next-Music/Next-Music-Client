@@ -7,7 +7,7 @@
 		"node": ">=24.0.0",
 		"pnpm": ">=9.0.0"
 	},
-	"packageManager": "pnpm@12.14.0",
+	"packageManager": "pnpm@12.15.0",
 	"scripts": {
 		"dev:vite": "vite",
 		"dev:electron": "electron src/index.js",
@@ -117,17 +117,17 @@
 		"codemirror": "^5.65.21",
 		"concurrently": "^10.0.6",
 		"cross-env": "^10.1.0",
-		"dotenv": "^18.0.8",
-		"electron": "^44.9.0",
+		"dotenv": "^18.0.9",
+		"electron": "^45.0.0",
 		"electron-builder": "^26.15.3",
 		"esbuild": "^0.28.2",
 		"html-minifier-terser": "^7.2.0",
 		"lightningcss": "^1.33.0",
 		"lit": "^3.3.3",
-		"sass": "^1.105.2",
+		"sass": "^1.106.1",
 		"scss": "^0.2.4",
 		"terser": "^5.51.2",
-		"vite": "^8.3.4",
+		"vite": "^8.3.5",
 		"vite-plugin-electron": "^1.1.2"
 	},
 	"dependencies": {
