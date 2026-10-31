@@ -227,10 +227,7 @@ window.nextmusicApi = {
 	},
 
 	nextText(text) {
-		if (window.__nmcTitleBarConfig?.showYandexMusicVersion) {
-			console.warn("nextText ignored: Yandex Music version mode is enabled");
-			return;
-		}
+		if (window.__nmcTitleBarConfig?.showYandexMusicVersion) return;
 		const el = document.querySelector(".TitleBar_nextText");
 		if (el) el.textContent = text;
 	},

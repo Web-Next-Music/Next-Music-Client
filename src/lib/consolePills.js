@@ -27,20 +27,28 @@ export function installConsolePills(terminal = false) {
 			const match = args[0].match(/^(\s*(?:\[[^\]\r\n]+\]\s*)+)/);
 			if (!match) return original(...args);
 
-			const styles = [];
+			const styles = terminal
+				? []
+				: [
+						"background:#2bfbf2;color:#000;border-radius:999px;padding:1px 6px;font-weight:600;",
+						"",
+					];
+			const badge = terminal
+				? "\u001b[48;2;43;251;242m\u001b[38;5;16m Next Music \u001b[0m "
+				: "%cNext Music%c ";
 			const prefix = match[0].replace(/\[([^\]\r\n]+)\]/g, (_, tag) => {
 				const [background, ansi] = colorFor(tag);
 				if (terminal) {
 					return `\u001b[48;5;${ansi}m\u001b[38;5;16m ${tag} \u001b[0m`;
 				}
 				styles.push(
-					`background:${background};color:#111827;border-radius:999px;padding:1px 7px;font-weight:700;`,
+					`background:${background};color:#000;border-radius:999px;padding:1px 6px;font-weight:600;`,
 					"",
 				);
-				return `%c ${tag.replace(/%/g, "%%")} %c`;
+				return `%c${tag.replace(/%/g, "%%")}%c`;
 			});
 			return original(
-				prefix + args[0].slice(match[0].length),
+				badge + prefix + args[0].slice(match[0].length),
 				...styles,
 				...args.slice(1),
 			);
