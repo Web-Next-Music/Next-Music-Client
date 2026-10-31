@@ -1,4 +1,12 @@
 window.nextmusicApi = {
+	async getUserLogin() {
+		try {
+			return (await window.nmcUserLogin?.get()) ?? null;
+		} catch {
+			return null;
+		}
+	},
+
 	visualizer: {
 		setAccentColor(color) {
 			window.__nmcVisualizerAccentColor = color;

@@ -1,4 +1,5 @@
 import { BrowserWindow, session, nativeTheme, app } from "electron";
+import { getUserLogin } from "./userLogin.js";
 import { registerHandlers, sync } from "../../ipc/registry.js";
 import { createLoaderWindow } from "../createLoaderWindow.js";
 import { applyAddons } from "../../addons/index.js";
@@ -62,6 +63,7 @@ async function readApiFunctionSource(name) {
 }
 
 registerHandlers({
+	"nmc:get-user-login": (event) => getUserLogin(event, mainWindow),
 	"nmc:get-experiments": sync(() => {
 		const config = getConfig();
 		return {

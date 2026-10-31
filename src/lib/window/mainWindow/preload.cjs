@@ -29,6 +29,16 @@ if (process.argv.includes("--nmc-titlebar")) {
 	});
 }
 
+contextBridge.exposeInMainWorld("nmcUserLogin", {
+	get: async () => {
+		try {
+			return await ipcRenderer.invoke("nmc:get-user-login");
+		} catch {
+			return null;
+		}
+	},
+});
+
 const STORE_ROUTE = "/next-store";
 
 let storeOpenOnBoot = false;
