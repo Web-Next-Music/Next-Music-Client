@@ -693,6 +693,63 @@ function visualizerPatcher() {
 	};
 }
 
+function desktopModePatcher() {
+	if (location.hostname !== "music.yandex.ru") return;
+
+	const chunks = (window.webpackChunk_N_E = window.webpackChunk_N_E || []);
+	let push = chunks.push;
+
+	function patchChunk(chunk) {
+		const modules = chunk && chunk[1];
+		if (!modules || typeof modules !== "object") return;
+
+		for (const id of Object.keys(modules)) {
+			const factory = modules[id];
+			if (typeof factory !== "function") continue;
+			const source = Function.prototype.toString.call(factory);
+			if (
+				!source.includes("YandexMusicWebNext") ||
+				!source.includes("YandexMusicDesktopApp") ||
+				!source.includes("NN:()=>") ||
+				!source.includes("$3:()=>")
+			) {
+				continue;
+			}
+
+			modules[id] = function (module, exports, require) {
+				const define = require.d;
+				require.d = function (target, definitions) {
+					if (target === exports && definitions.NN && definitions.$3) {
+						definitions.NN = () => true;
+						definitions.$3 = () => false;
+					}
+					return define.apply(this, arguments);
+				};
+				try {
+					return factory.apply(this, arguments);
+				} finally {
+					require.d = define;
+				}
+			};
+		}
+	}
+
+	chunks.forEach(patchChunk);
+	Object.defineProperty(chunks, "push", {
+		configurable: true,
+		get() {
+			const currentPush = push;
+			return function (...items) {
+				items.forEach(patchChunk);
+				return currentPush.apply(this, items);
+			};
+		},
+		set(value) {
+			push = value;
+		},
+	});
+}
+
 function injectIntoMainWorld(code) {
 	const inject = () => {
 		const script = document.createElement("script");
@@ -714,6 +771,8 @@ function injectIntoMainWorld(code) {
 	});
 	observer.observe(document, { childList: true });
 }
+
+injectIntoMainWorld(`(${desktopModePatcher.toString()})();`);
 
 injectIntoMainWorld(
 	`(${experimentPatcher.toString()})(${JSON.stringify(rscOverrides)}, ${JSON.stringify(storeOverrides)}, ${JSON.stringify(managedNames)});`,
