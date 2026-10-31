@@ -15,7 +15,8 @@ main.nmc-store-active > *:not(#nmc-store-root) {
 
 	display: block;
 	padding: var(--ym-spacer-size-xxl);
-	height: 100vh;
+	height: 100%;
+	min-height: 0;
 	box-sizing: border-box;
 	overflow-y: auto;
 	scrollbar-gutter: stable;
