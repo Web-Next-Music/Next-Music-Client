@@ -326,49 +326,51 @@ function createStoreCard(React, StoreButton) {
 		if (item.installed && !item.enabled) cardClasses.push("disabled");
 
 		return (
-			<div
-				className={cardClasses.join(" ")}
-				tabIndex={item.readme ? 0 : undefined}
-				aria-label={
-					item.readme ? `${item.name}: ${t("tooltipReadme")}` : undefined
-				}
-				onClick={(event) => {
-					if (
-						item.readme &&
-						event.target.matches(
-							".nmc-card, .nmc-card-top, .nmc-meta, .nmc-name, .nmc-actions",
-						)
-					)
-						onReadme(item);
-				}}
-				onKeyDown={(event) => {
-					if (
-						item.readme &&
-						event.target === event.currentTarget &&
-						(event.key === "Enter" || event.key === " ")
-					) {
-						event.preventDefault();
-						onReadme(item);
+			<>
+				<div
+					className={cardClasses.join(" ")}
+					tabIndex={item.readme ? 0 : undefined}
+					aria-label={
+						item.readme ? `${item.name}: ${t("tooltipReadme")}` : undefined
 					}
-				}}
-			>
-				<div className="nmc-card-top">
-					{logoNode}
-					<div className="nmc-meta">
-						<div className="nmc-name">
-							<Name
-								className="nmc-name-text"
-								{...(Text ? { variant: "span", size: "m" } : {})}
-							>
-								{item.name}
-							</Name>
-							{item.readme &&
-								storeIcon(React, "info", { className: "nmc-readme-info" })}
+					onClick={(event) => {
+						if (
+							item.readme &&
+							event.target.matches(
+								".nmc-card, .nmc-card-top, .nmc-meta, .nmc-name, .nmc-actions",
+							)
+						)
+							onReadme(item);
+					}}
+					onKeyDown={(event) => {
+						if (
+							item.readme &&
+							event.target === event.currentTarget &&
+							(event.key === "Enter" || event.key === " ")
+						) {
+							event.preventDefault();
+							onReadme(item);
+						}
+					}}
+				>
+					<div className="nmc-card-top">
+						{logoNode}
+						<div className="nmc-meta">
+							<div className="nmc-name">
+								<Name
+									className="nmc-name-text"
+									{...(Text ? { variant: "span", size: "m" } : {})}
+								>
+									{item.name}
+								</Name>
+								{item.readme &&
+									storeIcon(React, "info", { className: "nmc-readme-info" })}
+							</div>
+							{subtitle}
 						</div>
-						{subtitle}
 					</div>
+					<div className="nmc-actions">{buttons}</div>
 				</div>
-				<div className="nmc-actions">{buttons}</div>
 				{confirmDelete && (
 					<DeleteModal
 						item={item}
@@ -376,7 +378,7 @@ function createStoreCard(React, StoreButton) {
 						onConfirm={onDeleteConfirm}
 					/>
 				)}
-			</div>
+			</>
 		);
 	};
 }
