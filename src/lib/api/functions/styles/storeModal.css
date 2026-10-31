@@ -338,6 +338,10 @@
 	padding: var(--ym-spacer-size-l);
 }
 
+.nmc-settings-dialog {
+	width: min(52rem, 100%);
+}
+
 .nmc-settings-modal .nmc-modal-head {
 	padding: var(--ym-spacer-size-xl) var(--ym-spacer-size-xl) 0;
 	border: 0;
@@ -549,6 +553,48 @@
 	justify-content: space-between;
 	gap: 1rem;
 	padding: var(--ym-spacer-size-xl) var(--ym-spacer-size-xl) 0;
+}
+
+.nmc-delete-dialog {
+	width: min(26rem, calc(100vw - 2rem));
+}
+
+.nmc-delete-modal {
+	width: min(26rem, calc(100vw - 2rem));
+}
+
+.nmc-delete-modal .nmc-modal-foot {
+	justify-content: flex-end;
+}
+
+.nmc-delete-modal .nmc-settings-close {
+	display: inline-flex;
+	flex: 0 0 2rem;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
+.nmc-delete-modal .nmc-settings-close .nmc-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#nmc-store-root .nmc-delete-modal .btn-primary,
+.nmc-delete-modal .btn-primary {
+	background: var(--ym-controls-color-danger-default-enabled, #ff5c5c);
+	color: #000;
+}
+
+#nmc-store-root .nmc-delete-modal .btn-primary:hover:not(:disabled),
+.nmc-delete-modal .btn-primary:hover:not(:disabled) {
+	background: var(--ym-controls-color-danger-default-hovered, #e64a4a);
+}
+
+#nmc-store-root .nmc-delete-modal .btn-primary:active:not(:disabled),
+.nmc-delete-modal .btn-primary:active:not(:disabled) {
+	background: var(--ym-controls-color-danger-default-pressed, #cc3e3e);
 }
 
 .nmc-settings-heading {

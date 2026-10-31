@@ -2,26 +2,30 @@ function createStoreButton(React) {
 	return function StoreButton(props) {
 		const { variant, icon, label, title, disabled, busy, iconOnly, onClick } =
 			props;
-
+		const { Button } = getSiteComponents();
+		const iconNode = icon ? storeIcon(React, icon) : null;
 		const classes = ["btn"];
 		if (variant) classes.push("btn-" + variant);
-		if (iconOnly) classes.push("btn-icon");
+		if (iconOnly && iconNode) classes.push("btn-icon");
 
-		let content;
-		if (busy) content = <span className="nmc-spin" />;
-		else if (icon) content = storeIcon(React, icon);
-		else content = label;
-
+		const content = busy ? (
+			<span className="nmc-spin" aria-hidden="true" />
+		) : (
+			iconNode || label || title
+		);
+		const Component = Button || "button";
 		return (
-			<button
+			<Component
 				type="button"
 				className={classes.join(" ")}
 				title={title || undefined}
+				aria-label={label || title || undefined}
+				aria-busy={!!busy}
 				disabled={!!disabled || !!busy}
 				onClick={onClick}
 			>
 				{content}
-			</button>
+			</Component>
 		);
 	};
 }
@@ -79,9 +83,106 @@ function useHasSettings(React, item) {
 	return hasSettings;
 }
 
+function createDeleteModal(React, StoreButton) {
+	return function DeleteModal({ item, onClose, onConfirm }) {
+		const { Modal, Heading, Text } = getSiteComponents();
+		const title = t("confirmDeleteTitle");
+		React.useEffect(() => {
+			if (Modal) return undefined;
+			const onKey = (event) => {
+				if (event.key === "Escape") onClose();
+			};
+			window.addEventListener("keydown", onKey);
+			return () => window.removeEventListener("keydown", onKey);
+		}, [Modal, onClose]);
+
+		const heading = Heading ? (
+			<Heading
+				className="nmc-settings-heading"
+				variant="h4"
+				size="xs"
+				weight="bold"
+			>
+				{title}
+			</Heading>
+		) : (
+			<h2 className="nmc-settings-heading">{title}</h2>
+		);
+		const message = t("confirmDeleteMessage", { name: item.name });
+		const content = (
+			<div className="nmc-modal nmc-settings-modal nmc-delete-modal">
+				{!Modal && (
+					<div className="nmc-modal-head">
+						{heading}
+						<button
+							type="button"
+							className="nmc-settings-close"
+							aria-label={t("tooltipClose")}
+							onClick={onClose}
+						>
+							{storeIcon(React, "close") || "×"}
+						</button>
+					</div>
+				)}
+				<div className="nmc-modal-body">
+					{Text ? (
+						<Text variant="span" size="m">
+							{message}
+						</Text>
+					) : (
+						message
+					)}
+				</div>
+				<div className="nmc-modal-foot">
+					<StoreButton
+						variant="primary"
+						label={t("btnDelete")}
+						onClick={onConfirm}
+					/>
+				</div>
+			</div>
+		);
+		if (Modal)
+			return (
+				<Modal
+					open={true}
+					onClose={onClose}
+					onOpenChange={(open) => {
+						if (!open) onClose();
+					}}
+					header={heading}
+					labelClose={t("tooltipClose")}
+					placement="center"
+					overlayColor="full"
+					className="nmc-native-modal nmc-delete-dialog"
+					headerClassName="nmc-native-modal-header"
+					contentClassName="nmc-native-modal-content"
+					aria-label={title}
+				>
+					{content}
+				</Modal>
+			);
+		return (
+			<div
+				className="nmc-modal-bg"
+				onClick={(event) => {
+					if (event.target === event.currentTarget) onClose();
+				}}
+			>
+				<div role="dialog" aria-modal="true" aria-label={title}>
+					{content}
+				</div>
+			</div>
+		);
+	};
+}
+
 function createStoreCard(React, StoreButton) {
+	const DeleteModal = createDeleteModal(React, StoreButton);
 	return function StoreCard(props) {
 		const { item, section, hasUpdate, onAction, onReadme, onSettings } = props;
+		const { Text } = getSiteComponents();
+		const Name = Text || "span";
 
 		const [logo, setLogo] = useCardLogo(React, item);
 		const [busy, setBusy] = React.useState("");
@@ -89,7 +190,6 @@ function createStoreCard(React, StoreButton) {
 		const [confirmDelete, setConfirmDelete] = React.useState(false);
 		const hasSettings = useHasSettings(React, item);
 
-		useAutoReset(React, confirmDelete, () => setConfirmDelete(false), 4000);
 		useAutoReset(React, error, () => setError(""), 3000);
 
 		const run = async (action) => {
@@ -102,12 +202,8 @@ function createStoreCard(React, StoreButton) {
 			setBusy("");
 		};
 
-		const onDeleteClick = (event) => {
+		const onDeleteConfirm = (event) => {
 			if (!event?.isTrusted) return;
-			if (!confirmDelete) {
-				setConfirmDelete(true);
-				return;
-			}
 			setConfirmDelete(false);
 			run("delete");
 		};
@@ -175,14 +271,13 @@ function createStoreCard(React, StoreButton) {
 			buttons.push(
 				<StoreButton
 					key="delete"
-					variant={confirmDelete ? "primary" : "danger"}
-					iconOnly={!confirmDelete}
-					icon={confirmDelete ? undefined : "trash"}
-					label={confirmDelete ? t("btnDeleteConfirm") : undefined}
+					variant="danger"
+					iconOnly={true}
+					icon="trash"
 					title={t("tooltipDelete")}
 					busy={busy === "delete"}
 					disabled={!!busy}
-					onClick={onDeleteClick}
+					onClick={() => setConfirmDelete(true)}
 				/>,
 			);
 		}
@@ -213,6 +308,7 @@ function createStoreCard(React, StoreButton) {
 		const subtitle = repo ? (
 			<a
 				className="nmc-sub"
+				href={"https://github.com/" + repo.owner + "/" + repo.repo}
 				onClick={(event) => {
 					event.preventDefault();
 					openUrlExternal("https://github.com/" + repo.owner + "/" + repo.repo);
@@ -224,31 +320,62 @@ function createStoreCard(React, StoreButton) {
 			<div className="nmc-sub">{cardSubtitleText(item, section)}</div>
 		);
 
-		const readmeIcon = item.readme
-			? storeIcon(React, "readme", {
-					title: t("tooltipReadme"),
-					className: "nmc-readme-icon",
-					onClick: () => onReadme(item),
-				})
-			: null;
-
 		const cardClasses = ["nmc-card"];
+		if (item.readme) cardClasses.push("has-readme");
 		if (item.installed) cardClasses.push("installed");
 		if (item.installed && !item.enabled) cardClasses.push("disabled");
 
 		return (
-			<div className={cardClasses.join(" ")}>
+			<div
+				className={cardClasses.join(" ")}
+				tabIndex={item.readme ? 0 : undefined}
+				aria-label={
+					item.readme ? `${item.name}: ${t("tooltipReadme")}` : undefined
+				}
+				onClick={(event) => {
+					if (
+						item.readme &&
+						event.target.matches(
+							".nmc-card, .nmc-card-top, .nmc-meta, .nmc-name, .nmc-actions",
+						)
+					)
+						onReadme(item);
+				}}
+				onKeyDown={(event) => {
+					if (
+						item.readme &&
+						event.target === event.currentTarget &&
+						(event.key === "Enter" || event.key === " ")
+					) {
+						event.preventDefault();
+						onReadme(item);
+					}
+				}}
+			>
 				<div className="nmc-card-top">
 					{logoNode}
 					<div className="nmc-meta">
 						<div className="nmc-name">
-							<span className="nmc-name-text">{item.name}</span>
-							{readmeIcon}
+							<Name
+								className="nmc-name-text"
+								{...(Text ? { variant: "span", size: "m" } : {})}
+							>
+								{item.name}
+							</Name>
+							{item.readme &&
+								storeIcon(React, "info", { className: "nmc-readme-info" })}
 						</div>
 						{subtitle}
 					</div>
 				</div>
 				<div className="nmc-actions">{buttons}</div>
+				{confirmDelete && (
+					<DeleteModal
+						item={item}
+						onClose={() => setConfirmDelete(false)}
+						onConfirm={onDeleteConfirm}
+					/>
+				)}
 			</div>
 		);
 	};

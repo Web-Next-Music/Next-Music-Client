@@ -16,7 +16,12 @@
 	transition: background var(--ym-duration-transition);
 }
 
-#nmc-store-root .nmc-card:hover {
+#nmc-store-root .nmc-card.has-readme {
+	cursor: pointer;
+}
+
+#nmc-store-root .nmc-card.has-readme:hover,
+#nmc-store-root .nmc-card.has-readme:focus-visible {
 	background: var(--ym-controls-color-secondary-default-hovered);
 }
 
@@ -78,15 +83,16 @@
 	white-space: nowrap;
 }
 
-#nmc-store-root .nmc-readme-icon {
-	color: var(--ym-controls-color-primary-text-enabled);
-	cursor: pointer;
+#nmc-store-root .nmc-readme-info {
 	display: inline-flex;
 	flex-shrink: 0;
+	color: var(--ym-controls-color-primary-text-enabled);
+	pointer-events: none;
 }
 
-#nmc-store-root .nmc-readme-icon:hover {
-	color: var(--nmc-accent);
+#nmc-store-root .nmc-readme-info svg {
+	width: 0.875rem;
+	height: 0.875rem;
 }
 
 #nmc-store-root .nmc-sub {

@@ -40,6 +40,8 @@
 		"btnEnable": "Enable",
 		"btnDisable": "Disable",
 		"btnDelete": "Delete",
+		"confirmDeleteTitle": "Delete extension?",
+		"confirmDeleteMessage": "Are you sure you want to delete “{name}”?",
 		"btnDeleteConfirm": "Confirm?",
 		"btnRestart": "Restart",
 		"btnCancel": "Cancel",

@@ -2,6 +2,26 @@
 	background: transparent;
 }
 
+.nmc-readme-dialog {
+	width: min(52rem, 100%);
+}
+
+.nmc-readme-heading {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	gap: var(--ym-spacer-size-m);
+	min-width: 0;
+}
+
+.nmc-readme-modal .nmc-settings-close {
+	display: inline-flex;
+	flex: 0 0 2rem;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
 #nmc-store-root .nmc-banner {
 	position: fixed;
 	left: 50%;

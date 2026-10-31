@@ -3,7 +3,7 @@ main.nmc-store-active > *:not(#nmc-store-root) {
 }
 
 #nmc-store-root {
-	--nmc-accent: __STORE_ACCENT__;
+	--nmc-accent: #2bfef5;
 	--nmc-on-accent: #000;
 	--nmc-ctl: var(--ym-controls-color-secondary-default-enabled);
 	--nmc-ctl-hover: var(--ym-controls-color-secondary-default-hovered);
@@ -12,13 +12,6 @@ main.nmc-store-active > *:not(#nmc-store-root) {
 	--nmc-mut: var(--ym-controls-color-secondary-text-enabled);
 	--nmc-err: var(--ym-controls-color-danger-default-enabled, #ff5c5c);
 	--nmc-ok: var(--nmc-accent);
-
-	--ym-controls-color-primary-default-enabled: var(--nmc-accent);
-	--ym-controls-color-primary-default-hovered: var(--nmc-accent);
-	--ym-controls-color-primary-default-pressed: var(--nmc-accent);
-	--ym-controls-color-primary-on_default-enabled: #000;
-	--ym-controls-color-secondary-outline-selected_stroke: var(--nmc-accent);
-	--ym-controls-color-secondary-text-selected: var(--nmc-accent);
 
 	display: block;
 	padding: var(--ym-spacer-size-xxl);

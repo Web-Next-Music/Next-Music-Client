@@ -120,7 +120,7 @@ export function fsToggle(name) {
 
 	invalidateAddonsDir();
 
-	return !disabled;
+	return disabled;
 }
 
 export function fsDelete(name) {

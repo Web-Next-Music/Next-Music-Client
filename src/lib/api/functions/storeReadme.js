@@ -17,19 +17,22 @@ function onReadmeLinkClick(event) {
 	if (href && /^https?:/i.test(href)) openUrlExternal(href);
 }
 
-function createReadmeModal(React, StoreButton) {
+function createReadmeModal(React) {
 	const h = React.createElement;
 
 	return function ReadmeModal({ item, onClose }) {
 		const [html, setHtml] = React.useState(null);
+		const { Modal, Heading } = getSiteComponents();
+		const title = t("modalReadmeTitle", { name: item.name });
 
 		React.useEffect(() => {
+			if (Modal) return undefined;
 			const onKey = (event) => {
 				if (event.key === "Escape") onClose();
 			};
 			window.addEventListener("keydown", onKey);
 			return () => window.removeEventListener("keydown", onKey);
-		}, [onClose]);
+		}, [Modal, onClose]);
 
 		React.useEffect(() => {
 			let alive = true;
@@ -54,7 +57,64 @@ function createReadmeModal(React, StoreButton) {
 						onClick: onReadmeLinkClick,
 						dangerouslySetInnerHTML: { __html: html },
 					});
-
+		const heading = h(
+			"div",
+			{ className: "nmc-readme-heading" },
+			Heading
+				? h(
+						Heading,
+						{
+							className: "nmc-settings-heading",
+							variant: "h4",
+							size: "xs",
+							weight: "bold",
+						},
+						title,
+					)
+				: h("h2", { className: "nmc-settings-heading" }, title),
+			h("div", { className: "nmc-modal-badge" }, "README"),
+		);
+		const content = h(
+			"div",
+			{ className: "nmc-modal nmc-settings-modal nmc-readme-modal" },
+			!Modal &&
+				h(
+					"div",
+					{ className: "nmc-modal-head" },
+					heading,
+					h(
+						"button",
+						{
+							type: "button",
+							className: "nmc-settings-close",
+							"aria-label": t("tooltipClose"),
+							onClick: onClose,
+						},
+						storeIcon(React, "close") || "×",
+					),
+				),
+			h("div", { className: "nmc-modal-body nmc-scroll" }, body),
+		);
+		if (Modal)
+			return h(
+				Modal,
+				{
+					open: true,
+					onClose,
+					onOpenChange: (open) => {
+						if (!open) onClose();
+					},
+					header: heading,
+					labelClose: t("tooltipClose"),
+					placement: "center",
+					overlayColor: "full",
+					className: "nmc-native-modal",
+					headerClassName: "nmc-native-modal-header",
+					contentClassName: "nmc-native-modal-content",
+					"aria-label": title,
+				},
+				content,
+			);
 		return h(
 			"div",
 			{
@@ -64,30 +124,15 @@ function createReadmeModal(React, StoreButton) {
 				},
 			},
 			h(
-				"div",
-				{ className: "nmc-modal" },
-				h(
-					"div",
-					{ className: "nmc-modal-head" },
-					h(
-						"div",
-						{ className: "nmc-modal-title" },
-						t("modalReadmeTitle", { name: item.name }),
-					),
-					h("div", { className: "nmc-modal-badge" }, "README"),
-				),
-				h("div", { className: "nmc-modal-body nmc-scroll" }, body),
-				h(
-					"div",
-					{ className: "nmc-modal-foot" },
-					h("div", { className: "nmc-modal-status" }, ""),
-					h(StoreButton, {
-						variant: "primary",
-						label: t("tooltipClose"),
-						onClick: onClose,
-					}),
-				),
-			),
+							"div",
+							{
+								className: "nmc-readme-dialog",
+								role: "dialog",
+								"aria-modal": true,
+								"aria-label": title,
+							},
+							content,
+						),
 		);
 	};
 }

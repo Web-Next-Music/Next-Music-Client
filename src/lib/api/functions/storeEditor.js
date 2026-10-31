@@ -570,7 +570,12 @@ function createEditorModal(React, StoreButton) {
 			},
 			h(
 				"div",
-				{ role: "dialog", "aria-modal": true, "aria-label": name },
+				{
+									className: "nmc-settings-dialog",
+									role: "dialog",
+									"aria-modal": true,
+									"aria-label": name,
+								},
 				content,
 			),
 		);

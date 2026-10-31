@@ -40,6 +40,8 @@
 		"btnEnable": "Включить",
 		"btnDisable": "Выключить",
 		"btnDelete": "Удалить",
+		"confirmDeleteTitle": "Удалить расширение?",
+		"confirmDeleteMessage": "Вы уверены, что хотите удалить «{name}»?",
 		"btnRestart": "Перезапустить",
 		"btnCancel": "Отмена",
 		"btnSave": "Сохранить",

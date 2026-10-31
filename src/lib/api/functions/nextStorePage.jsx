@@ -1,7 +1,47 @@
-const OPTIONAL_SLOTS = ["TabCarousel", "Tab", "TabWithTitle", "SearchInput"];
+const OPTIONAL_SLOTS = [
+	"TabCarousel",
+	"Tab",
+	"TabWithTitle",
+	"SearchInput",
+	"Heading",
+	"Text",
+	"Button",
+];
 
 let _storeHost = null;
 let _storeRoot = null;
+const _storePendingChanges = new Map();
+
+function trackStoreChange(action, item, result) {
+	const key = lower(item.name);
+	const change = _storePendingChanges.get(key) || {
+		originalInstalled: !!item.installed,
+		originalEnabled: !!item.enabled,
+		installed: !!item.installed,
+		enabled: !!item.enabled,
+		contentChanged: false,
+	};
+
+	if (action === "toggle") {
+		change.enabled = result.enabled;
+	} else if (action === "delete") {
+		change.installed = false;
+	} else {
+		if (change.originalInstalled) change.contentChanged = true;
+		change.installed = true;
+		change.enabled = true;
+	}
+
+	if (
+		change.installed === change.originalInstalled &&
+		(!change.installed || change.enabled === change.originalEnabled) &&
+		!change.contentChanged
+	) {
+		_storePendingChanges.delete(key);
+	} else {
+		_storePendingChanges.set(key, change);
+	}
+}
 
 function findContentArea() {
 	return (
@@ -156,7 +196,7 @@ function useRateLimit(React) {
 }
 
 function renderTabs(components, tab, setTab, counts) {
-	const { React, TabCarousel, Tab, TabWithTitle } = components;
+	const { React, TabCarousel, Tab, TabWithTitle, Button } = components;
 
 	const defs = [
 		["addons", t("tabAddons")],
@@ -166,18 +206,21 @@ function renderTabs(components, tab, setTab, counts) {
 
 	const labelOf = (value, label) => label + " • " + counts[value];
 
-	if (!TabCarousel) {
+	if (!TabCarousel || (!TabWithTitle && !Tab)) {
+		const TabButton = Button || "button";
 		return (
 			<div className="nmc-tabs">
 				{defs.map(([value, label]) => (
-					<button
+					<TabButton
 						key={value}
 						type="button"
 						className={tab === value ? "nmc-tab active" : "nmc-tab"}
+						size={Button ? "s" : undefined}
+						radius={Button ? "xxxl" : undefined}
 						onClick={() => setTab(value)}
 					>
 						{labelOf(value, label)}
-					</button>
+					</TabButton>
 				))}
 			</div>
 		);
@@ -231,17 +274,23 @@ function renderSearch(components, query, setQuery) {
 }
 
 function createStoreApp(components) {
-	const { React } = components;
+	const { React, Heading, Text, Button } = components;
 
 	const StoreButton = createStoreButton(React);
 	const Card = createStoreCard(React, StoreButton);
 	const EditorModal = createEditorModal(React, StoreButton);
-	const ReadmeModal = createReadmeModal(React, StoreButton);
+	const ReadmeModal = createReadmeModal(React);
 
 	const renderBanner = (key, text, action) => (
 		<div className="nmc-banner" key={key}>
-			{storeIcon(React, "warning", { key: "icon" })}
-			<span key="text">{text}</span>
+			{key !== "restart" && storeIcon(React, "warning", { key: "icon" })}
+			{Text ? (
+				<Text key="text" variant="span" size="m">
+					{text}
+				</Text>
+			) : (
+				<span key="text">{text}</span>
+			)}
 			{action}
 		</div>
 	);
@@ -249,7 +298,9 @@ function createStoreApp(components) {
 	return function StoreApp() {
 		const [tab, setTab] = React.useState("addons");
 		const [query, setQuery] = React.useState("");
-		const [restartNeeded, setRestartNeeded] = React.useState(false);
+		const [restartNeeded, setRestartNeeded] = React.useState(
+			_storePendingChanges.size > 0,
+		);
 		const [readme, setReadme] = React.useState(null);
 		const [editor, setEditor] = React.useState(null);
 		const [, setLangReady] = React.useState(0);
@@ -277,7 +328,8 @@ function createStoreApp(components) {
 					});
 				}
 
-				setRestartNeeded(true);
+				trackStoreChange(action, item, res);
+				setRestartNeeded(_storePendingChanges.size > 0);
 				await reload();
 			},
 			[reload, setUpdates],
@@ -328,25 +380,59 @@ function createStoreApp(components) {
 				renderBanner(
 					"restart",
 					t("statusRestartRequired"),
-					<StoreButton
-						key="btn"
-						variant="primary"
-						label={t("btnRestart")}
-						onClick={() => {
-							storeJson("POST", "/api/reload", {}).catch(() => {});
-						}}
-					/>,
+					Button ? (
+						<Button
+							key="btn"
+							type="button"
+							size="s"
+							radius="xxxl"
+							onClick={() => {
+								storeJson("POST", "/api/reload", {}).catch(() => {});
+							}}
+						>
+							{t("btnRestart")}
+						</Button>
+					) : (
+						<StoreButton
+							key="btn"
+							variant="primary"
+							label={t("btnRestart")}
+							onClick={() => {
+								storeJson("POST", "/api/reload", {}).catch(() => {});
+							}}
+						/>
+					),
 				),
 			);
 		}
 
 		let body;
 		if (data[tab] === null) {
-			body = <div className="nmc-empty">{t("statusLoading")}</div>;
+			body = (
+				<div className="nmc-empty">
+					{Text ? (
+						<Text variant="span" size="m">
+							{t("statusLoading")}
+						</Text>
+					) : (
+						t("statusLoading")
+					)}
+				</div>
+			);
 		} else if (!items.length) {
 			body = (
 				<div className="nmc-empty">
-					{needle ? t("searchNoResults", { query }) : t("statusEmptyInstalled")}
+					{Text ? (
+						<Text variant="span" size="m">
+							{needle
+								? t("searchNoResults", { query })
+								: t("statusEmptyInstalled")}
+						</Text>
+					) : needle ? (
+						t("searchNoResults", { query })
+					) : (
+						t("statusEmptyInstalled")
+					)}
 				</div>
 			);
 		} else {
@@ -370,9 +456,15 @@ function createStoreApp(components) {
 		return (
 			<div>
 				<div className="nmc-head">
-					<div className="nmc-title">
-						Next Music <span>Store</span>
-					</div>
+					{Heading ? (
+						<Heading className="nmc-title" variant="h1" size="xl" weight="bold">
+							Next Music <span>Store</span>
+						</Heading>
+					) : (
+						<div className="nmc-title">
+							Next Music <span>Store</span>
+						</div>
+					)}
 				</div>
 				<div>{renderTabs(components, tab, setTab, counts)}</div>
 				<div className="nmc-toolbar">

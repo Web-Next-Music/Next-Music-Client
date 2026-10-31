@@ -1,12 +1,7 @@
 const STORE_ROOT_ID = "nmc-store-root";
 const STORE_STYLE_ID = "nmc-store-style";
 const STORE_ACTIVE_CLASS = "nmc-store-active";
-const STORE_ACCENT = "#2bfef5";
-
-const STORE_TOKENS_CSS = __CSS_FILE__("./styles/storeTokens.css").replace(
-	/__STORE_ACCENT__/g,
-	STORE_ACCENT,
-);
+const STORE_TOKENS_CSS = __CSS_FILE__("./styles/storeTokens.css");
 
 const STORE_HEADER_CSS = __CSS_FILE__("./styles/storeHeader.css");
 
@@ -18,10 +13,15 @@ const STORE_TABS_CSS = __CSS_FILE__("./styles/storeTabs.css");
 
 const STORE_README_CSS = __CSS_FILE__("./styles/storeReadme.css");
 
-const STORE_MODAL_CSS = __CSS_FILE__("./styles/storeModal.css").replace(
-	/__STORE_ACCENT__/g,
-	STORE_ACCENT,
-);
+const STORE_MODAL_CSS = __CSS_FILE__("./styles/storeModal.css")
+	.replace(
+		/__STORE_ACCENT__/g,
+		"var(--ym-controls-color-primary-default-enabled, #ffdb4d)",
+	)
+	.replace(
+		"color: #000;",
+		"color: var(--ym-controls-color-primary-on_default-enabled, #000);",
+	);
 
 const STORE_CSS = [
 	STORE_TOKENS_CSS,
