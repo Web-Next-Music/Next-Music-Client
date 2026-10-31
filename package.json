@@ -7,7 +7,7 @@
 		"node": ">=24.0.0",
 		"pnpm": ">=9.0.0"
 	},
-	"packageManager": "pnpm@12.15.0",
+	"packageManager": "pnpm@12.16.1",
 	"scripts": {
 		"dev:vite": "vite",
 		"dev:electron": "electron src/index.js",
@@ -118,17 +118,17 @@
 		"concurrently": "^10.0.6",
 		"cross-env": "^10.1.0",
 		"dotenv": "^18.0.9",
-		"electron": "^45.0.0",
-		"electron-builder": "^26.15.3",
+		"electron": "^45.2.1",
+		"electron-builder": "^26.18.0",
 		"esbuild": "^0.28.2",
 		"html-minifier-terser": "^7.2.0",
 		"lightningcss": "^1.33.0",
 		"lit": "^3.3.3",
-		"sass": "^1.106.1",
+		"sass": "^1.107.1",
 		"scss": "^0.2.4",
 		"terser": "^5.51.2",
 		"vite": "^8.3.5",
-		"vite-plugin-electron": "^1.1.2"
+		"vite-plugin-electron": "^1.2.0"
 	},
 	"dependencies": {
 		"@fontsource/noto-sans": "^5.3.0",
@@ -137,11 +137,11 @@
 		"@fontsource/space-mono": "^5.3.0",
 		"@fontsource/syne": "^5.3.0",
 		"@xhayper/discord-rpc": "^1.5.1",
-		"electron-updater": "^6.8.9",
+		"electron-updater": "^6.8.11",
 		"mdui": "^2.1.5",
 		"prettier": "^3.9.10",
 		"sucrase": "^3.35.1",
-		"ws": "^8.22.0",
+		"ws": "^8.22.1",
 		"zod": "^4.6.7"
 	}
 }
