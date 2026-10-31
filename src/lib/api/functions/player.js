@@ -1,7 +1,12 @@
+function isDeadStateTreeNode(obj) {
+	return obj?.$treenode?.isAlive === false;
+}
+
 function isPlayerLike(obj) {
 	return (
 		obj !== null &&
 		typeof obj === "object" &&
+		!isDeadStateTreeNode(obj) &&
 		typeof obj.id === "string" &&
 		typeof obj.play === "function" &&
 		typeof obj.moveForward === "function" &&
@@ -14,6 +19,7 @@ function isPlaybackControllerLike(obj) {
 	return (
 		obj !== null &&
 		typeof obj === "object" &&
+		!isDeadStateTreeNode(obj) &&
 		obj.playbacks instanceof Map &&
 		obj.activePlayback !== undefined &&
 		typeof obj.activePlayback?.onChange === "function"
@@ -46,6 +52,7 @@ function findPlaybackController() {
 			return;
 		visited.add(obj);
 		try {
+			if (isDeadStateTreeNode(obj)) return;
 			if (isPlaybackControllerLike(obj)) {
 				controller = obj;
 				return;
@@ -111,6 +118,7 @@ function refreshPlayers() {
 				return;
 			visited.add(obj);
 			try {
+				if (isDeadStateTreeNode(obj)) return;
 				if (isPlayerLike(obj)) {
 					found.push(obj);
 					return;
