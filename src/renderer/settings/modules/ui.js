@@ -6,6 +6,7 @@ import { buildGitHubStarBlock } from "./github.js";
 import { buildDiscordSignInBlock } from "./discord.js";
 import { getPath } from "./utils.js";
 import { getBadge, GROUP_BADGE_KEY } from "./notice.js";
+import { checkDirty } from "./dirty.js";
 import "../components/config-field.js";
 
 function el(tag, className, text) {
@@ -234,17 +235,49 @@ export function buildUI() {
 	const saveBtn = document.createElement("mdui-button");
 	saveBtn.variant = "filled";
 	saveBtn.id = "save-restart-btn";
+	saveBtn.disabled = state.saving || state.languageSaving > 0;
 	saveBtn.className =
-		"save-restart-btn" + (state.hasPendingChanges ? " visible" : "");
+		"save-restart-btn" +
+		(state.hasPendingChanges || state.restartRequired ? " visible" : "");
 	saveBtn.dataset.i18n = "settings.saveRestart";
 	saveBtn.textContent = t("settings.saveRestart");
 	saveBtn.addEventListener("click", async () => {
-		const result = await window.electronAPI?.saveConfig(state.CONFIG);
-		state.ORIGINAL_CONFIG = JSON.parse(JSON.stringify(state.CONFIG));
-		state.hasPendingChanges = false;
-		saveBtn.classList.remove("visible");
-		if (result?.needRestart) {
+		if (state.saving || state.languageSaving > 0) return;
+		if (state.restartRequired && !state.hasPendingChanges) {
 			window.electronAPI?.restartApp?.();
+			return;
+		}
+		state.saving = true;
+		saveBtn.disabled = true;
+		try {
+			const savedConfig = structuredClone(state.CONFIG);
+			if (!window.electronAPI?.saveConfig) throw new Error("API unavailable");
+			const result = await window.electronAPI.saveConfig(savedConfig);
+			if (!result || result.ok === false) throw new Error("Save failed");
+			savedConfig.programSettings.language =
+				state.ORIGINAL_CONFIG.programSettings.language;
+			state.ORIGINAL_CONFIG = savedConfig;
+			state.restartRequired ||= result.needRestart;
+			checkDirty();
+			if (result.applyFailed) {
+				window.alert(
+					t(
+						"settings.applyError",
+						"Settings were saved, but could not be fully applied. Restart the app.",
+					),
+				);
+			}
+			if (state.restartRequired && !state.hasPendingChanges) {
+				window.electronAPI?.restartApp?.();
+			}
+		} catch (error) {
+			console.error("Failed to save settings:", error);
+			window.alert(
+				t("settings.saveError", "Failed to save settings. Please try again."),
+			);
+		} finally {
+			state.saving = false;
+			checkDirty();
 		}
 	});
 

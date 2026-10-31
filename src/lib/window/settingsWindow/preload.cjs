@@ -46,7 +46,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	loadLangStrings: () => ipcRenderer.invoke("settings:load-lang-strings"),
 	getLangList: () => ipcRenderer.invoke("settings:get-lang-list"),
 	setLanguage: (langCode) =>
-		ipcRenderer.send("settings:set-language", langCode),
+		ipcRenderer.invoke("settings:set-language", langCode),
 	onLanguageChange: (cb) => {
 		ipcRenderer.removeAllListeners("settings:language-changed");
 		ipcRenderer.on("settings:language-changed", (_event, strings) =>

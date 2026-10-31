@@ -159,15 +159,6 @@ function deepLinkFromArgv(argv) {
 	return argv.find((arg) => arg.startsWith("nextmusic://")) ?? null;
 }
 
-// Allow self-signed certificates
-app.on(
-	"certificate-error",
-	(event, _webContents, _url, _error, _cert, callback) => {
-		event.preventDefault();
-		callback(true);
-	},
-);
-
 // Single Instance Lock
 const isSingleInstance = app.requestSingleInstanceLock();
 

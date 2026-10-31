@@ -188,28 +188,14 @@ function socketUrl() {
 	return `wss://${label}${query ? `?${query}` : ""}`;
 }
 
-function certPins() {
-	return getConfig()?.alpha?.listenAlong?.certPins || {};
-}
-
-function saveCertPin(key, fingerprint) {
-	patchListenAlongConfig({
-		certPins: { ...certPins(), [key]: fingerprint },
-	});
-}
-
 function checkAdminAccess(host, port, token) {
 	return new Promise((resolve) => {
-		const pinKey = `${host}:${port || 443}`;
-		const pinned = certPins()[pinKey];
-
 		const req = https.request(
 			{
 				hostname: host,
 				port: port || 443,
 				path: "/api/settings",
 				method: "GET",
-				rejectUnauthorized: false,
 				timeout: ADMIN_CHECK_TIMEOUT_MS,
 				headers: { Authorization: `Bearer ${token}` },
 			},
@@ -218,31 +204,9 @@ function checkAdminAccess(host, port, token) {
 				resolve(res.statusCode === 200);
 			},
 		);
-
-		req.on("socket", (socket) => {
-			socket.once("secureConnect", () => {
-				const fingerprint = socket.getPeerCertificate()?.fingerprint256;
-				if (!fingerprint) {
-					req.destroy();
-					resolve(false);
-					return;
-				}
-				if (!pinned) {
-					saveCertPin(pinKey, fingerprint);
-				} else if (pinned !== fingerprint) {
-					req.destroy();
-					resolve(false);
-					return;
-				}
-				req.end();
-			});
-		});
-
 		req.on("error", () => resolve(false));
-		req.on("timeout", () => {
-			req.destroy();
-			resolve(false);
-		});
+		req.on("timeout", () => req.destroy());
+		req.end();
 	});
 }
 
@@ -254,7 +218,6 @@ function fetchPublicInfo(host, port) {
 				port: port || 443,
 				path: "/api/info",
 				method: "GET",
-				rejectUnauthorized: false,
 				timeout: ADMIN_CHECK_TIMEOUT_MS,
 			},
 			(res) => {
@@ -442,7 +405,7 @@ function open() {
 	setStatus({ connecting: true, fatal: null });
 	refreshPublicInfo();
 
-	ws = new WebSocket(url, { rejectUnauthorized: false });
+	ws = new WebSocket(url);
 
 	ws.on("open", () => {
 		reconnectDelay = RECONNECT_MIN_MS;

@@ -2,6 +2,12 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { handleRequest } from "./requestHandler.js";
+import {
+	addonsDirectory,
+	validAddonName,
+	invalidateAddonsDir,
+} from "./filesystem.js";
+import { recoverTransactions } from "./transactions.js";
 import { registerHandlers } from "../ipc/registry.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,16 +56,53 @@ function isTextual(contentType) {
 	return TEXT_TYPES.some((t) => ct.includes(t));
 }
 
+function validateSender(event) {
+	const frame = event.senderFrame;
+	if (
+		!frame ||
+		event.sender !== globalThis.mainWindow?.webContents ||
+		frame !== event.sender.mainFrame
+	)
+		throw new Error("Invalid store sender");
+	const url = new URL(frame.url);
+	if (url.origin !== "https://music.yandex.ru")
+		throw new Error("Invalid store sender");
+}
+
+function validatePayload(payload) {
+	if (
+		!payload ||
+		typeof payload !== "object" ||
+		Array.isArray(payload) ||
+		!["GET", "POST"].includes(payload.method) ||
+		typeof payload.urlPath !== "string" ||
+		!/^\/api\/[a-z0-9/-]+$/i.test(payload.urlPath) ||
+		!payload.qp ||
+		typeof payload.qp !== "object" ||
+		Array.isArray(payload.qp) ||
+		Object.entries(payload.qp).some(
+			([key, value]) =>
+				key.length > 100 || typeof value !== "string" || value.length > 65536,
+		) ||
+		(payload.body !== null &&
+			(typeof payload.body !== "string" || payload.body.length > 1024 * 1024))
+	)
+		throw new Error("Invalid store request");
+}
+
 export function setupStoreIpc() {
+	recoverTransactions(addonsDirectory, validAddonName);
+	invalidateAddonsDir();
 	registerHandlers({
 		[EDITOR_CHANNEL]: async (event) => {
+			validateSender(event);
 			const js = readCodeMirror(CM_JS);
 			if (!js) throw new Error("CodeMirror assets not found");
 			await event.sender.executeJavaScript(js + "\n;void 0;");
 			return { css: readCodeMirror(CM_CSS) };
 		},
 
-		[CHANNEL]: async (_event, payload) => {
+		[CHANNEL]: async (event, payload) => {
 			const {
 				method = "GET",
 				urlPath = "/",
@@ -68,6 +111,8 @@ export function setupStoreIpc() {
 			} = payload || {};
 
 			try {
+				validateSender(event);
+				validatePayload(payload);
 				const result = await handleRequest(
 					method,
 					urlPath,

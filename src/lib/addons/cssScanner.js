@@ -1,7 +1,7 @@
 import { getPaths } from "../../config.js";
 import fs from "fs";
 import path from "path";
-import { statDirent, fileSignature } from "./fsUtils.js";
+import { statDirent, enterDirectory, fileSignature } from "./fsUtils.js";
 import { ADDON_DIRS } from "./assetServer.js";
 import { isTypeDeclaration } from "./transpile.js";
 
@@ -18,7 +18,14 @@ function normalizeExtensions(extension) {
 	return new Set(list.map((ext) => ext.toLowerCase()));
 }
 
-function loadFilesFromDirectory(directory, extension, callback) {
+function loadFilesFromDirectory(
+	directory,
+	extension,
+	callback,
+	ancestors = new Set(),
+) {
+	const visited = enterDirectory(directory, ancestors);
+	if (!visited) return Promise.resolve();
 	const extensions = normalizeExtensions(extension);
 
 	return new Promise((resolve) => {
@@ -69,7 +76,9 @@ function loadFilesFromDirectory(directory, extension, callback) {
 						continue;
 					}
 
-					pending.push(loadFilesFromDirectory(fullPath, extension, callback));
+					pending.push(
+						loadFilesFromDirectory(fullPath, extension, callback, visited),
+					);
 					continue;
 				}
 
@@ -111,7 +120,13 @@ function relativeAddonPath(filePath) {
 	return path.relative(addonsDirectory, filePath).replace(/\\/g, "/");
 }
 
-function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
+function scanAddonCssFiles(
+	directory = addonsDirectory,
+	result = new Map(),
+	ancestors = new Set(),
+) {
+	const visited = enterDirectory(directory, ancestors);
+	if (!visited) return result;
 	let entries;
 
 	try {
@@ -140,7 +155,7 @@ function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
 			if (isIgnoredDirectory(entry.name)) continue;
 			if (entry.name === "assets") continue;
 
-			scanAddonCssFiles(info.fullPath, result);
+			scanAddonCssFiles(info.fullPath, result, visited);
 			continue;
 		}
 
@@ -165,7 +180,13 @@ function scanAddonCssFiles(directory = addonsDirectory, result = new Map()) {
 	return result;
 }
 
-function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
+function scanAddonCssMeta(
+	directory = addonsDirectory,
+	result = new Map(),
+	ancestors = new Set(),
+) {
+	const visited = enterDirectory(directory, ancestors);
+	if (!visited) return result;
 	let entries;
 
 	try {
@@ -188,7 +209,7 @@ function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
 			if (isIgnoredDirectory(entry.name)) continue;
 			if (entry.name === "assets") continue;
 
-			scanAddonCssMeta(info.fullPath, result);
+			scanAddonCssMeta(info.fullPath, result, visited);
 			continue;
 		}
 
@@ -209,7 +230,10 @@ function scanAddonCssMeta(directory = addonsDirectory, result = new Map()) {
 function scanAddonCssDirectories(
 	directory = addonsDirectory,
 	result = new Set(),
+	ancestors = new Set(),
 ) {
+	const visited = enterDirectory(directory, ancestors);
+	if (!visited) return result;
 	let entries;
 
 	try {
@@ -221,11 +245,12 @@ function scanAddonCssDirectories(
 	result.add(directory);
 
 	for (const entry of entries) {
-		if (!entry.isDirectory()) continue;
+		const info = statDirent(directory, entry);
+		if (!info?.isDirectory) continue;
 		if (isIgnoredDirectory(entry.name)) continue;
 		if (entry.name === "assets") continue;
 
-		scanAddonCssDirectories(path.join(directory, entry.name), result);
+		scanAddonCssDirectories(info.fullPath, result, visited);
 	}
 
 	return result;

@@ -2,7 +2,7 @@ import { BrowserWindow, shell, app, nativeTheme } from "electron";
 import { registerHandlers, on } from "../../ipc/registry.js";
 import { broadcastToRenderers } from "../../ipc/broadcast.js";
 import { getCurrentVersion } from "../../getAppVersion.js";
-import { getConfig, loadConfig, updateConfig } from "../../configManager.js";
+import { getConfig, updateConfig } from "../../configManager.js";
 import {
 	getAddonExperimentOverrides,
 	mergeAddonExperiments,
@@ -29,11 +29,13 @@ import { loadRendererPage } from "../../paths.js";
 import { fileURLToPath } from "url";
 
 import path from "path";
+import fs from "fs";
 
 import {
 	loadLanguage,
 	getAvailableLanguages,
 	getAllStrings,
+	getCurrentLangCode,
 } from "../../langManager.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,7 +58,7 @@ function maskConfigForRenderer(config) {
 
 function normalizeConfigFromRenderer(newConfig) {
 	const normalizedConfig = structuredClone(newConfig ?? {});
-	const currentConfig = loadConfig();
+	const currentConfig = getConfig();
 	const incomingToken = normalizedConfig?.github?.accessToken;
 
 	if (!normalizedConfig.github) normalizedConfig.github = {};
@@ -199,6 +201,8 @@ registerHandlers({
 	"settings:save-config": (_event, newConfig) => {
 		const currentConfig = getConfig();
 		const normalizedConfig = normalizeConfigFromRenderer(newConfig);
+		normalizedConfig.programSettings.language =
+			currentConfig.programSettings.language;
 		const { needRestart, experimentsChanged } = configChangeNeedsRestart(
 			currentConfig,
 			normalizedConfig,
@@ -207,13 +211,23 @@ registerHandlers({
 
 		updateConfig(normalizedConfig);
 
+		let applyFailed = false;
+		const apply = (fn) => {
+			try {
+				fn();
+			} catch (error) {
+				applyFailed = true;
+				console.error("[Settings] Failed to apply saved settings:", error);
+			}
+		};
+
 		if (!needRestart && experimentsChanged) {
-			applyExperimentsLive(normalizedConfig);
+			apply(() => applyExperimentsLive(normalizedConfig));
 		}
 
-		refreshListenAlong();
+		apply(refreshListenAlong);
 
-		return { needRestart };
+		return { needRestart: needRestart || applyFailed, applyFailed };
 	},
 
 	"settings:toggle-maximize": on(() =>
@@ -233,32 +247,60 @@ registerHandlers({
 		app.exit(0);
 	}),
 
+	"settings:set-language": (_event, language) => {
+		const { languagesDirectory } = getPaths();
+		if (!getAvailableLanguages(languagesDirectory).includes(language)) {
+			throw new Error("Language is not available");
+		}
+		JSON.parse(
+			fs.readFileSync(
+				path.join(languagesDirectory, `${language}.json`),
+				"utf-8",
+			),
+		);
+
+		const config = structuredClone(getConfig());
+		config.programSettings.language = language;
+		updateConfig(config);
+
+		let applyFailed = false;
+		const apply = (fn) => {
+			try {
+				fn();
+			} catch (error) {
+				applyFailed = true;
+				console.error("[Settings] Failed to apply saved language:", error);
+			}
+		};
+		let languageLoaded = false;
+		apply(() => {
+			if (
+				!loadLanguage(languagesDirectory, language) ||
+				getCurrentLangCode() !== language
+			) {
+				throw new Error("Failed to load language");
+			}
+			languageLoaded = true;
+		});
+		if (languageLoaded) {
+			apply(() => _rebuildTray?.());
+			apply(() =>
+				withSettingsWindow((win) =>
+					win.webContents.send("settings:language-changed", getAllStrings()),
+				),
+			);
+			apply(() =>
+				broadcastToRenderers("change-language", language, {
+					except: settingsWindow,
+				}),
+			);
+		}
+		return { applyFailed };
+	},
+
 	"settings:load-lang-strings": () => getAllStrings?.() ?? {},
 	"settings:get-lang-list": () => {
 		const { languagesDirectory } = getPaths();
 		return getAvailableLanguages(languagesDirectory);
 	},
-
-	"settings:set-language": on((_event, langCode) => {
-		const { languagesDirectory } = getPaths();
-
-		loadLanguage(languagesDirectory, langCode);
-
-		const cfg = getConfig();
-		cfg.programSettings.language = langCode;
-		updateConfig(cfg);
-
-		_rebuildTray?.();
-
-		withSettingsWindow((win) =>
-			win.webContents.send(
-				"settings:language-changed",
-				getAllStrings?.() ?? {},
-			),
-		);
-
-		broadcastToRenderers("change-language", langCode, {
-			except: settingsWindow,
-		});
-	}),
 });

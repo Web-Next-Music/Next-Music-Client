@@ -11,9 +11,18 @@ function storeRequest(method, urlPath, qp, body) {
 
 async function storeJson(method, urlPath, qp, body) {
 	const res = await storeRequest(method, urlPath, qp, body);
-	if (typeof res.body !== "string") throw new Error("expected text body");
-	const data = JSON.parse(res.body);
-	if (data && data.ok === false) throw new Error(data.error || "failed");
+	let data;
+	if (typeof res.body === "string" && res.body) {
+		try {
+			data = JSON.parse(res.body);
+		} catch {
+			if (res.status >= 200 && res.status < 300)
+				throw new Error("invalid JSON response");
+		}
+	}
+	if (res.status < 200 || res.status >= 300 || data?.ok === false)
+		throw new Error(data?.error || `Store request failed (HTTP ${res.status})`);
+	if (data === undefined) throw new Error("expected JSON body");
 	return data;
 }
 

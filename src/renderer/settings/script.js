@@ -54,7 +54,7 @@ async function init() {
 	]);
 
 	state.CONFIG = cfg || {};
-	state.ORIGINAL_CONFIG = JSON.parse(JSON.stringify(state.CONFIG));
+
 	state.STRINGS = strings || {};
 	state.LANGLIST = Array.isArray(langList) ? langList : [];
 	state.ADDON_EXPERIMENTS = Array.isArray(addonExps) ? addonExps : [];
@@ -67,6 +67,8 @@ async function init() {
 	state.CONFIG.github.accessToken = tokenResult?.hasToken
 		? "__has_token__"
 		: null;
+
+	state.ORIGINAL_CONFIG = JSON.parse(JSON.stringify(state.CONFIG));
 
 	state.DISCORD_HAS_TOKEN = discordResult?.hasToken ?? false;
 	state.DISCORD_USERNAME = discordResult?.username ?? null;

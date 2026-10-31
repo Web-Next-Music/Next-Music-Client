@@ -3,10 +3,12 @@ import { state } from "./state.js";
 export function checkDirty() {
 	const isDirty =
 		JSON.stringify(state.CONFIG) !== JSON.stringify(state.ORIGINAL_CONFIG);
-	if (isDirty === state.hasPendingChanges) return;
 	state.hasPendingChanges = isDirty;
 	const btn = document.getElementById("save-restart-btn");
-	if (btn) btn.classList.toggle("visible", isDirty);
+	if (btn) {
+		btn.classList.toggle("visible", isDirty || state.restartRequired);
+		btn.disabled = state.saving || state.languageSaving > 0;
+	}
 }
 
 export function scheduleSave() {

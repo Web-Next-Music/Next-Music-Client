@@ -8,6 +8,23 @@ import {
 	loadGitmodules,
 } from "./github/index.js";
 
+const MAX_ARCHIVE_SIZE = 100 * 1024 * 1024;
+const MAX_ENTRIES = 10000;
+
+function safeArchivePath(name) {
+	if (
+		typeof name !== "string" ||
+		!name ||
+		name.includes("\\") ||
+		name.startsWith("/") ||
+		/^[A-Za-z]:/.test(name) ||
+		/[\x00-\x1f:]/.test(name) ||
+		name.split("/").some((part) => part === ".." || part === ".")
+	)
+		throw new Error("Unsafe archive path");
+	return name;
+}
+
 export async function downloadTree(
 	contentPath,
 	destDir,
@@ -19,9 +36,19 @@ export async function downloadTree(
 	const items = await ghContents(owner, repo, contentPath, token, true);
 	fs.mkdirSync(destDir, { recursive: true });
 
+	if (!Array.isArray(items)) throw new Error("Invalid GitHub directory");
 	for (const item of items) {
+		if (
+			typeof item.name !== "string" ||
+			item.name.includes("/") ||
+			item.name.includes("\\")
+		)
+			throw new Error("Invalid GitHub entry");
+		safeArchivePath(item.name);
 		if (item.type === "file") {
 			const r = await httpsGet(item.download_url);
+			if (r.statusCode !== 200)
+				throw new Error(`Download failed: HTTP ${r.statusCode}`);
 			fs.writeFileSync(path.join(destDir, item.name), r.body);
 		} else if (item.type === "dir") {
 			await downloadTree(
@@ -65,26 +92,48 @@ export async function downloadAndExtractTarGz(url, destDir) {
 		throw new Error(`Failed to download tar.gz: HTTP ${r.statusCode}`);
 
 	const { gunzipSync } = await import("zlib");
-	const tarBuf = gunzipSync(r.body);
+	const tarBuf = gunzipSync(r.body, { maxOutputLength: MAX_ARCHIVE_SIZE });
 
 	const topDirs = new Set();
 	let offset = 0;
+	let entryCount = 0;
 
 	while (offset + 512 <= tarBuf.length) {
 		const header = tarBuf.slice(offset, offset + 512);
-		const name = header.toString("utf8", 0, 100).replace(/\0+$/, "");
+		const shortName = header.toString("utf8", 0, 100).replace(/\0.*$/, "");
+		const prefix = header.toString("utf8", 345, 500).replace(/\0.*$/, "");
+		const rawName = prefix ? prefix + "/" + shortName : shortName;
 
-		if (!name) break;
+		if (!rawName) break;
+		const name = rawName.replace(/^(\.\/)+/, "") || ".";
+		if (name !== ".") safeArchivePath(name);
+		if (++entryCount > MAX_ENTRIES) throw new Error("Too many archive entries");
+		const storedChecksum = parseInt(
+			header.toString("ascii", 148, 156).replace(/\0.*$/, "").trim(),
+			8,
+		);
+		let checksum = 0;
+		for (let i = 0; i < 512; i++)
+			checksum += i >= 148 && i < 156 ? 32 : header[i];
+		if (checksum !== storedChecksum) throw new Error("Invalid tar checksum");
 
 		const sizeOctal = header
 			.toString("utf8", 124, 136)
 			.trim()
 			.replace(/\0+$/, "");
 
-		const size = parseInt(sizeOctal, 8) || 0;
+		if (!/^[0-7]+$/.test(sizeOctal)) throw new Error("Invalid tar size");
+		const size = parseInt(sizeOctal, 8);
+		if (name === "." && (header[156] !== 53 || size !== 0))
+			throw new Error("Invalid tar root entry");
+		if (
+			!Number.isSafeInteger(size) ||
+			offset + 512 + Math.ceil(size / 512) * 512 > tarBuf.length
+		)
+			throw new Error("Truncated tar archive");
 		const topPart = name.split("/")[0];
 
-		if (topPart) topDirs.add(topPart);
+		if (topPart && topPart !== ".") topDirs.add(topPart);
 
 		offset += 512 + Math.ceil(size / 512) * 512;
 	}
@@ -93,11 +142,16 @@ export async function downloadAndExtractTarGz(url, destDir) {
 	offset = 0;
 	while (offset + 512 <= tarBuf.length) {
 		const header = tarBuf.slice(offset, offset + 512);
-		const name = header.toString("utf8", 0, 100).replace(/\0+$/, "");
+		const shortName = header.toString("utf8", 0, 100).replace(/\0.*$/, "");
+		const prefix = header.toString("utf8", 345, 500).replace(/\0.*$/, "");
+		const rawName = prefix ? prefix + "/" + shortName : shortName;
 
-		if (!name) break;
+		if (!rawName) break;
+		const name = rawName.replace(/^(\.\/)+/, "") || ".";
 
 		const typeFlag = header.toString("utf8", 156, 157);
+		if (!["0", "\0", "5"].includes(typeFlag))
+			throw new Error("Unsupported tar entry");
 		const sizeOctal = header
 			.toString("utf8", 124, 136)
 			.trim()
@@ -140,23 +194,46 @@ async function _extractZipBuffer(zipBuf, destDir) {
 	const eocdOffset = findEOCD(zipBuf);
 	if (eocdOffset === -1) throw new Error("Invalid ZIP: EOCD not found");
 
+	if (
+		eocdOffset + 22 > zipBuf.length ||
+		eocdOffset + 22 + zipBuf.readUInt16LE(eocdOffset + 20) !== zipBuf.length ||
+		zipBuf.readUInt16LE(eocdOffset + 4) !== 0 ||
+		zipBuf.readUInt16LE(eocdOffset + 6) !== 0 ||
+		zipBuf.readUInt16LE(eocdOffset + 8) !== zipBuf.readUInt16LE(eocdOffset + 10)
+	)
+		throw new Error("Invalid ZIP directory");
 	const cdOffset = zipBuf.readUInt32LE(eocdOffset + 16);
 	const totalEntries = zipBuf.readUInt16LE(eocdOffset + 10);
+	const cdEnd = cdOffset + zipBuf.readUInt32LE(eocdOffset + 12);
+	if (totalEntries > MAX_ENTRIES || cdEnd !== eocdOffset)
+		throw new Error("Invalid ZIP directory");
+	let totalSize = 0;
 
 	const topDirs = new Set();
 	let pos = cdOffset;
 
 	for (let e = 0; e < totalEntries; e++) {
-		if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
+		if (pos + 46 > cdEnd || zipBuf.readUInt32LE(pos) !== 0x02014b50)
+			throw new Error("Invalid ZIP entry");
 
 		const fnLen = zipBuf.readUInt16LE(pos + 28);
 		const extraLen = zipBuf.readUInt16LE(pos + 30);
 		const commentLen = zipBuf.readUInt16LE(pos + 32);
 		const name = zipBuf.toString("utf8", pos + 46, pos + 46 + fnLen);
+		if (pos + 46 + fnLen + extraLen + commentLen > cdEnd)
+			throw new Error("Truncated ZIP entry");
+		safeArchivePath(name);
+		const flags = zipBuf.readUInt16LE(pos + 8);
+		const mode = zipBuf.readUInt32LE(pos + 38) >>> 16;
+		if (
+			flags & 1 ||
+			(mode & 0xf000 && ![0x8000, 0x4000].includes(mode & 0xf000))
+		)
+			throw new Error("Unsupported ZIP entry");
+		totalSize += zipBuf.readUInt32LE(pos + 24);
+		if (totalSize > MAX_ARCHIVE_SIZE) throw new Error("ZIP too large");
 		const topPart = name.split("/")[0];
-
 		if (topPart) topDirs.add(topPart);
-
 		pos += 46 + fnLen + extraLen + commentLen;
 	}
 
@@ -164,7 +241,8 @@ async function _extractZipBuffer(zipBuf, destDir) {
 
 	pos = cdOffset;
 	for (let e = 0; e < totalEntries; e++) {
-		if (zipBuf.readUInt32LE(pos) !== 0x02014b50) break;
+		if (pos + 46 > cdEnd || zipBuf.readUInt32LE(pos) !== 0x02014b50)
+			throw new Error("Invalid ZIP entry");
 
 		const fnLen = zipBuf.readUInt16LE(pos + 28);
 		const extraLen = zipBuf.readUInt16LE(pos + 30);
@@ -181,11 +259,27 @@ async function _extractZipBuffer(zipBuf, destDir) {
 
 		if (!relName || relName.endsWith("/")) continue;
 
+		if (
+			localOffset + 30 > cdOffset ||
+			zipBuf.readUInt32LE(localOffset) !== 0x04034b50
+		)
+			throw new Error("Invalid ZIP local header");
 		const lhFnLen = zipBuf.readUInt16LE(localOffset + 26);
 		const lhExtraLen = zipBuf.readUInt16LE(localOffset + 28);
 		const dataOffset = localOffset + 30 + lhFnLen + lhExtraLen;
 		const compMethod = zipBuf.readUInt16LE(localOffset + 8);
-		const compSize = zipBuf.readUInt32LE(localOffset + 18);
+		const compSize = zipBuf.readUInt32LE(
+			pos - (46 + fnLen + extraLen + commentLen) + 20,
+		);
+		const expectedSize = zipBuf.readUInt32LE(
+			pos - (46 + fnLen + extraLen + commentLen) + 24,
+		);
+		if (
+			dataOffset + compSize > cdOffset ||
+			compMethod !==
+				zipBuf.readUInt16LE(pos - (46 + fnLen + extraLen + commentLen) + 10)
+		)
+			throw new Error("Invalid ZIP data");
 		const compData = zipBuf.slice(dataOffset, dataOffset + compSize);
 
 		let fileData;
@@ -193,11 +287,14 @@ async function _extractZipBuffer(zipBuf, destDir) {
 			fileData = compData;
 		} else if (compMethod === 8) {
 			const { inflateRawSync } = await import("zlib");
-			fileData = inflateRawSync(compData);
+			fileData = inflateRawSync(compData, {
+				maxOutputLength: Math.max(1, expectedSize),
+			});
 		} else {
 			throw new Error(`Unsupported ZIP compression method: ${compMethod}`);
 		}
 
+		if (fileData.length !== expectedSize) throw new Error("Invalid ZIP size");
 		const outPath = path.join(destDir, ...relName.split("/"));
 		fs.mkdirSync(path.dirname(outPath), { recursive: true });
 		fs.writeFileSync(outPath, fileData);

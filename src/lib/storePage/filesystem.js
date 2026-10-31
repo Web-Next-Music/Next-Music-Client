@@ -33,7 +33,47 @@ export function invalidateAddonsDir() {
 	dirCache = null;
 }
 
+export function validAddonName(name) {
+	return (
+		typeof name === "string" &&
+		name.length > 0 &&
+		name.length <= 200 &&
+		!name.startsWith(".") &&
+		!name.startsWith("!") &&
+		!/[/\\\x00-\x1f<>:"|?*]/.test(name) &&
+		!/[. ]$/.test(name) &&
+		!/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)
+	);
+}
+
+export function localAddonFile(name, file) {
+	const raw = findRawEntry(name);
+	if (
+		!raw ||
+		typeof file !== "string" ||
+		!file ||
+		path.isAbsolute(file) ||
+		path.win32.isAbsolute(file) ||
+		file.includes("\\") ||
+		file.split("/").some((part) => !part || part === "." || part === "..")
+	) {
+		throw new Error("Invalid local path");
+	}
+	let target = path.join(addonsDirectory, raw);
+	if (!fs.lstatSync(target).isDirectory())
+		throw new Error("Invalid addon path");
+	for (const part of file.split("/")) {
+		target = path.join(target, part);
+		if (fs.lstatSync(target).isSymbolicLink())
+			throw new Error("Symbolic links are not allowed");
+	}
+	if (!fs.lstatSync(target).isFile()) throw new Error("Invalid local file");
+	return target;
+}
+
 export function findRawEntry(name) {
+	if (typeof name === "string" && name.startsWith("!")) name = name.slice(1);
+	if (!validAddonName(name)) return null;
 	const needle = name.toLowerCase();
 	return (
 		readAddonsDir().find((n) => n.replace(/^!/, "").toLowerCase() === needle) ||
@@ -43,9 +83,10 @@ export function findRawEntry(name) {
 
 export function getLocalReleaseTag(addonName) {
 	try {
-		const raw = findRawEntry(addonName) || addonName;
+		const raw = findRawEntry(addonName);
+		if (!raw) return null;
 
-		const tagFile = path.join(addonsDirectory, raw, ".git-release");
+		const tagFile = localAddonFile(raw, ".git-release");
 		if (fs.existsSync(tagFile)) return fs.readFileSync(tagFile, "utf8").trim();
 
 		return null;
@@ -56,7 +97,8 @@ export function getLocalReleaseTag(addonName) {
 
 export function getLocalCommitHash(addonName) {
 	try {
-		const raw = findRawEntry(addonName) || addonName;
+		const raw = findRawEntry(addonName);
+		if (!raw) return null;
 
 		const headFile = path.join(addonsDirectory, raw, ".git", "HEAD");
 
@@ -64,14 +106,23 @@ export function getLocalCommitHash(addonName) {
 			const commitFile = path.join(addonsDirectory, raw, ".git-commit");
 
 			if (fs.existsSync(commitFile))
-				return fs.readFileSync(commitFile, "utf8").trim();
+				return fs
+					.readFileSync(localAddonFile(raw, ".git-commit"), "utf8")
+					.trim();
 			return null;
 		}
 
-		const head = fs.readFileSync(headFile, "utf8").trim();
+		const head = fs
+			.readFileSync(localAddonFile(raw, ".git/HEAD"), "utf8")
+			.trim();
 		if (!head.startsWith("ref:")) return head.length >= 40 ? head : null;
 
 		const refPath = head.slice(5).trim();
+		if (
+			!/^refs\/[A-Za-z0-9._/-]+$/.test(refPath) ||
+			refPath.split("/").includes("..")
+		)
+			return null;
 
 		const refFile = path.join(
 			addonsDirectory,
@@ -80,11 +131,16 @@ export function getLocalCommitHash(addonName) {
 			...refPath.split("/"),
 		);
 
-		if (fs.existsSync(refFile)) return fs.readFileSync(refFile, "utf8").trim();
+		if (fs.existsSync(refFile))
+			return fs
+				.readFileSync(localAddonFile(raw, ".git/" + refPath), "utf8")
+				.trim();
 
 		const packedRefs = path.join(addonsDirectory, raw, ".git", "packed-refs");
 		if (fs.existsSync(packedRefs)) {
-			const lines = fs.readFileSync(packedRefs, "utf8").split("\n");
+			const lines = fs
+				.readFileSync(localAddonFile(raw, ".git/packed-refs"), "utf8")
+				.split("\n");
 			for (const line of lines) {
 				if (line.endsWith(refPath)) return line.split(" ")[0].trim();
 			}
@@ -113,10 +169,17 @@ export function fsToggle(name) {
 	if (!found) throw new Error("Not found: " + name);
 
 	const disabled = found.startsWith("!");
-	fs.renameSync(
-		path.join(addonsDirectory, found),
-		path.join(addonsDirectory, disabled ? found.slice(1) : "!" + found),
+	const target = path.join(
+		addonsDirectory,
+		disabled ? found.slice(1) : "!" + found,
 	);
+	try {
+		fs.lstatSync(target);
+		throw new Error("Target addon already exists");
+	} catch (error) {
+		if (error.code !== "ENOENT") throw error;
+	}
+	fs.renameSync(path.join(addonsDirectory, found), target);
 
 	invalidateAddonsDir();
 
@@ -149,7 +212,7 @@ export function getCustomEntries(knownNames) {
 				const clean = n.replace(/^!/, "");
 				const enabled = !n.startsWith("!");
 				const fullPath = path.join(addonsDirectory, n);
-				const isDir = fs.statSync(fullPath).isDirectory();
+				const isDir = fs.lstatSync(fullPath).isDirectory();
 				let logo = null,
 					readme = null;
 
@@ -175,7 +238,7 @@ export function getCustomEntries(knownNames) {
 								try {
 									return (
 										/^branding$/i.test(item) &&
-										fs.statSync(path.join(dirPath, item)).isDirectory()
+										fs.lstatSync(path.join(dirPath, item)).isDirectory()
 									);
 								} catch {
 									return false;
@@ -187,7 +250,7 @@ export function getCustomEntries(knownNames) {
 							for (const item of items) {
 								try {
 									const itemPath = path.join(dirPath, item);
-									if (fs.statSync(itemPath).isDirectory()) {
+									if (fs.lstatSync(itemPath).isDirectory()) {
 										const r = findBrandingDir(itemPath, depth + 1);
 										if (r) return r;
 									}
@@ -206,7 +269,7 @@ export function getCustomEntries(knownNames) {
 							for (const item of items) {
 								try {
 									const itemPath = path.join(dirPath, item);
-									if (fs.statSync(itemPath).isDirectory()) {
+									if (fs.lstatSync(itemPath).isDirectory()) {
 										const r = findLogoInDir(itemPath, depth + 1);
 										if (r) return r;
 									}
@@ -228,7 +291,7 @@ export function getCustomEntries(knownNames) {
 							const logoAbs = findLogoInDir(brandingPath);
 
 							if (logoAbs)
-								logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.relative(fullPath, logoAbs))}`;
+								logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.relative(fullPath, logoAbs).split(path.sep).join("/"))}`;
 						}
 					}
 
@@ -236,13 +299,13 @@ export function getCustomEntries(knownNames) {
 						for (const sub of files) {
 							try {
 								const subPath = path.join(fullPath, sub);
-								if (!fs.statSync(subPath).isDirectory()) continue;
+								if (!fs.lstatSync(subPath).isDirectory()) continue;
 
 								const subFiles = fs.readdirSync(subPath);
 								if (subFiles.some((f) => /\.(css|js|json)$/i.test(f))) {
 									const found = pickImgFile(subFiles);
 									if (found) {
-										logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(path.join(sub, found))}`;
+										logo = `/api/local-logo?name=${encodeURIComponent(n)}&file=${encodeURIComponent(`${sub}/${found}`)}`;
 										break;
 									}
 								}

@@ -32,6 +32,7 @@ import {
 } from "./download.js";
 
 import { readOldHandleEvents, applyHandleEventsMerge } from "./handleEvents.js";
+import { commitAddon, preserveLocalFiles } from "./transactions.js";
 
 import {
 	addonsDirectory,
@@ -43,6 +44,8 @@ import {
 	getCustomEntries,
 	findRawEntry,
 	invalidateAddonsDir,
+	validAddonName,
+	localAddonFile,
 } from "./filesystem.js";
 
 import { getPaths } from "../../config.js";
@@ -117,6 +120,8 @@ const IMG_MIME = {
 	".webp": "image/webp",
 	".svg": "image/svg+xml",
 };
+
+const activeDownloads = new Set();
 
 async function checkUpdate(name, subUrl, token, force) {
 	try {
@@ -235,8 +240,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const { name, file } = qp;
 			if (!name || !file) return notFound();
 
-			const raw = findRawEntry(name) || name;
-			const filePath = path.join(addonsDirectory, raw, file);
+			const filePath = localAddonFile(name, file);
 
 			if (!fs.existsSync(filePath)) return notFound();
 
@@ -255,8 +259,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const { name, file } = qp;
 			if (!name || !file) return notFound();
 
-			const raw = findRawEntry(name) || name;
-			const filePath = path.join(addonsDirectory, raw, file);
+			const filePath = localAddonFile(name, file);
 
 			if (!fs.existsSync(filePath)) return notFound();
 
@@ -306,93 +309,132 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 				releaseCache = {},
 			} = JSON.parse(await getBody());
 
-			if (!name) throw new Error("Missing name");
-			const dest = path.join(addonsDirectory, name);
-			const token = getConfig().github?.accessToken || undefined;
+			if (!validAddonName(name)) throw new Error("Invalid addon name");
+			if (
+				!submodule &&
+				(typeof folderPath !== "string" ||
+					!folderPath ||
+					folderPath.split("/").some((p) => !p || p === "." || p === "..") ||
+					folderPath.includes("\\"))
+			)
+				throw new Error("Invalid folder path");
+			const downloadKey = name.toLowerCase();
+			if (activeDownloads.has(downloadKey))
+				throw new Error("Addon download already in progress");
+			activeDownloads.add(downloadKey);
+			try {
+				invalidateAddonsDir();
+				const existing = findRawEntry(name);
+				const finalDest = path.join(addonsDirectory, existing || name);
+				const existingStat = existing ? fs.lstatSync(finalDest) : null;
+				if (existingStat && !existingStat.isDirectory())
+					throw new Error("Addon is not a directory");
+				fs.mkdirSync(addonsDirectory, { recursive: true });
+				const dest = fs.mkdtempSync(
+					path.join(addonsDirectory, ".store-stage-"),
+				);
+				const token = getConfig().github?.accessToken || undefined;
 
-			const oldHandleEvents = readOldHandleEvents(dest);
-
-			if (submodule && subUrl) {
-				const normalized = normalizeGitUrl(subUrl);
-				const m =
-					normalized &&
-					normalized.match(
-						/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
-					);
-
-				if (!m) throw new Error("Cannot parse submodule URL: " + subUrl);
-				const [, subOwner, subRepo] = m;
-
-				const cacheKey = `${subOwner}/${subRepo}`;
-				const releaseCacheKey = cacheKey.toLowerCase();
-				let nmRelease = null;
-				let apiAvailable = true;
-				const hasCachedRelease = !!releaseCache[releaseCacheKey];
-
+				const oldHandleEvents = readOldHandleEvents(finalDest);
+				let committed = false;
 				try {
-					nmRelease = await getLatestNmRelease(subOwner, subRepo, token, true);
-				} catch {
-					apiAvailable = false;
-				}
+					if (submodule && subUrl) {
+						const normalized = normalizeGitUrl(subUrl);
+						const m =
+							normalized &&
+							normalized.match(
+								/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/,
+							);
 
-				if (!apiAvailable) {
-					if (hasCachedRelease) {
-						throw new Error(
-							`GitHub releases API is unavailable. Skipping "${name}" because it previously had a release build. Try again later.`,
+						if (!m) throw new Error("Cannot parse submodule URL: " + subUrl);
+						const [, subOwner, subRepo] = m;
+
+						const cacheKey = `${subOwner}/${subRepo}`;
+						const releaseCacheKey = cacheKey.toLowerCase();
+						let nmRelease = null;
+						let apiAvailable = true;
+						const hasCachedRelease = !!releaseCache[releaseCacheKey];
+
+						try {
+							nmRelease = await getLatestNmRelease(
+								subOwner,
+								subRepo,
+								token,
+								true,
+							);
+						} catch {
+							apiAvailable = false;
+						}
+
+						if (!apiAvailable) {
+							if (hasCachedRelease) {
+								throw new Error(
+									`GitHub releases API is unavailable. Skipping "${name}" because it previously had a release build. Try again later.`,
+								);
+							}
+						}
+
+						if (nmRelease) {
+							fs.mkdirSync(dest, { recursive: true });
+							await downloadAndExtractTarGz(nmRelease.downloadUrl, dest);
+							fs.writeFileSync(
+								path.join(dest, ".git-release"),
+								nmRelease.tag,
+								"utf8",
+							);
+						} else {
+							fs.mkdirSync(dest, { recursive: true });
+							await downloadSourceZip(subOwner, subRepo, dest, token);
+							try {
+								const sha = await getRemoteHeadCommit(
+									subOwner,
+									subRepo,
+									token,
+									true,
+								);
+								if (sha)
+									fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
+							} catch {}
+						}
+
+						if (existingStat) preserveLocalFiles(finalDest, dest);
+						applyHandleEventsMerge(dest, oldHandleEvents);
+						commitAddon(addonsDirectory, dest, finalDest, existingStat);
+						committed = true;
+						invalidateAddonsDir();
+
+						return json({
+							ok: true,
+							releaseInfo: {
+								key: releaseCacheKey,
+								hasRelease: !!nmRelease,
+							},
+						});
+					} else {
+						const gm = await loadGitmodules(GITHUB_OWNER, GITHUB_REPO);
+						await downloadTree(
+							folderPath,
+							dest,
+							GITHUB_OWNER,
+							GITHUB_REPO,
+							gm,
+							token,
 						);
 					}
+
+					if (existingStat) preserveLocalFiles(finalDest, dest);
+					applyHandleEventsMerge(dest, oldHandleEvents);
+					commitAddon(addonsDirectory, dest, finalDest, existingStat);
+					committed = true;
+					invalidateAddonsDir();
+
+					return json({ ok: true });
+				} finally {
+					if (!committed) fs.rmSync(dest, { recursive: true, force: true });
 				}
-
-				if (nmRelease) {
-					fs.mkdirSync(dest, { recursive: true });
-					await downloadAndExtractTarGz(nmRelease.downloadUrl, dest);
-					fs.writeFileSync(
-						path.join(dest, ".git-release"),
-						nmRelease.tag,
-						"utf8",
-					);
-				} else {
-					// API works but no nm.tar.gz release (never had one, or author removed it)
-					fs.mkdirSync(dest, { recursive: true });
-					await downloadSourceZip(subOwner, subRepo, dest, token);
-					try {
-						const sha = await getRemoteHeadCommit(
-							subOwner,
-							subRepo,
-							token,
-							true,
-						);
-						if (sha)
-							fs.writeFileSync(path.join(dest, ".git-commit"), sha, "utf8");
-					} catch {}
-				}
-
-				applyHandleEventsMerge(dest, oldHandleEvents);
-				invalidateAddonsDir();
-
-				return json({
-					ok: true,
-					releaseInfo: {
-						key: releaseCacheKey,
-						hasRelease: !!nmRelease,
-					},
-				});
-			} else {
-				const gm = await loadGitmodules(GITHUB_OWNER, GITHUB_REPO);
-				await downloadTree(
-					folderPath,
-					dest,
-					GITHUB_OWNER,
-					GITHUB_REPO,
-					gm,
-					token,
-				);
+			} finally {
+				activeDownloads.delete(downloadKey);
 			}
-
-			applyHandleEventsMerge(dest, oldHandleEvents);
-			invalidateAddonsDir();
-
-			return json({ ok: true });
 		} catch (e) {
 			return json({ ok: false, error: e.message }, 500);
 		}
@@ -432,6 +474,8 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 	if (method === "POST" && urlPath === "/api/toggle") {
 		try {
 			const { name } = JSON.parse(await getBody());
+			if (activeDownloads.has(String(name).replace(/^!/, "").toLowerCase()))
+				throw new Error("Addon download already in progress");
 			const enabled = fsToggle(name);
 			return json({ ok: true, enabled });
 		} catch (e) {
@@ -442,6 +486,8 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 	if (method === "POST" && urlPath === "/api/delete") {
 		try {
 			const { name } = JSON.parse(await getBody());
+			if (activeDownloads.has(String(name).replace(/^!/, "").toLowerCase()))
+				throw new Error("Addon download already in progress");
 			fsDelete(name);
 			return json({ ok: true });
 		} catch (e) {
@@ -499,7 +545,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) return json({ exists: false });
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = localAddonFile(raw, "handleEvents.json");
 
 			return json({ exists: fs.existsSync(filePath), path: filePath });
 		} catch (e) {
@@ -515,7 +561,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = localAddonFile(raw, "handleEvents.json");
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");
@@ -532,12 +578,14 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 		try {
 			const { name, content } = JSON.parse(await getBody());
 			if (!name) throw new Error("Missing name");
+			if (activeDownloads.has(String(name).replace(/^!/, "").toLowerCase()))
+				throw new Error("Addon download already in progress");
 			JSON.parse(content);
 
 			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = localAddonFile(raw, "handleEvents.json");
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");
@@ -558,7 +606,7 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 			const raw = findRawEntry(name);
 
 			if (!raw) throw new Error("Addon not found: " + name);
-			const filePath = path.join(addonsDirectory, raw, "handleEvents.json");
+			const filePath = localAddonFile(raw, "handleEvents.json");
 
 			if (!fs.existsSync(filePath))
 				throw new Error("handleEvents.json not found");

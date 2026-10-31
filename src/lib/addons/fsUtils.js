@@ -43,93 +43,25 @@ function statDirent(dir, entry) {
 	}
 }
 
+function enterDirectory(directory, ancestors) {
+	try {
+		const realPath = fs.realpathSync(directory);
+		if (ancestors.has(realPath)) return null;
+		return new Set([...ancestors, realPath]);
+	} catch {
+		return null;
+	}
+}
+
 function fileSignature(stat) {
 	return `${stat.mtimeMs}:${stat.size}`;
 }
 
-function findAssetsDir(dir) {
-	if (!fs.existsSync(dir)) return null;
-	const queue = [dir];
-
-	while (queue.length) {
-		const current = queue.shift();
-		let entries;
-
-		try {
-			entries = fs.readdirSync(current, { withFileTypes: true });
-		} catch {
-			continue;
-		}
-
-		for (const entry of entries) {
-			const info = statDirent(current, entry);
-			if (!info || !info.isDirectory) continue;
-
-			if (entry.name === "assets") return info.fullPath;
-			queue.push(info.fullPath);
-		}
-	}
-	return null;
-}
-
-function findFileRecursive(dir, fileName) {
-	let entries;
-
-	try {
-		entries = fs.readdirSync(dir, { withFileTypes: true });
-	} catch {
-		return null;
-	}
-
-	for (const entry of entries) {
-		const info = statDirent(dir, entry);
-		if (!info) continue;
-
-		if (info.isFile && entry.name === fileName) return info.fullPath;
-		if (info.isDirectory) {
-			const found = findFileRecursive(info.fullPath, fileName);
-			if (found) return found;
-		}
-	}
-	return null;
-}
-
-function findHandleFile(addonDir) {
-	if (!fs.existsSync(addonDir)) return null;
-	const queue = [addonDir];
-
-	while (queue.length) {
-		const current = queue.shift();
-
-		let entries;
-
-		try {
-			entries = fs.readdirSync(current, { withFileTypes: true });
-		} catch {
-			continue;
-		}
-
-		for (const entry of entries) {
-			const info = statDirent(current, entry);
-			if (!info || !info.isDirectory) continue;
-
-			if (entry.name === "assets") {
-				const candidate = path.join(current, "handleEvents.json");
-				if (fs.existsSync(candidate)) return candidate;
-			}
-			queue.push(info.fullPath);
-		}
-	}
-
-	return findFileRecursive(addonDir, "handleEvents.json");
-}
 
 export {
 	safeDecodeURI,
 	safeResolve,
 	statDirent,
+	enterDirectory,
 	fileSignature,
-	findAssetsDir,
-	findFileRecursive,
-	findHandleFile,
 };

@@ -1,4 +1,4 @@
-import { resolve, join, extname, dirname, basename } from "path";
+import { resolve, join, extname, dirname, basename, sep } from "path";
 import {
 	readdirSync,
 	statSync,
@@ -93,23 +93,8 @@ export function minifyCSS(css, isProperties = false) {
 	return minified;
 }
 
-function minifyJS(file, outFile, encryptionKey, appVersion) {
-	let code = readFileSync(file, "utf8");
-	const isInjectFile = file.includes(join(SRC, "inject"));
-	if (
-		isInjectFile &&
-		code.includes("const ENCRYPTION_KEY = __ENCRYPTION_KEY__")
-	) {
-		if (!encryptionKey) {
-			console.warn(`⚠️  ENCRYPTION_KEY not found in .env for ${file}`);
-		} else {
-			console.log(`✓ Replacing __ENCRYPTION_KEY__ in ${basename(file)}`);
-			code = code.replace(
-				/const ENCRYPTION_KEY = __ENCRYPTION_KEY__;/g,
-				`const ENCRYPTION_KEY = ${JSON.stringify(encryptionKey)};`,
-			);
-		}
-	}
+function minifyJS(file, outFile) {
+	const code = readFileSync(file, "utf8");
 	const result = esbuild.transformSync(code, {
 		minify: true,
 		format: "esm",
@@ -146,6 +131,15 @@ export function processDir(
 		const outFile = file.replace(srcDir, distDir);
 		mkdirSync(dirname(outFile), { recursive: true });
 
+		if (
+			["storePage", "obsWidget"].some((name) =>
+				file.startsWith(join(SRC, "lib", name, "public") + sep),
+			)
+		) {
+			cpSync(file, outFile);
+			continue;
+		}
+
 		if (ext === ".scss") {
 			compileScss(file, outFile);
 		} else if (ext === ".css") {
@@ -179,7 +173,7 @@ export function processDir(
 				format: "esm",
 				target: "es2022",
 			});
-			writeFileSync(outFile, result.code.replace(/\n/g, " ").trimEnd() + "\n");
+			writeFileSync(outFile, result.code);
 		} else if (ext === ".html" && allowHtml) {
 			minifyHTML(file, outFile);
 		} else {
@@ -300,7 +294,7 @@ export function createElectronAssetsPlugin(encryptionKey, appVersion) {
 			for (const file of ["config.js", "events.js", "index.js"]) {
 				const src = join(SRC, file);
 				const out = join(DIST, file);
-				if (existsSync(src)) minifyJS(src, out, encryptionKey, appVersion);
+				if (existsSync(src)) minifyJS(src, out);
 			}
 
 			for (const dir of STATIC_RENDERER_DIRS) {

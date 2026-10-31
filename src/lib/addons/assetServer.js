@@ -4,13 +4,7 @@ import path from "path";
 import http from "http";
 
 import { fileURLToPath } from "url";
-import {
-	safeDecodeURI,
-	safeResolve,
-	findAssetsDir,
-	findFileRecursive,
-	findHandleFile,
-} from "./fsUtils.js";
+import { safeDecodeURI, safeResolve } from "./fsUtils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,17 +30,88 @@ let assetServerPort = 2007;
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+function within(root, target) {
+	try {
+		const base = fs.realpathSync(root);
+		const resolved = fs.realpathSync(target);
+		return resolved === base || resolved.startsWith(base + path.sep);
+	} catch {
+		return false;
+	}
+}
+
+function findEntry(root, predicate) {
+	const queue = [root];
+	while (queue.length) {
+		const current = queue.shift();
+		let entries;
+		try {
+			entries = fs.readdirSync(current, { withFileTypes: true });
+		} catch {
+			continue;
+		}
+		for (const entry of entries) {
+			if (entry.isSymbolicLink()) continue;
+			const full = path.join(current, entry.name);
+			if (predicate(entry)) return full;
+			if (entry.isDirectory()) queue.push(full);
+		}
+	}
+	return null;
+}
+
+function findAssetsDir(root) {
+	return findEntry(
+		root,
+		(entry) => entry.isDirectory() && entry.name === "assets",
+	);
+}
+
+function findFileRecursive(root, name) {
+	return findEntry(root, (entry) => entry.isFile() && entry.name === name);
+}
+
+function findHandleFile(root) {
+	const assets = findAssetsDir(root);
+	const adjacent =
+		assets && path.join(path.dirname(assets), "handleEvents.json");
+	if (adjacent && within(root, adjacent)) return adjacent;
+	return findFileRecursive(root, "handleEvents.json");
+}
+
+let starting = null;
+
 function startAssetServer(port = 2007) {
 	if (serverStarted) return Promise.resolve(assetServerPort);
+	if (starting) return starting;
 
-	return new Promise((resolve) => {
+	starting = new Promise((resolve, reject) => {
 		const server = http.createServer((req, res) => {
+			res.setHeader("X-Content-Type-Options", "nosniff");
+			req.on("error", (error) =>
+				console.error("[Assets] Request error:", error),
+			);
+			res.on("error", (error) =>
+				console.error("[Assets] Response error:", error),
+			);
 			function send(status, body, headers = {}) {
 				res.writeHead(status, {
 					"Content-Type": "text/plain",
 					...headers,
 				});
 				res.end(body);
+			}
+
+			const host = req.headers.host || "";
+			if (!/^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(host)) {
+				return send(403, "Forbidden host");
+			}
+			if (
+				req.method !== "GET" &&
+				req.method !== "HEAD" &&
+				req.method !== "POST"
+			) {
+				return send(405, "Method not allowed");
 			}
 
 			let parsed;
@@ -58,7 +123,10 @@ function startAssetServer(port = 2007) {
 			}
 
 			const pathname = parsed.pathname;
-			const name = safeDecodeURI(parsed.searchParams.get("name"));
+			const name = parsed.searchParams.get("name");
+			if (name && (name === "." || name === ".." || /[\\/\0]/.test(name))) {
+				return send(400, "Invalid addon name");
+			}
 
 			if (pathname.startsWith("/app_asset/")) {
 				const rawFile = pathname.slice("/app_asset/".length);
@@ -69,8 +137,14 @@ function startAssetServer(port = 2007) {
 				const filePath = safeResolve(APP_ASSETS_DIR, ...relFile.split("/"));
 
 				if (!filePath) return send(400, "Invalid path");
-				if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile())
+				if (!within(APP_ASSETS_DIR, filePath))
 					return send(404, "Asset not found");
+				try {
+					if (!fs.statSync(filePath).isFile())
+						return send(404, "Asset not found");
+				} catch {
+					return send(404, "Asset not found");
+				}
 
 				const mime =
 					APP_ASSET_MIME[path.extname(filePath).toLowerCase()] ||
@@ -80,6 +154,7 @@ function startAssetServer(port = 2007) {
 				stream.on("error", (err) => {
 					console.error("[Assets] app_asset stream error:", err);
 					if (!res.headersSent) send(500, "Read error");
+					else res.destroy();
 				});
 
 				res.writeHead(200, { "Content-Type": mime });
@@ -99,7 +174,8 @@ function startAssetServer(port = 2007) {
 				}
 
 				const addonDir = ADDON_DIRS.get(name);
-				if (!addonDir) return send(404, `Addon '${name}' not found`);
+				if (!addonDir || !within(addonsDirectory, addonDir))
+					return send(404, `Addon '${name}' not found`);
 
 				const assetsRoot = findAssetsDir(addonDir);
 				if (!assetsRoot) return send(404, "Assets folder not found for addon");
@@ -110,7 +186,7 @@ function startAssetServer(port = 2007) {
 				if (!filePath)
 					return send(404, `File '${safeFileName}' not found in assets`);
 
-				if (!filePath.startsWith(assetsRoot + path.sep)) {
+				if (!within(addonDir, assetsRoot) || !within(assetsRoot, filePath)) {
 					return send(403, "Forbidden");
 				}
 
@@ -119,6 +195,7 @@ function startAssetServer(port = 2007) {
 				stream.on("error", (err) => {
 					console.error("[Assets] Stream error:", err);
 					if (!res.headersSent) send(500, "Read error");
+					else res.destroy();
 				});
 
 				res.writeHead(200);
@@ -130,72 +207,80 @@ function startAssetServer(port = 2007) {
 				if (!name) return send(400, "Missing name parameter");
 
 				const addonDir = path.join(addonsDirectory, name);
-				let assetsRoot = findAssetsDir(addonDir);
-
-				if (!assetsRoot) {
-					assetsRoot = path.join(addonDir, "assets");
-
-					try {
-						fs.mkdirSync(assetsRoot, { recursive: true });
-					} catch (err) {
-						console.error("[download_asset] Cannot create assets dir:", err);
-						return send(500, "Cannot create assets directory");
-					}
+				if (!within(addonsDirectory, addonDir)) {
+					return send(404, `Addon '${name}' not found`);
 				}
 
 				let body = "";
 				req.on("data", (chunk) => (body += chunk));
-
 				req.on("end", async () => {
-					let url, fileName;
-
+					let data;
 					try {
-						({ url, fileName } = JSON.parse(body));
+						data = JSON.parse(body);
 					} catch {
 						return send(400, "Invalid JSON body");
 					}
 
+					const { url, fileName } = data || {};
 					if (!url || typeof url !== "string") return send(400, "Missing url");
-
-					if (!fileName || typeof fileName !== "string")
+					if (!fileName || typeof fileName !== "string") {
 						return send(400, "Missing fileName");
-
+					}
 					const safeFileName = path.basename(fileName);
-					if (!safeFileName) return send(400, "Invalid fileName");
-					const destPath = safeResolve(assetsRoot, safeFileName);
+					if (
+						!safeFileName ||
+						safeFileName === "." ||
+						safeFileName === ".." ||
+						/[\\/\0]/.test(safeFileName)
+					)
+						return send(400, "Invalid fileName");
 
-					if (!destPath)
-						return send(400, "Invalid fileName (traversal detected)");
 					try {
+						let assetsRoot = findAssetsDir(addonDir);
+						if (!assetsRoot) {
+							assetsRoot = path.join(addonDir, "assets");
+							fs.mkdirSync(assetsRoot, { recursive: true });
+						}
+						if (
+							!within(addonsDirectory, addonDir) ||
+							!within(addonDir, assetsRoot)
+						)
+							return send(403, "Forbidden");
+
+						const destPath = safeResolve(assetsRoot, safeFileName);
+						if (!destPath) return send(400, "Invalid fileName");
+
 						const controller = new AbortController();
 						const timer = setTimeout(
 							() => controller.abort(),
 							FETCH_TIMEOUT_MS,
 						);
-
-						let fetchRes;
-
+						let buffer;
 						try {
-							fetchRes = await fetch(url, {
-								signal: controller.signal,
-							});
+							const fetchRes = await fetch(url, { signal: controller.signal });
+							if (!fetchRes.ok) {
+								return send(502, `Fetch failed: HTTP ${fetchRes.status}`);
+							}
+							buffer = Buffer.from(await fetchRes.arrayBuffer());
 						} finally {
 							clearTimeout(timer);
 						}
 
-						if (!fetchRes.ok) {
-							return send(502, `Fetch failed: HTTP ${fetchRes.status}`);
+						if (
+							!within(addonsDirectory, addonDir) ||
+							!within(addonDir, assetsRoot)
+						)
+							return send(403, "Forbidden");
+						const flags =
+							fs.constants.O_WRONLY |
+							fs.constants.O_CREAT |
+							fs.constants.O_TRUNC |
+							(fs.constants.O_NOFOLLOW || 0);
+						if (fs.existsSync(destPath) && !within(assetsRoot, destPath)) {
+							return send(403, "Forbidden");
 						}
-
-						const buffer = Buffer.from(await fetchRes.arrayBuffer());
-						fs.writeFileSync(destPath, buffer);
-						console.log(
-							`[download_asset] Saved '${safeFileName}' → ${destPath}`,
-						);
-						res.writeHead(200, {
-							"Content-Type": "application/json",
-						});
-
+						fs.writeFileSync(destPath, buffer, { flag: flags });
+						res.writeHead(200, { "Content-Type": "application/json" });
 						res.end(
 							JSON.stringify({
 								ok: true,
@@ -218,7 +303,10 @@ function startAssetServer(port = 2007) {
 				if (!addonDir) {
 					const candidate = path.join(addonsDirectory, name);
 					try {
-						if (fs.statSync(candidate).isDirectory()) {
+						if (
+							within(addonsDirectory, candidate) &&
+							fs.statSync(candidate).isDirectory()
+						) {
 							ADDON_DIRS.set(name, candidate);
 							addonDir = candidate;
 							console.log(
@@ -232,7 +320,7 @@ function startAssetServer(port = 2007) {
 						);
 					}
 				}
-				if (!addonDir) {
+				if (!addonDir || !within(addonsDirectory, addonDir)) {
 					console.error(
 						`[get_handle] Addon '${name}' not in ADDON_DIRS. addonsDirectory=${addonsDirectory} keys=[${[...ADDON_DIRS.keys()].join(", ")}]`,
 					);
@@ -240,7 +328,7 @@ function startAssetServer(port = 2007) {
 				}
 
 				const handleFile = findHandleFile(addonDir);
-				if (!handleFile) {
+				if (!handleFile || !within(addonDir, handleFile)) {
 					console.error(
 						"[get_handle] handleEvents.json not found in:",
 						addonDir,
@@ -273,16 +361,18 @@ function startAssetServer(port = 2007) {
 
 		server.on("error", (err) => {
 			console.error(`[Assets] Server error on port ${port}:`, err.message);
-			resolve(port);
+			starting = null;
+			reject(err);
 		});
 
 		server.listen(port, "127.0.0.1", () => {
 			serverStarted = true;
-			assetServerPort = port;
+			assetServerPort = server.address().port;
 			console.log(`[Assets] Server running on http://127.0.0.1:${port}`);
-			resolve(port);
+			resolve(assetServerPort);
 		});
 	});
+	return starting;
 }
 
 export { startAssetServer, ADDON_DIRS, FETCH_TIMEOUT_MS };

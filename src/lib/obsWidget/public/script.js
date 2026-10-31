@@ -1,4 +1,4 @@
-const ws = new WebSocket("ws://localhost:4091");
+const ws = new WebSocket(`ws://${location.host}`);
 
 let state = null;
 

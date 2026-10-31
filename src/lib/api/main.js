@@ -26,6 +26,8 @@ window.nextmusicApi = {
 		let currentSettings = {};
 		let lastJson = null;
 		let pollingTimer = null;
+		let pollingGeneration = 0;
+		let settingsRevision = 0;
 
 		function pick(value, fallback) {
 			return value === undefined || value === null ? fallback : value;
@@ -115,31 +117,32 @@ window.nextmusicApi = {
 			if (json === lastJson) return false;
 			lastJson = json;
 			currentSettings = settings;
+			settingsRevision++;
 			return true;
 		}
 
-		function scheduleNextPoll() {
+		function scheduleNextPoll(generation) {
 			pollingTimer = setTimeout(async () => {
 				pollingTimer = null;
 				const settings = await fetchSettings();
+				if (generation !== pollingGeneration || !listeners.size) return;
 				if (settings) {
 					pollDelay = 1000;
 					if (apply(settings)) notify();
 				} else {
 					pollDelay = Math.min(pollDelay * 2, MAX_POLL_DELAY);
 				}
-				scheduleNextPoll();
+				if (generation === pollingGeneration && listeners.size) {
+					scheduleNextPoll(generation);
+				}
 			}, pollDelay);
 		}
 
 		function startPolling() {
-			if (pollingTimer) return;
-			scheduleNextPoll();
+			scheduleNextPoll(++pollingGeneration);
 		}
-
-		startPolling();
 		fetchSettings().then((settings) => {
-			if (settings && apply(settings)) notify();
+			if (settings && !settingsRevision && apply(settings)) notify();
 		});
 
 		return {
@@ -148,8 +151,9 @@ window.nextmusicApi = {
 			},
 			onChange(callback) {
 				if (typeof callback !== "function") return () => {};
+				const wasEmpty = listeners.size === 0;
 				listeners.add(callback);
-				startPolling();
+				if (wasEmpty) startPolling();
 
 				if (lastJson !== null) {
 					try {
@@ -157,7 +161,13 @@ window.nextmusicApi = {
 					} catch {}
 				}
 
-				return () => listeners.delete(callback);
+				return () => {
+					if (!listeners.delete(callback) || listeners.size) return;
+					pollingGeneration++;
+					clearTimeout(pollingTimer);
+					pollingTimer = null;
+					pollDelay = 1000;
+				};
 			},
 		};
 	},

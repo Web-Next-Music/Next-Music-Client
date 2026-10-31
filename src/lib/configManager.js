@@ -132,8 +132,7 @@ export function loadConfig() {
 	} catch (err) {
 		console.error("[Config] Failed to read Config.lua:", err);
 
-		config = structuredClone(defaultConfig);
-		writeLuaConfig(config);
+		throw err;
 	}
 
 	return config;
@@ -145,14 +144,10 @@ export function getConfig() {
 }
 
 export function saveConfig(newConfig) {
-	config = reorderConfig(newConfig, defaultConfig);
-	validateConfig(config);
-
-	try {
-		writeLuaConfig(config);
-	} catch (err) {
-		console.error("[Config] Failed to save config:", err);
-	}
+	const nextConfig = reorderConfig(newConfig, defaultConfig);
+	validateConfig(nextConfig);
+	writeLuaConfig(nextConfig);
+	config = nextConfig;
 }
 
 export function patchConfig(mutator) {

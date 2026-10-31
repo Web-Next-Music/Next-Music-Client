@@ -22,12 +22,49 @@ class ConfigField extends LitElement {
 	#commit(value) {
 		const path = this.#path;
 		setPath(state.CONFIG, path, value);
-		if (this.node.type === "select") {
-			if (!path.endsWith("language")) scheduleSave();
-			window.electronAPI?.setLanguage?.(value);
-			return;
+
+		if (path === "programSettings.language") {
+			this.#saveLanguage(value);
 		}
 		scheduleSave();
+	}
+
+	async #saveLanguage(value) {
+		state.languageSaving++;
+		try {
+			if (!window.electronAPI?.setLanguage) throw new Error("API unavailable");
+			const result = await window.electronAPI.setLanguage(value);
+			if (!result || result.ok === false) throw new Error("Save failed");
+			setPath(state.ORIGINAL_CONFIG, "programSettings.language", value);
+			if (result.applyFailed) {
+				state.restartRequired = true;
+				window.alert(
+					t(
+						"settings.applyError",
+						"Settings were saved, but could not be fully applied. Restart the app.",
+					),
+				);
+			}
+		} catch (error) {
+			console.error("Failed to save language:", error);
+			if (getPath(state.CONFIG, "programSettings.language") === value) {
+				setPath(
+					state.CONFIG,
+					"programSettings.language",
+					getPath(state.ORIGINAL_CONFIG, "programSettings.language"),
+				);
+				document.querySelectorAll("config-field").forEach((field) => {
+					if (field.node?.path === "programSettings.language")
+						field.repopulate();
+				});
+			}
+			window.alert(
+				t("settings.saveError", "Failed to save settings. Please try again."),
+			);
+		} finally {
+			state.languageSaving--;
+			scheduleSave();
+		}
 	}
 
 	#current() {

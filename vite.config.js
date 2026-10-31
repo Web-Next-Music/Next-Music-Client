@@ -149,6 +149,10 @@ function isMainEntry(file) {
 	// (processDir + composeInjectFiles), so Rollup never needs to touch it -
 	// and composite inject fragments aren't standalone modules anyway.
 	if (file.startsWith(INJECT_DIR + sep)) return false;
+	if (file.startsWith(join("src", "lib", "obsWidget", "public") + sep))
+		return false;
+	if (file.startsWith(join("src", "lib", "storePage", "public") + sep))
+		return false;
 	return !file.startsWith(RENDERER_DIR) && !file.startsWith(BUILD_DIR);
 }
 
