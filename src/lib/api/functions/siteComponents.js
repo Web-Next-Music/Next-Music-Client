@@ -67,12 +67,35 @@ function isReactMod(m) {
 }
 
 const MODULE_SLOTS = {
+	Menu: { special: true },
+	MenuItem: { special: true },
+	Slider: { special: true },
 	React: { module: isReactMod },
 	ReactDOMClient: { module: (m) => typeof m.createRoot === "function" },
 	ReactDOMPortal: { module: (m) => typeof m.createPortal === "function" },
 	JsxRuntime: {
 		module: (m) => typeof m.jsx === "function" && typeof m.jsxs === "function",
 		raw: true,
+	},
+	Modal: {
+		export: (fn) =>
+			hasKeys(
+				firstDestructureKeys(fnBody(fn)),
+				"initialOpen",
+				"closeOnOutsidePress",
+				"overlayColor",
+				"disableFocusTrap",
+			),
+	},
+	Switch: {
+		export: (fn) => {
+			const src = fnBody(fn);
+			return (
+				hasKeys(firstDestructureKeys(src), "isChecked", "onChange") &&
+				src.includes('role:"switch"') &&
+				src.includes('"aria-checked"')
+			);
+		},
 	},
 	TabCarousel: {
 		export: (fn) => fnBody(fn).includes("TAB_CAROUSEL"),
@@ -108,6 +131,17 @@ const FIBER_SLOTS = {
 		selector: "span",
 		test: isTextType,
 	},
+	Heading: {
+		selector: "h1, h2, h3, h4, h5, h6",
+		test: (type) => {
+			const src = typeSource(type);
+			return (
+				hasKeys(firstDestructureKeys(src), "variant", "weight", "size") &&
+				src.includes('"root_size_"') &&
+				src.includes('"root_weight_"')
+			);
+		},
+	},
 	Icon: {
 		selector: "svg",
 		test: isIconType,
@@ -137,6 +171,42 @@ function scanModules(found) {
 	const req = getAppRequire();
 	if (!req?.m) return;
 
+	if (!found.Menu || !found.MenuItem || !found.Slider) {
+		for (const id of Object.keys(req.m)) {
+			const source = fnBody(req.m[id]);
+			try {
+				if (
+					!found.Slider &&
+					source.includes("secondaryValue") &&
+					source.includes("showThumbVariant") &&
+					source.includes("SliderMode")
+				) {
+					const exports = Object.values(req(id));
+					if (exports.length === 1 && exports[0]?.render)
+						found.Slider = exports[0];
+				}
+				if (
+					(!found.Menu || !found.MenuItem) &&
+					source.includes("nestedOffsetOptions") &&
+					source.includes("menuRole") &&
+					source.includes("MenuMobile")
+				) {
+					const exports = Object.values(req(id));
+					const menu = exports.find((value) =>
+						typeSource(value).includes("MenuMobile"),
+					);
+					const items = exports.filter(
+						(value) => value !== menu && value?.render,
+					);
+					if (menu && items.length === 1) {
+						found.Menu = menu;
+						found.MenuItem = items[0];
+					}
+				}
+			} catch {}
+		}
+	}
+
 	const pending = Object.entries(MODULE_SLOTS).filter(([name]) => !found[name]);
 	if (!pending.length) return;
 
@@ -150,7 +220,7 @@ function scanModules(found) {
 		if (!mod) continue;
 
 		for (const [name, slot] of pending) {
-			if (found[name]) continue;
+			if (found[name] || slot.special) continue;
 
 			if (slot.module) {
 				if (slot.module(mod)) found[name] = mod;

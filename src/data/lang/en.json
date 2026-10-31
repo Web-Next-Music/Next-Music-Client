@@ -70,7 +70,12 @@
 		"statusInvalidJson": "⚠ Invalid JSON: {message}",
 		"statusFailedReadme": "Failed to load README.",
 		"modalReadmeTitle": "{name}",
-		"modalEditorBadge": "JSON",
+		"settingsUnsupported": "This settings format is not supported. Its data will remain unchanged.",
+		"settingsLoadFailed": "Could not load settings",
+		"btnClose": "Close",
+		"colorHue": "Hue",
+		"colorSaturation": "Saturation",
+		"colorBrightness": "Brightness",
 		"modalEditorTitle": "{name}",
 		"modalLoading": "Loading…"
 	},

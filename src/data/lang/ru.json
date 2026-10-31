@@ -69,7 +69,12 @@
 		"statusInvalidJson": "⚠ Некорректный JSON: {message}",
 		"statusFailedReadme": "Не удалось загрузить README.",
 		"modalReadmeTitle": "{name}",
-		"modalEditorBadge": "JSON",
+		"settingsUnsupported": "Этот формат настройки не поддерживается. Данные останутся без изменений.",
+		"settingsLoadFailed": "Не удалось загрузить настройки",
+		"btnClose": "Закрыть",
+		"colorHue": "Оттенок",
+		"colorSaturation": "Насыщенность",
+		"colorBrightness": "Яркость",
 		"modalEditorTitle": "{name}",
 		"modalLoading": "Загрузка…"
 	},
