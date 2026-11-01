@@ -243,7 +243,16 @@ function createEditorModal(React, StoreButton) {
 		const [data, setData] = React.useState(null);
 		const [loaded, setLoaded] = React.useState(false);
 		const [error, setError] = React.useState(false);
+		const [menuPortal, setMenuPortal] = React.useState(null);
 		const { open, close } = useStoreModal(React, onClose);
+
+		React.useEffect(() => {
+			const portal = document.createElement("div");
+			portal.className = "nmc-settings-menu-portal";
+			document.body.appendChild(portal);
+			setMenuPortal(portal);
+			return () => portal.remove();
+		}, []);
 
 		const dataRef = React.useRef(null);
 		const queue = React.useRef(Promise.resolve());
@@ -368,10 +377,7 @@ function createEditorModal(React, StoreButton) {
 										String(item.selected),
 									ariaLabel: label,
 									lockScroll: false,
-									portalNode:
-										document
-											.querySelector(".nmc-settings-modal")
-											?.closest('[role="dialog"]') || undefined,
+								portalNode: menuPortal || undefined,
 									size: "s",
 									radius: "xxxl",
 									icon: Icon

@@ -375,6 +375,17 @@
 	width: min(52rem, 100%);
 }
 
+.nmc-settings-menu-portal {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483001;
+	pointer-events: none;
+}
+
+.nmc-settings-menu-portal > * {
+	pointer-events: auto;
+}
+
 .nmc-settings-modal .nmc-modal-head {
 	padding: var(--ym-spacer-size-xl) var(--ym-spacer-size-xl) 0;
 	border: 0;
