@@ -136,10 +136,6 @@ function updateActivity(data) {
 	const rpcTitleRaw = config?.programSettings?.richPresence?.rpcTitle;
 	const rpcTitle = userHasStarred ? rpcTitleRaw : null;
 
-	if (rpcTitleRaw && !userHasStarred) {
-		console.log("[RPC] rpcTitle ignored - user has not starred the repo");
-	}
-
 	const configLargeImageUrl =
 		config?.programSettings?.richPresence?.largeImageUrl;
 	const resolvedLargeImageUrl = userHasStarred
@@ -180,11 +176,6 @@ function updateActivity(data) {
 
 	if (listenAlongUrl && showGithubButton) {
 		showGithubButton = false;
-		console.log("[RPC] GitHub button replaced by the Listen Along button");
-	}
-
-	if (githubButton && !userHasStarred) {
-		console.log("[RPC] GitHub button ignored - user has not starred the repo");
 	}
 
 	const activityObject = {

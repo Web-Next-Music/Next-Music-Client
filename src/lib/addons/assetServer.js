@@ -314,25 +314,20 @@ function startAssetServer(port = 2007) {
 							);
 						}
 					} catch (e) {
-						console.error(
-							`[get_handle] Lazy lookup failed for '${name}' at '${candidate}':`,
-							e.message,
-						);
+						if (e.code !== "ENOENT") {
+							console.error(
+								`[get_handle] Lazy lookup failed for '${name}' at '${candidate}':`,
+								e.message,
+							);
+						}
 					}
 				}
 				if (!addonDir || !within(addonsDirectory, addonDir)) {
-					console.error(
-						`[get_handle] Addon '${name}' not in ADDON_DIRS. addonsDirectory=${addonsDirectory} keys=[${[...ADDON_DIRS.keys()].join(", ")}]`,
-					);
 					return send(404, `Addon '${name}' not found`);
 				}
 
 				const handleFile = findHandleFile(addonDir);
 				if (!handleFile || !within(addonDir, handleFile)) {
-					console.error(
-						"[get_handle] handleEvents.json not found in:",
-						addonDir,
-					);
 					return send(404, "handleEvents.json not found");
 				}
 
@@ -368,7 +363,9 @@ function startAssetServer(port = 2007) {
 		server.listen(port, "127.0.0.1", () => {
 			serverStarted = true;
 			assetServerPort = server.address().port;
-			console.log(`[Assets] Server running on http://127.0.0.1:${port}`);
+			console.log(
+				`[Assets] Server running on http://127.0.0.1:${assetServerPort}`,
+			);
 			resolve(assetServerPort);
 		});
 	});

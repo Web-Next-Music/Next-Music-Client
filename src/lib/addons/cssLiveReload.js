@@ -16,6 +16,8 @@ const cssWatchers = new Map();
 const addonCssCache = new Map();
 const addonCssMeta = new Map();
 const pendingCssRemovals = new Map();
+const cssReadErrors = new Map();
+const cssWatchErrors = new Map();
 const CSS_RESCAN_DELAY_MS = 100;
 const CSS_POLL_INTERVAL_MS = 1000;
 const CSS_REMOVAL_GRACE_MS = 2500;
@@ -108,11 +110,15 @@ async function rescanAddonCss() {
 			let content;
 			try {
 				content = fs.readFileSync(filePath, "utf8");
+				cssReadErrors.delete(filePath);
 			} catch (err) {
-				console.warn(
-					`[Addons] Cannot read CSS file '${filePath}':`,
-					err.message,
-				);
+				if (cssReadErrors.get(filePath) !== err.message) {
+					cssReadErrors.set(filePath, err.message);
+					console.warn(
+						`[Addons] Cannot read CSS file '${filePath}':`,
+						err.message,
+					);
+				}
 				continue;
 			}
 
@@ -123,6 +129,10 @@ async function rescanAddonCss() {
 			addonCssCache.set(filePath, content);
 			console.log(`Update CSS: ${label}`);
 			await execAddonScript(cssInjectionScript(filePath, content), label);
+		}
+
+		for (const filePath of cssReadErrors.keys()) {
+			if (!nextSnapshot.has(filePath)) cssReadErrors.delete(filePath);
 		}
 
 		for (const filePath of [...addonCssCache.keys()]) {
@@ -166,6 +176,10 @@ function scheduleAddonCssRescan() {
 function refreshAddonCssWatchers() {
 	const directories = scanAddonCssDirectories();
 
+	for (const directory of cssWatchErrors.keys()) {
+		if (!directories.has(directory)) cssWatchErrors.delete(directory);
+	}
+
 	for (const [directory, watcher] of cssWatchers) {
 		if (directories.has(directory)) continue;
 
@@ -179,11 +193,15 @@ function refreshAddonCssWatchers() {
 		try {
 			const watcher = fs.watch(directory, scheduleAddonCssRescan);
 			cssWatchers.set(directory, watcher);
+			cssWatchErrors.delete(directory);
 		} catch (err) {
-			console.warn(
-				`[Addons] Cannot watch CSS directory '${directory}':`,
-				err.message,
-			);
+			if (cssWatchErrors.get(directory) !== err.message) {
+				cssWatchErrors.set(directory, err.message);
+				console.warn(
+					`[Addons] Cannot watch CSS directory '${directory}':`,
+					err.message,
+				);
+			}
 		}
 	}
 }

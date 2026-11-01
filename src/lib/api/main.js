@@ -28,6 +28,16 @@ window.nextmusicApi = {
 		let pollingTimer = null;
 		let pollingGeneration = 0;
 		let settingsRevision = 0;
+		let pendingSettings = null;
+
+		function requestSettings() {
+			if (!pendingSettings) {
+				pendingSettings = fetchSettings().finally(() => {
+					pendingSettings = null;
+				});
+			}
+			return pendingSettings;
+		}
 
 		function pick(value, fallback) {
 			return value === undefined || value === null ? fallback : value;
@@ -124,7 +134,7 @@ window.nextmusicApi = {
 		function scheduleNextPoll(generation) {
 			pollingTimer = setTimeout(async () => {
 				pollingTimer = null;
-				const settings = await fetchSettings();
+				const settings = await requestSettings();
 				if (generation !== pollingGeneration || !listeners.size) return;
 				if (settings) {
 					pollDelay = 1000;
@@ -141,7 +151,7 @@ window.nextmusicApi = {
 		function startPolling() {
 			scheduleNextPoll(++pollingGeneration);
 		}
-		fetchSettings().then((settings) => {
+		requestSettings().then((settings) => {
 			if (settings && !settingsRevision && apply(settings)) notify();
 		});
 

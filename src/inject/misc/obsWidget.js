@@ -4,11 +4,19 @@
 	const WS_URL = "ws://localhost:4091";
 	let conn = null;
 	let lastPayload = "";
+	let connectionErrorLogged = false;
 
 	function connect() {
 		conn = window.nextmusicApi.wsReconnect(WS_URL, {
 			reconnectDelay: 2000,
-			onError: (e) => console.error("[OBS Widget] WebSocket error", e),
+			onOpen: () => {
+				connectionErrorLogged = false;
+			},
+			onError: (e) => {
+				if (connectionErrorLogged) return;
+				connectionErrorLogged = true;
+				console.error("[OBS Widget] WebSocket error", e);
+			},
 		});
 	}
 

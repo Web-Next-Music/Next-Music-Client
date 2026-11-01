@@ -8,6 +8,7 @@ import { isTypeDeclaration } from "./transpile.js";
 const { addonsDirectory } = getPaths();
 
 const IGNORED_DIRECTORIES = new Set(["node_modules", ".git"]);
+const cssScanErrors = new Map();
 
 function isIgnoredDirectory(name) {
 	return name.startsWith("!") || IGNORED_DIRECTORIES.has(name);
@@ -191,8 +192,12 @@ function scanAddonCssMeta(
 
 	try {
 		entries = fs.readdirSync(directory, { withFileTypes: true });
+		cssScanErrors.delete(directory);
 	} catch (err) {
-		if (err.code !== "ENOENT") {
+		if (err.code === "ENOENT") {
+			cssScanErrors.delete(directory);
+		} else if (cssScanErrors.get(directory) !== err.message) {
+			cssScanErrors.set(directory, err.message);
 			console.warn(
 				`[Addons] Cannot scan CSS directory '${directory}':`,
 				err.message,
