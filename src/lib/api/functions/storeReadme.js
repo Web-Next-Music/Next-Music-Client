@@ -24,11 +24,12 @@ function createReadmeModal(React) {
 		const [html, setHtml] = React.useState(null);
 		const { Modal, Heading } = getSiteComponents();
 		const title = t("modalReadmeTitle", { name: item.name });
+		const { open, close } = useStoreModal(React, onClose);
 
 		React.useEffect(() => {
 			if (Modal) return undefined;
 			const onKey = (event) => {
-				if (event.key === "Escape") onClose();
+				if (event.key === "Escape") close();
 			};
 			window.addEventListener("keydown", onKey);
 			return () => window.removeEventListener("keydown", onKey);
@@ -93,7 +94,7 @@ function createReadmeModal(React) {
 							type: "button",
 							className: "nmc-settings-close",
 							"aria-label": t("tooltipClose"),
-							onClick: onClose,
+							onClick: () => close(),
 						},
 						storeIcon(React, "close") || "×",
 					),
@@ -104,10 +105,10 @@ function createReadmeModal(React) {
 			return h(
 				Modal,
 				{
-					open: true,
-					onClose,
+					open,
+					onClose: () => close(),
 					onOpenChange: (open) => {
-						if (!open) onClose();
+						if (!open) close();
 					},
 					header: heading,
 					labelClose: t("tooltipClose"),
@@ -124,8 +125,9 @@ function createReadmeModal(React) {
 			"div",
 			{
 				className: "nmc-modal-bg",
+				"data-open": open,
 				onClick: (event) => {
-					if (event.target === event.currentTarget) onClose();
+					if (event.target === event.currentTarget) close();
 				},
 			},
 			h(

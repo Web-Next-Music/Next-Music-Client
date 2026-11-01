@@ -75,14 +75,44 @@ function useHasSettings(React, item) {
 	return hasSettings;
 }
 
+function useStoreModal(React, onClose) {
+	const [open, setOpen] = React.useState(false);
+	const closing = React.useRef(false);
+	const timer = React.useRef(null);
+
+	React.useEffect(() => {
+		const frame = requestAnimationFrame(() => setOpen(true));
+		return () => {
+			cancelAnimationFrame(frame);
+			clearTimeout(timer.current);
+		};
+	}, []);
+
+	const close = (afterClose) => {
+		if (closing.current) return;
+		closing.current = true;
+		setOpen(false);
+		const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+			? 0
+			: 300;
+		timer.current = setTimeout(() => {
+			onClose();
+			afterClose?.();
+		}, duration);
+	};
+
+	return { open, close };
+}
+
 function createDeleteModal(React, StoreButton) {
 	return function DeleteModal({ item, onClose, onConfirm }) {
 		const { Modal, Heading, Text } = getSiteComponents();
 		const title = t("confirmDeleteTitle");
+		const { open, close } = useStoreModal(React, onClose);
 		React.useEffect(() => {
 			if (Modal) return undefined;
 			const onKey = (event) => {
-				if (event.key === "Escape") onClose();
+				if (event.key === "Escape") close();
 			};
 			window.addEventListener("keydown", onKey);
 			return () => window.removeEventListener("keydown", onKey);
@@ -110,7 +140,7 @@ function createDeleteModal(React, StoreButton) {
 							type="button"
 							className="nmc-settings-close"
 							aria-label={t("tooltipClose")}
-							onClick={onClose}
+							onClick={() => close()}
 						>
 							{storeIcon(React, "close") || "×"}
 						</button>
@@ -129,7 +159,9 @@ function createDeleteModal(React, StoreButton) {
 					<StoreButton
 						variant="primary"
 						label={t("btnDelete")}
-						onClick={onConfirm}
+						onClick={(event) => {
+												if (event?.isTrusted) close(() => onConfirm(event));
+											}}
 					/>
 				</div>
 			</div>
@@ -137,10 +169,10 @@ function createDeleteModal(React, StoreButton) {
 		if (Modal)
 			return (
 				<Modal
-					open={true}
-					onClose={onClose}
+					open={open}
+					onClose={() => close()}
 					onOpenChange={(open) => {
-						if (!open) onClose();
+						if (!open) close();
 					}}
 					header={heading}
 					labelClose={t("tooltipClose")}
@@ -157,8 +189,9 @@ function createDeleteModal(React, StoreButton) {
 		return (
 			<div
 				className="nmc-modal-bg"
+				data-open={open}
 				onClick={(event) => {
-					if (event.target === event.currentTarget) onClose();
+					if (event.target === event.currentTarget) close();
 				}}
 			>
 				<div role="dialog" aria-modal="true" aria-label={title}>

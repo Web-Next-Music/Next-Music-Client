@@ -13,6 +13,39 @@
 	padding: var(--ym-spacer-size-xl);
 }
 
+.nmc-modal-bg,
+.nmc-color-modal-bg {
+	opacity: 0;
+	transition: opacity 300ms;
+}
+
+.nmc-modal-bg[data-open="true"],
+.nmc-color-modal-bg[data-open="true"] {
+	opacity: 1;
+}
+
+.nmc-modal-bg > [role="dialog"],
+.nmc-color-modal-bg > [role="dialog"] {
+	opacity: 0;
+	transform: translateY(20px);
+	transition: opacity 300ms, transform 300ms;
+}
+
+.nmc-modal-bg[data-open="true"] > [role="dialog"],
+.nmc-color-modal-bg[data-open="true"] > [role="dialog"] {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.nmc-modal-bg,
+	.nmc-color-modal-bg,
+	.nmc-modal-bg > [role="dialog"],
+	.nmc-color-modal-bg > [role="dialog"] {
+		transition: none;
+	}
+}
+
 .nmc-modal {
 	display: flex;
 	flex-direction: column;

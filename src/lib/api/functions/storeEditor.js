@@ -24,6 +24,76 @@ function createEditorModal(React, StoreButton) {
 			: h("h4", { className: "nmc-settings-heading" }, content);
 	};
 
+	function ColorDialog({ Modal, label, panel, onClose }) {
+		const { open, close } = useStoreModal(React, onClose);
+		React.useEffect(() => {
+			if (Modal) return undefined;
+			const closeOnEscape = (event) => {
+				if (event.key !== "Escape") return;
+				event.stopImmediatePropagation();
+				close();
+			};
+			window.addEventListener("keydown", closeOnEscape, true);
+			return () => window.removeEventListener("keydown", closeOnEscape, true);
+		}, [Modal]);
+
+		if (Modal) {
+			return h(
+				Modal,
+				{
+					open,
+					onClose: () => close(),
+					onOpenChange: (visible) => {
+						if (!visible) close();
+					},
+					header: renderHeading(label),
+					labelClose: t("btnClose"),
+					placement: "center",
+					overlayColor: "full",
+					className: "nmc-color-modal",
+					headerClassName: "nmc-native-modal-header",
+					"aria-label": label,
+				},
+				panel,
+			);
+		}
+		return h(
+			"div",
+			{
+				className: "nmc-color-modal-bg",
+				"data-open": open,
+				onClick: (event) => {
+					if (event.target === event.currentTarget) close();
+				},
+			},
+			h(
+				"div",
+				{
+					className: "nmc-color-modal-fallback",
+					role: "dialog",
+					"aria-modal": true,
+					"aria-label": label,
+				},
+				h(
+					"div",
+					{ className: "nmc-color-modal-head" },
+					renderHeading(label),
+					h(
+						"button",
+						{
+							type: "button",
+							className: "nmc-settings-close",
+							"aria-label": t("btnClose"),
+							onClick: () => close(),
+						},
+						"×",
+					),
+				),
+				panel,
+			),
+		);
+	}
+
 	function ColorSetting({ id, label, value, onChange }) {
 		const [open, setOpen] = React.useState(false);
 		const { Modal, Button, Slider } =
@@ -32,16 +102,7 @@ function createEditorModal(React, StoreButton) {
 		const hueRef = React.useRef(0);
 		const saturationRef = React.useRef(0);
 		React.useEffect(() => setText(value), [value]);
-		React.useEffect(() => {
-			if (!open || Modal) return undefined;
-			const closeOnEscape = (event) => {
-				if (event.key !== "Escape") return;
-				event.stopImmediatePropagation();
-				setOpen(false);
-			};
-			window.addEventListener("keydown", closeOnEscape, true);
-			return () => window.removeEventListener("keydown", closeOnEscape, true);
-		}, [open, Modal]);
+
 		const valid = /^#[\da-f]{6}$/i.test(value);
 		const rgb = valid
 			? value.match(/[\da-f]{2}/gi).map((part) => parseInt(part, 16) / 255)
@@ -167,62 +228,14 @@ function createEditorModal(React, StoreButton) {
 					),
 			),
 		);
-		const close = () => setOpen(false);
-		const dialog = !open
-			? null
-			: Modal
-				? h(
-						Modal,
-						{
-							open: true,
-							onClose: close,
-							onOpenChange: (visible) => {
-								if (!visible) close();
-							},
-							header: renderHeading(label),
-							labelClose: t("btnClose"),
-							placement: "center",
-							overlayColor: "full",
-							className: "nmc-color-modal",
-							headerClassName: "nmc-native-modal-header",
-							"aria-label": label,
-						},
-						panel,
-					)
-				: h(
-						"div",
-						{
-							className: "nmc-color-modal-bg",
-							onClick: (event) => {
-								if (event.target === event.currentTarget) close();
-							},
-						},
-						h(
-							"div",
-							{
-								className: "nmc-color-modal-fallback",
-								role: "dialog",
-								"aria-modal": true,
-								"aria-label": label,
-							},
-							h(
-								"div",
-								{ className: "nmc-color-modal-head" },
-								renderHeading(label),
-								h(
-									"button",
-									{
-										type: "button",
-										className: "nmc-settings-close",
-										"aria-label": t("btnClose"),
-										onClick: close,
-									},
-									"×",
-								),
-							),
-							panel,
-						),
-					);
+		const dialog = open
+			? h(ColorDialog, {
+					Modal,
+					label,
+					panel,
+					onClose: () => setOpen(false),
+				})
+			: null;
 		return h("div", { className: "nmc-color" }, trigger, dialog);
 	}
 
@@ -230,6 +243,7 @@ function createEditorModal(React, StoreButton) {
 		const [data, setData] = React.useState(null);
 		const [loaded, setLoaded] = React.useState(false);
 		const [error, setError] = React.useState(false);
+		const { open, close } = useStoreModal(React, onClose);
 
 		const dataRef = React.useRef(null);
 		const queue = React.useRef(Promise.resolve());
@@ -275,7 +289,7 @@ function createEditorModal(React, StoreButton) {
 		React.useEffect(() => {
 			if (Modal) return undefined;
 			const onKey = (event) => {
-				if (event.key === "Escape") onClose();
+				if (event.key === "Escape") close();
 			};
 			window.addEventListener("keydown", onKey);
 			return () => window.removeEventListener("keydown", onKey);
@@ -497,7 +511,7 @@ function createEditorModal(React, StoreButton) {
 							type: "button",
 							className: "nmc-settings-close",
 							"aria-label": t("btnClose"),
-							onClick: onClose,
+							onClick: () => close(),
 						},
 						"×",
 					),
@@ -547,10 +561,10 @@ function createEditorModal(React, StoreButton) {
 			return h(
 				Modal,
 				{
-					open: true,
-					onClose,
+					open,
+					onClose: () => close(),
 					onOpenChange: (open) => {
-						if (!open) onClose();
+						if (!open) close();
 					},
 					header: renderHeading(name),
 					labelClose: t("btnClose"),
@@ -568,8 +582,9 @@ function createEditorModal(React, StoreButton) {
 			"div",
 			{
 				className: "nmc-modal-bg",
+				"data-open": open,
 				onClick: (event) => {
-					if (event.target === event.currentTarget) onClose();
+					if (event.target === event.currentTarget) close();
 				},
 			},
 			h(
