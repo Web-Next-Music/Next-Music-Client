@@ -6,5 +6,10 @@ export function injectJsFile(injectedPath, encryptionKey) {
 	script.type = "text/javascript";
 	script.src = `file://${injectedPath}`;
 	script.dataset.injected = injectedPath;
-	document.head.appendChild(script);
+	script.async = false;
+	return new Promise((resolve, reject) => {
+		script.onload = resolve;
+		script.onerror = () => reject(new Error(`Failed to load ${injectedPath}`));
+		document.head.appendChild(script);
+	});
 }

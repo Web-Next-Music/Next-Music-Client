@@ -39,10 +39,15 @@ function createReadmeModal(React) {
 			ensureMarkdownCss()
 				.then(() => fetchReadmeHtml(item))
 				.then((content) => {
-					if (alive) setHtml(content || t("statusFailedReadme"));
+					if (!alive) return;
+					if (!content)
+						window.nextmusicApi.showErrorToast(t("statusFailedReadme"));
+					setHtml(content || t("statusFailedReadme"));
 				})
 				.catch(() => {
-					if (alive) setHtml(t("statusFailedReadme"));
+					if (!alive) return;
+					window.nextmusicApi.showErrorToast(t("statusFailedReadme"));
+					setHtml(t("statusFailedReadme"));
 				});
 			return () => {
 				alive = false;
@@ -124,15 +129,15 @@ function createReadmeModal(React) {
 				},
 			},
 			h(
-							"div",
-							{
-								className: "nmc-readme-dialog",
-								role: "dialog",
-								"aria-modal": true,
-								"aria-label": title,
-							},
-							content,
-						),
+				"div",
+				{
+					className: "nmc-readme-dialog",
+					role: "dialog",
+					"aria-modal": true,
+					"aria-label": title,
+				},
+				content,
+			),
 		);
 	};
 }

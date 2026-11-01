@@ -10,14 +10,21 @@
 (function () {
 	"use strict";
 
-	const UNKNOWN_R128 = { i: 0, tp: 0 };
+	const UNKNOWN_R128 = { i: -14, tp: 0 };
 	const WAIT_INTERVAL_MS = 250;
 	const WAIT_ATTEMPTS = 120;
 
 	function readR128(api) {
 		const track = api.getCurrentTrack?.();
 		const r128 = track?.r128;
-		if (!r128 || !Number.isFinite(Number(r128.i))) return UNKNOWN_R128;
+		if (
+			!r128 ||
+			r128.i == null ||
+			(typeof r128.i === "string" && !r128.i.trim()) ||
+			!Number.isFinite(Number(r128.i)) ||
+			(r128.i === 0 && r128.tp === 0)
+		)
+			return UNKNOWN_R128;
 		return r128;
 	}
 

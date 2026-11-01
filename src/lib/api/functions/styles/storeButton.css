@@ -126,17 +126,3 @@
 		transform: rotate(360deg);
 	}
 }
-
-#nmc-store-root .nmc-sb {
-	padding: 0 var(--ym-spacer-size-s);
-	height: var(--ym-icon-size-m);
-	display: flex;
-	align-items: center;
-	border-radius: var(--ym-radius-size-xxxl);
-	background: var(--nmc-ctl);
-	font-size: var(--ym-font-size-label-s);
-	color: var(--nmc-err);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}

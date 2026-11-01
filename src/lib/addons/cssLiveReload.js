@@ -26,17 +26,32 @@ function setActiveAddonsWindow(window) {
 	activeAddonsWindow = window;
 }
 
+function resetAddonCssSnapshot(snapshot) {
+	for (const timer of pendingCssRemovals.values()) clearTimeout(timer);
+	pendingCssRemovals.clear();
+	addonCssCache.clear();
+	addonCssMeta.clear();
+	for (const [filePath, data] of snapshot) {
+		addonCssCache.set(filePath, data.content);
+		addonCssMeta.set(filePath, data.signature);
+	}
+}
+
 function cssInjectionScript(filePath, cssContent) {
 	return `(() => {
 		const key = ${JSON.stringify(relativeAddonPath(filePath))};
 		const css = ${JSON.stringify(cssContent)};
+		if (window.__nmcPendingAddonCss?.has(key)) {
+			window.__nmcPendingAddonCss.set(key, css);
+			return;
+		}
 		const selector = \`style[data-nmc-addon-css="\${CSS.escape(key)}"]\`;
 		let style = document.querySelector(selector);
 
 		if (!style) {
 			style = document.createElement("style");
 			style.dataset.nmcAddonCss = key;
-			document.head.appendChild(style);
+			(document.head || document.documentElement).appendChild(style);
 		}
 
 		if (style.textContent !== css) {
@@ -48,6 +63,9 @@ function cssInjectionScript(filePath, cssContent) {
 function cssRemovalScript(filePath) {
 	return `(() => {
 		const key = ${JSON.stringify(relativeAddonPath(filePath))};
+		if (window.__nmcPendingAddonCss?.has(key)) {
+			window.__nmcPendingAddonCss.set(key, null);
+		}
 		document
 			.querySelectorAll(\`style[data-nmc-addon-css="\${CSS.escape(key)}"]\`)
 			.forEach((style) => style.remove());
@@ -218,6 +236,7 @@ function startAddonCssLiveUpdates() {
 
 export {
 	setActiveAddonsWindow,
+	resetAddonCssSnapshot,
 	cssInjectionScript,
 	cssRemovalScript,
 	execAddonScript,

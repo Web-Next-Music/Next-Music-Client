@@ -21,6 +21,13 @@ function isTypeDeclaration(fileName) {
 	return fileName.toLowerCase().endsWith(".d.ts");
 }
 
+function isEarlyAddonScript(filePath) {
+	return (
+		/\.early\.(?:js|ts|tsx|jsx)$/i.test(filePath) &&
+		!isTypeDeclaration(filePath)
+	);
+}
+
 function scriptExtension(filePath) {
 	return path.extname(filePath).toLowerCase();
 }
@@ -54,7 +61,9 @@ async function transpileAddonScript(code, filePath, label) {
 
 export {
 	ADDON_SCRIPT_EXTENSIONS,
+	loadSucrase,
 	isTypeDeclaration,
+	isEarlyAddonScript,
 	scriptExtension,
 	transpileAddonScript,
 };

@@ -38,6 +38,7 @@ function buildItemFragment(item, config) {
 
 		return {
 			label,
+			type: "js",
 			code: `try{${injectScript}}catch(e){console.error(${JSON.stringify(`[Injector] inject error: ${label}`)},e);}`,
 		};
 	}
@@ -76,7 +77,8 @@ function buildItemFragment(item, config) {
 
 	return {
 		label,
-		code: `try{${injectScript}}catch(e){console.error(${JSON.stringify(`[Injector] inject error: ${label}`)},e);}`,
+		type,
+		code: `try{${type === "js" ? "await " : ""}${injectScript}}catch(e){console.error(${JSON.stringify(`[Injector] inject error: ${label}`)},e);}`,
 	};
 }
 
@@ -86,6 +88,9 @@ export function buildFragments(config, appVersion) {
 		`window.__APP_VERSION__ = ${JSON.stringify(appVersion)};`,
 	];
 	const injected = [];
+	const styles = [];
+	const scripts = [];
+	const apiScripts = [];
 
 	for (const item of injectList) {
 		const { condition } = item;
@@ -98,9 +103,15 @@ export function buildFragments(config, appVersion) {
 		const result = buildItemFragment(item, config);
 		if (!result) continue;
 
-		fragments.push(result.code);
+		if (item.file === "misc/fastPlay.js") {
+			apiScripts.push(result.code);
+		} else if (result.type === "js") {
+			scripts.push(result.code);
+		} else {
+			styles.push(result.code);
+		}
 		injected.push(result.label);
 	}
 
-	return { fragments, injected };
+	return { fragments, styles, scripts, apiScripts, injected };
 }

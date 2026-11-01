@@ -2,7 +2,7 @@ import { BrowserWindow, session, nativeTheme, app } from "electron";
 import { getUserLogin } from "./userLogin.js";
 import { registerHandlers, sync } from "../../ipc/registry.js";
 import { createLoaderWindow } from "../createLoaderWindow.js";
-import { applyAddons } from "../../addons/index.js";
+import { registerEarlyAddons } from "../../addons/index.js";
 import {
 	mergeAddonExperiments,
 	getAllAddonExperimentNames,
@@ -17,7 +17,7 @@ import {
 } from "../../api/order.js";
 import { fileURLToPath } from "url";
 import path from "path";
-import injector from "../../injector/index.js";
+import { prepareEarlyInjector } from "../../injector/index.js";
 import { transpileJsx } from "../../jsx/transform.js";
 import fs from "fs";
 
@@ -64,6 +64,23 @@ async function readApiFunctionSource(name) {
 
 registerHandlers({
 	"nmc:get-user-login": (event) => getUserLogin(event, mainWindow),
+	"nmc:early-injector": sync((event) => {
+		if (
+			!mainWindow ||
+			event.sender !== mainWindow.webContents ||
+			event.senderFrame !== mainWindow.webContents.mainFrame
+		)
+			return null;
+		try {
+			const url = new URL(event.senderFrame.url);
+			if (url.protocol !== "https:" || url.hostname !== "music.yandex.ru")
+				return null;
+			return prepareEarlyInjector(getConfig());
+		} catch (error) {
+			console.error("[Injector] Early preparation failed:", error);
+			return null;
+		}
+	}),
 	"nmc:get-experiments": sync(() => {
 		const config = getConfig();
 		return {
@@ -84,7 +101,12 @@ export function createWindow(config) {
 	const startMinimized = config?.launchSettings?.startMinimized;
 	const titleBarEnabled = config.windowSettings?.titleBar?.enable;
 	const transparentBg = config.windowSettings?.transparentBg;
-
+	const showSplash =
+		config.launchSettings.splashScreen &&
+		!startMinimized &&
+		!config.launchSettings.loaderWindow;
+	let navigationId = 0;
+	let splashPending = showSplash;
 	let loaderWindow;
 	if (config.launchSettings.loaderWindow && !startMinimized) {
 		loaderWindow = createLoaderWindow();
@@ -125,6 +147,7 @@ export function createWindow(config) {
 		},
 	});
 
+	mainWindow.earlyAddonsReady = registerEarlyAddons(mainWindow);
 	setupCSP();
 	setupTitleBarEvents();
 	setupInputHandlers();
@@ -173,7 +196,7 @@ export function createWindow(config) {
 
 	function runInPage(code) {
 		if (!isOnYandexMusic()) return;
-		mainWindow.webContents
+		return mainWindow.webContents
 			.executeJavaScript(
 				`(() => {
 					if (!location.host.includes("music.yandex.ru")) return;
@@ -184,6 +207,17 @@ export function createWindow(config) {
 	}
 
 	function setupLoadHandlers() {
+		mainWindow.webContents.on(
+			"did-start-navigation",
+			(_event, url, isInPlace, isMainFrame) => {
+				if (!isMainFrame || isInPlace) return;
+				navigationId++;
+				if (splashPending && url.startsWith("https://music.yandex.ru/")) {
+					splashPending = false;
+					mainWindow.hide();
+				}
+			},
+		);
 		mainWindow.webContents.on("did-finish-load", () => {
 			if (!isOnYandexMusic()) {
 				if (
@@ -195,12 +229,6 @@ export function createWindow(config) {
 				return;
 			}
 
-			injector(mainWindow, config);
-
-			if (config.programSettings.addons.enable) {
-				applyAddons(mainWindow);
-			}
-
 			onFinishLoad();
 		});
 
@@ -208,8 +236,16 @@ export function createWindow(config) {
 	}
 
 	async function onFinishLoad() {
+		const currentNavigation = navigationId;
 		if (titleBarEnabled) injectTitleBar();
 		await injectApi();
+		await waitForExperiments();
+		if (
+			mainWindow.isDestroyed() ||
+			currentNavigation !== navigationId ||
+			!isOnYandexMusic()
+		)
+			return;
 
 		if (global.__nmcUpdateGate) {
 			try {
@@ -219,9 +255,36 @@ export function createWindow(config) {
 			}
 		}
 
+		if (
+			mainWindow.isDestroyed() ||
+			currentNavigation !== navigationId ||
+			!isOnYandexMusic()
+		)
+			return;
 		closeLoaderWindow();
-
 		if (!startMinimized) mainWindow.show();
+	}
+
+	async function waitForExperiments() {
+		let timeout;
+		try {
+			await Promise.race([
+				mainWindow.webContents.executeJavaScript(`new Promise((resolve) => {
+					if (window.__nmcExperimentsDone) return resolve();
+					window.addEventListener("__nmcExperimentsApplied", resolve, { once: true });
+					if (window.__nmcExperimentsDone) resolve();
+				})`),
+				new Promise((resolve) => {
+					timeout = setTimeout(() => {
+						console.warn("[Startup] Experiments wait timed out");
+						resolve();
+					}, 20_000);
+				}),
+			]);
+		} catch {
+		} finally {
+			clearTimeout(timeout);
+		}
 	}
 
 	async function injectApi() {
@@ -236,7 +299,7 @@ export function createWindow(config) {
 				cachedApiJs = `${parts.join("\n")}\n${mainJs}`;
 			}
 		}
-		runInPage(cachedApiJs);
+		return runInPage(cachedApiJs);
 	}
 
 	function injectTitleBar() {
@@ -314,7 +377,7 @@ export function createWindow(config) {
 	function setupInitialVisibility() {
 		if (config.launchSettings.startMinimized) {
 			mainWindow.hide();
-		} else if (!config.launchSettings.loaderWindow) {
+		} else if (showSplash) {
 			mainWindow.show();
 		}
 	}

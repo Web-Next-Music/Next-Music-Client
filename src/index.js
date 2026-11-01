@@ -208,11 +208,12 @@ app.on("activate", async () => {
 // App Initialization
 let mainWindow;
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
 	const config = loadConfig();
 
 	mainWindow = createWindow(config);
 	global.mainWindow = mainWindow;
+	await mainWindow.earlyAddonsReady;
 
 	const targetUrl = "https://music.yandex.ru/";
 

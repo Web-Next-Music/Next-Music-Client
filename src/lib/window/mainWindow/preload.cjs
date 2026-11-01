@@ -152,6 +152,30 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 		}
 	};
 
+	const patchStatePatches = (patches) => {
+		if (!Array.isArray(patches)) return;
+		for (const patch of patches) {
+			if (
+				!patch ||
+				patch.op !== "replace" ||
+				(patch.path !== "/experiments/experiments" &&
+					patch.path !== "/experiments/overwrittenExperiments") ||
+				!patch.value ||
+				typeof patch.value !== "object" ||
+				Array.isArray(patch.value)
+			)
+				continue;
+			if (patch.path === "/experiments/overwrittenExperiments") {
+				for (const name of managedNames || []) {
+					if (!(name in storeOverrides)) delete patch.value[name];
+				}
+			}
+			for (const name of Object.keys(storeOverrides)) {
+				patch.value[name] = buildEntry(storeOverrides[name], patch.value[name]);
+			}
+		}
+	};
+
 	function interceptArray(prop, patchItem) {
 		const arr = Array.isArray(window[prop]) ? window[prop] : [];
 		arr.forEach(patchItem);
@@ -161,9 +185,10 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 			configurable: true,
 			enumerable: false,
 			get() {
+				const push = nativePush || Array.prototype.push;
 				return function (...items) {
 					items.forEach(patchItem);
-					return (nativePush || Array.prototype.push).apply(arr, items);
+					return push.apply(arr, items);
 				};
 			},
 			set(fn) {
@@ -178,7 +203,7 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 				return arr;
 			},
 			set(next) {
-				if (Array.isArray(next) && next !== arr) next.forEach(patchItem);
+				if (Array.isArray(next) && next !== arr) arr.push(...next);
 			},
 		});
 	}
@@ -223,6 +248,10 @@ function experimentPatcher(rscOverrides, storeOverrides, managedNames) {
 			childList: true,
 			subtree: true,
 		});
+	}
+
+	if (rscNames.length || (managedNames && managedNames.length)) {
+		interceptArray("__STATE_PATCHES__", patchStatePatches);
 	}
 
 	if (rscNames.length) {
@@ -782,22 +811,65 @@ function injectIntoMainWorld(code) {
 	observer.observe(document, { childList: true });
 }
 
-injectIntoMainWorld(`(${desktopModePatcher.toString()})();`);
-
-injectIntoMainWorld(
-	`(${experimentPatcher.toString()})(${JSON.stringify(rscOverrides)}, ${JSON.stringify(storeOverrides)}, ${JSON.stringify(managedNames)});`,
-);
-
-injectIntoMainWorld(
-	`(${ynisonDeviceNamePatcher.toString()})(${JSON.stringify(YNISON_DEVICE_NAME)});`,
-);
-
-if (process.argv.includes("--nmc-r128")) {
-	injectIntoMainWorld(`(${r128NormalizationPatcher.toString()})();`);
+try {
+	contextBridge.executeInMainWorld({ func: desktopModePatcher, args: [] });
+} catch (error) {
+	console.error("[Preload] Desktop mode initialization failed:", error);
 }
 
-if (process.argv.includes("--nmc-vis")) {
-	injectIntoMainWorld(`(${visualizerPatcher.toString()})();`);
+if (
+	process.isMainFrame &&
+	location.protocol === "https:" &&
+	location.hostname === "music.yandex.ru"
+) {
+	try {
+		contextBridge.executeInMainWorld({
+			func: experimentPatcher,
+			args: [rscOverrides, storeOverrides, managedNames],
+		});
+	} catch (error) {
+		console.error("[Experiments] Early initialization failed:", error);
+	}
+}
+
+if (
+	process.isMainFrame &&
+	location.protocol === "https:" &&
+	location.hostname === "music.yandex.ru"
+) {
+	const patches = [[ynisonDeviceNamePatcher, [YNISON_DEVICE_NAME]]];
+	if (process.argv.includes("--nmc-r128")) {
+		patches.push([r128NormalizationPatcher, []]);
+	}
+	if (process.argv.includes("--nmc-vis")) {
+		patches.push([visualizerPatcher, []]);
+	}
+	for (const [func, args] of patches) {
+		try {
+			contextBridge.executeInMainWorld({ func, args });
+		} catch (error) {
+			console.error("[Preload] Early patch initialization failed:", error);
+		}
+	}
+	try {
+		const code = ipcRenderer.sendSync("nmc:document-start-addons");
+		if (code) {
+			contextBridge.executeInMainWorld({
+				func: (source) => (0, eval)(source),
+				args: [code],
+			});
+		}
+	} catch (error) {
+		console.error("[Addons] Document-start initialization failed:", error);
+	}
+	for (const channel of ["nmc:early-injector", "nmc:early-addons"]) {
+		try {
+			const code = ipcRenderer.sendSync(channel);
+			if (code) injectIntoMainWorld(code);
+		} catch (error) {
+			console.error(`[Preload] ${channel} failed:`, error);
+		}
+	}
 }
 
 contextBridge.exposeInMainWorld("nmcDownloader", {

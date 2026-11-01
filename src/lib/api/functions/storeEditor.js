@@ -229,7 +229,6 @@ function createEditorModal(React, StoreButton) {
 	return function EditorModal({ name, onClose }) {
 		const [data, setData] = React.useState(null);
 		const [loaded, setLoaded] = React.useState(false);
-		const [status, setStatus] = React.useState("");
 		const [error, setError] = React.useState(false);
 
 		const dataRef = React.useRef(null);
@@ -263,7 +262,10 @@ function createEditorModal(React, StoreButton) {
 				.catch((err) => {
 					if (!alive) return;
 					setError(true);
-					setStatus(t("settingsLoadFailed") + ": " + err.message);
+					window.nextmusicApi?.showErrorToast?.(
+						t("settingsLoadFailed") + ": " + err.message,
+						window.nextmusicApi?.ContainerId?.ERROR,
+					);
 				});
 			return () => {
 				alive = false;
@@ -282,7 +284,6 @@ function createEditorModal(React, StoreButton) {
 		const save = (next) => {
 			const current = ++revision.current;
 
-			setStatus("");
 			setError(false);
 			queue.current = queue.current
 				.catch(() => {})
@@ -298,7 +299,10 @@ function createEditorModal(React, StoreButton) {
 				.catch((err) => {
 					if (current === revision.current) {
 						setError(true);
-						setStatus(t("statusSaveFailed") + ": " + err.message);
+						window.nextmusicApi?.showErrorToast?.(
+							t("statusSaveFailed") + ": " + err.message,
+							window.nextmusicApi?.ContainerId?.ERROR,
+						);
 					}
 				});
 		};
@@ -520,7 +524,7 @@ function createEditorModal(React, StoreButton) {
 						)
 					: loaded && h("div", null, renderText(t("settingsUnsupported"))),
 			),
-			(status || (!loaded && !error)) &&
+			((!loaded && !error) || (error && loaded)) &&
 				h(
 					"div",
 					{
@@ -529,7 +533,7 @@ function createEditorModal(React, StoreButton) {
 							: "nmc-settings-status",
 						role: "status",
 					},
-					renderText(status || t("modalLoading"), { size: "s" }),
+					!loaded && renderText(t("modalLoading"), { size: "s" }),
 					error &&
 						loaded &&
 						h(
@@ -571,11 +575,11 @@ function createEditorModal(React, StoreButton) {
 			h(
 				"div",
 				{
-									className: "nmc-settings-dialog",
-									role: "dialog",
-									"aria-modal": true,
-									"aria-label": name,
-								},
+					className: "nmc-settings-dialog",
+					role: "dialog",
+					"aria-modal": true,
+					"aria-label": name,
+				},
 				content,
 			),
 		);

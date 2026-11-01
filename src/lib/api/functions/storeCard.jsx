@@ -42,14 +42,6 @@ function cardSubtitleText(item, section) {
 	return section === "themes" ? t("sectionThemes") : t("sectionAddons");
 }
 
-function useAutoReset(React, value, reset, delay) {
-	React.useEffect(() => {
-		if (!value) return undefined;
-		const timer = setTimeout(reset, delay);
-		return () => clearTimeout(timer);
-	}, [value]);
-}
-
 function useCardLogo(React, item) {
 	const [logo, setLogo] = React.useState(null);
 
@@ -186,20 +178,19 @@ function createStoreCard(React, StoreButton) {
 
 		const [logo, setLogo] = useCardLogo(React, item);
 		const [busy, setBusy] = React.useState("");
-		const [error, setError] = React.useState("");
+
 		const [confirmDelete, setConfirmDelete] = React.useState(false);
 		const hasSettings = useHasSettings(React, item);
-
-		useAutoReset(React, error, () => setError(""), 3000);
 
 		const run = async (action) => {
 			setBusy(action);
 			try {
 				await onAction(action, item);
 			} catch (err) {
-				setError(err?.message || t("statusError"));
+				window.nextmusicApi.showErrorToast(err?.message || t("statusError"));
+			} finally {
+				setBusy("");
 			}
-			setBusy("");
 		};
 
 		const onDeleteConfirm = (event) => {
@@ -279,14 +270,6 @@ function createStoreCard(React, StoreButton) {
 					disabled={!!busy}
 					onClick={() => setConfirmDelete(true)}
 				/>,
-			);
-		}
-
-		if (error) {
-			buttons.push(
-				<div key="err" className="nmc-sb" title={error}>
-					{error}
-				</div>,
 			);
 		}
 

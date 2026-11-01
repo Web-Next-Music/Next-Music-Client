@@ -1,4 +1,4 @@
-main.nmc-store-active > *:not(#nmc-store-root) {
+main.nmc-store-active > *:not(#nmc-store-root):not(:has(.Toastify)) {
 	display: none !important;
 }
 

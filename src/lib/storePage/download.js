@@ -86,6 +86,21 @@ export async function downloadTree(
 	}
 }
 
+function tarSize(header) {
+	const field = header.subarray(124, 136);
+	if (field[0] & 0x80) {
+		if (field[0] & 0x40) throw new Error("Invalid tar size");
+		let size = BigInt(field[0] & 0x7f);
+		for (const byte of field.subarray(1)) size = (size << 8n) | BigInt(byte);
+		if (size > BigInt(Number.MAX_SAFE_INTEGER))
+			throw new Error("Invalid tar size");
+		return Number(size);
+	}
+	const text = field.toString("latin1");
+	if (!/^[ \0]*[0-7]+[ \0]*$/.test(text)) throw new Error("Invalid tar size");
+	return parseInt(text.replace(/^[ \0]+/, ""), 8);
+}
+
 export async function downloadAndExtractTarGz(url, destDir) {
 	const r = await httpsGet(url, {}, 60000);
 	if (r.statusCode !== 200)
@@ -93,7 +108,10 @@ export async function downloadAndExtractTarGz(url, destDir) {
 
 	const { gunzipSync } = await import("zlib");
 	const tarBuf = gunzipSync(r.body, { maxOutputLength: MAX_ARCHIVE_SIZE });
+	extractTarBuffer(tarBuf, destDir);
+}
 
+function extractTarBuffer(tarBuf, destDir) {
 	const topDirs = new Set();
 	let offset = 0;
 	let entryCount = 0;
@@ -117,13 +135,9 @@ export async function downloadAndExtractTarGz(url, destDir) {
 			checksum += i >= 148 && i < 156 ? 32 : header[i];
 		if (checksum !== storedChecksum) throw new Error("Invalid tar checksum");
 
-		const sizeOctal = header
-			.toString("utf8", 124, 136)
-			.trim()
-			.replace(/\0+$/, "");
-
-		if (!/^[0-7]+$/.test(sizeOctal)) throw new Error("Invalid tar size");
-		const size = parseInt(sizeOctal, 8);
+		const size = tarSize(header);
+		if (![0, 48, 53].includes(header[156]))
+			throw new Error("Unsupported tar entry");
 		if (name === "." && (header[156] !== 53 || size !== 0))
 			throw new Error("Invalid tar root entry");
 		if (
@@ -152,12 +166,7 @@ export async function downloadAndExtractTarGz(url, destDir) {
 		const typeFlag = header.toString("utf8", 156, 157);
 		if (!["0", "\0", "5"].includes(typeFlag))
 			throw new Error("Unsupported tar entry");
-		const sizeOctal = header
-			.toString("utf8", 124, 136)
-			.trim()
-			.replace(/\0+$/, "");
-
-		const size = parseInt(sizeOctal, 8) || 0;
+		const size = tarSize(header);
 		offset += 512;
 
 		if (typeFlag === "0" || typeFlag === "" || typeFlag === "\0") {

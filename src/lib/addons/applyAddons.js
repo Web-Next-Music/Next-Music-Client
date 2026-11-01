@@ -18,6 +18,7 @@ import {
 } from "./cssLiveReload.js";
 import {
 	ADDON_SCRIPT_EXTENSIONS,
+	isEarlyAddonScript,
 	scriptExtension,
 	transpileAddonScript,
 } from "./transpile.js";
@@ -156,6 +157,7 @@ async function applyAddons(mainWindow) {
 		addonsDirectory,
 		ADDON_SCRIPT_EXTENSIONS,
 		(jsContent, filePath) => {
+			if (isEarlyAddonScript(filePath)) return;
 			const target = experimentAddonNames.has(addonNameFromPath(filePath))
 				? experimentJs
 				: regularJs;

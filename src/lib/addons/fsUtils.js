@@ -57,7 +57,6 @@ function fileSignature(stat) {
 	return `${stat.mtimeMs}:${stat.size}`;
 }
 
-
 export {
 	safeDecodeURI,
 	safeResolve,
