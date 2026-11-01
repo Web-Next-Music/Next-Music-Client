@@ -39,7 +39,7 @@ export function metaFromTree(owner, repo, paths, root) {
 		rel(p)
 			.split("/")
 			.slice(0, -1)
-			.some((seg) => /^branding$/i.test(seg)),
+			.some((seg) => /^_branding$/i.test(seg)),
 	);
 
 	const logo = pickImgPath(branding) || pickImgPath(scoped);
@@ -83,11 +83,11 @@ export async function findLogoRecursive(
 
 export async function findBrandingDir(owner, repo, items, depth = 0, token) {
 	const branding = items.find(
-		(i) => i.type === "dir" && /^branding$/i.test(i.name),
+		(i) => i.type === "dir" && /^_branding$/i.test(i.name),
 	);
 
 	if (branding) return branding.path;
-	if (depth >= 1) return null;
+	if (depth >= 3) return null;
 
 	for (const sub of items.filter((i) => i.type === "dir")) {
 		try {

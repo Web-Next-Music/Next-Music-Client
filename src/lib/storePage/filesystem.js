@@ -237,7 +237,7 @@ export function getCustomEntries(knownNames) {
 							const found = items.find((item) => {
 								try {
 									return (
-										/^branding$/i.test(item) &&
+										/^_branding$/i.test(item) &&
 										fs.lstatSync(path.join(dirPath, item)).isDirectory()
 									);
 								} catch {

@@ -158,7 +158,7 @@ export async function getFolderMeta(
 	force = false,
 	rootPaths = null,
 ) {
-	const cacheKey = "meta:" + (f.submodule ? f.subUrl || f.name : f.path);
+	const cacheKey = "meta:v2:" + (f.submodule ? f.subUrl || f.name : f.path);
 	const cached = getEntry(cacheKey);
 
 	if (!force && isFresh(cached, META_TTL)) return cached.v;

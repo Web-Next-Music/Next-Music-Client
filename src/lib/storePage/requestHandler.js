@@ -91,6 +91,12 @@ function findMainWindow() {
 	);
 }
 
+const isLfsPointer = (body) =>
+	body
+		.subarray(0, 42)
+		.toString()
+		.startsWith("version https://git-lfs.github.com/spec/v1");
+
 const LOGO_TTL = 7 * 24 * 60 * 60 * 1000;
 const LOGO_CACHE_CONTROL = "public, max-age=604800";
 
@@ -219,12 +225,25 @@ export async function handleRequest(method, urlPath, qp, getBody) {
 		if (!qp.url) return notFound();
 
 		const cached = getLogo(qp.url, LOGO_TTL);
-		if (cached)
+		if (cached && !isLfsPointer(cached.body))
 			return binary(cached.body, cached.contentType, LOGO_CACHE_CONTROL);
 
 		try {
-			const r = await httpsGet(qp.url);
+			let r = await httpsGet(qp.url);
 			if (r.statusCode !== 200) return notFound();
+
+			if (isLfsPointer(r.body)) {
+				const url = new URL(qp.url);
+				if (
+					url.protocol !== "https:" ||
+					url.hostname !== "raw.githubusercontent.com"
+				)
+					return notFound();
+				r = await httpsGet(
+					`https://media.githubusercontent.com/media${url.pathname}`,
+				);
+				if (r.statusCode !== 200) return notFound();
+			}
 
 			const contentType = r.headers["content-type"] || "image/png";
 			setLogo(qp.url, r.body, contentType);
