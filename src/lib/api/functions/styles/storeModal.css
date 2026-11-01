@@ -465,8 +465,14 @@
 	cursor: pointer;
 }
 
-.nmc-setting-range input {
+.nmc-setting-range > :first-child {
 	width: 8rem;
+	flex: 0 0 8rem;
+}
+
+.nmc-setting-range output {
+	min-width: 3rem;
+	text-align: right;
 }
 
 .nmc-settings-status {
