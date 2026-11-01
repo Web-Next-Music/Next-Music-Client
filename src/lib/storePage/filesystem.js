@@ -60,8 +60,7 @@ export function localAddonFile(name, file) {
 		throw new Error("Invalid local path");
 	}
 	let target = path.join(addonsDirectory, raw);
-	if (!fs.lstatSync(target).isDirectory())
-		throw new Error("Invalid addon path");
+	if (!fs.statSync(target).isDirectory()) throw new Error("Invalid addon path");
 	for (const part of file.split("/")) {
 		target = path.join(target, part);
 		if (fs.lstatSync(target).isSymbolicLink())
