@@ -40,6 +40,17 @@ function within(root, target) {
 	}
 }
 
+function isAddonDir(name, directory) {
+	try {
+		return (
+			path.resolve(directory) === path.resolve(addonsDirectory, name) &&
+			fs.statSync(directory).isDirectory()
+		);
+	} catch {
+		return false;
+	}
+}
+
 function findEntry(root, predicate) {
 	const queue = [root];
 	while (queue.length) {
@@ -174,7 +185,7 @@ function startAssetServer(port = 2007) {
 				}
 
 				const addonDir = ADDON_DIRS.get(name);
-				if (!addonDir || !within(addonsDirectory, addonDir))
+				if (!addonDir || !isAddonDir(name, addonDir))
 					return send(404, `Addon '${name}' not found`);
 
 				const assetsRoot = findAssetsDir(addonDir);
@@ -207,7 +218,7 @@ function startAssetServer(port = 2007) {
 				if (!name) return send(400, "Missing name parameter");
 
 				const addonDir = path.join(addonsDirectory, name);
-				if (!within(addonsDirectory, addonDir)) {
+				if (!isAddonDir(name, addonDir)) {
 					return send(404, `Addon '${name}' not found`);
 				}
 
@@ -241,10 +252,7 @@ function startAssetServer(port = 2007) {
 							assetsRoot = path.join(addonDir, "assets");
 							fs.mkdirSync(assetsRoot, { recursive: true });
 						}
-						if (
-							!within(addonsDirectory, addonDir) ||
-							!within(addonDir, assetsRoot)
-						)
+						if (!isAddonDir(name, addonDir) || !within(addonDir, assetsRoot))
 							return send(403, "Forbidden");
 
 						const destPath = safeResolve(assetsRoot, safeFileName);
@@ -266,10 +274,7 @@ function startAssetServer(port = 2007) {
 							clearTimeout(timer);
 						}
 
-						if (
-							!within(addonsDirectory, addonDir) ||
-							!within(addonDir, assetsRoot)
-						)
+						if (!isAddonDir(name, addonDir) || !within(addonDir, assetsRoot))
 							return send(403, "Forbidden");
 						const flags =
 							fs.constants.O_WRONLY |
@@ -303,10 +308,7 @@ function startAssetServer(port = 2007) {
 				if (!addonDir) {
 					const candidate = path.join(addonsDirectory, name);
 					try {
-						if (
-							within(addonsDirectory, candidate) &&
-							fs.statSync(candidate).isDirectory()
-						) {
+						if (isAddonDir(name, candidate)) {
 							ADDON_DIRS.set(name, candidate);
 							addonDir = candidate;
 							console.log(
@@ -322,7 +324,7 @@ function startAssetServer(port = 2007) {
 						}
 					}
 				}
-				if (!addonDir || !within(addonsDirectory, addonDir)) {
+				if (!addonDir || !isAddonDir(name, addonDir)) {
 					return send(404, `Addon '${name}' not found`);
 				}
 
