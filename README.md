@@ -1,9 +1,5 @@
 <img width="1478" height="989" alt="image" src=".github/assets/preview.png" />
 
-# Next Music
-
-Web client for Yandex Music with support for themes, addons and Discord Rich Presence (RPC)
-
 ## Features
 
 <details>
@@ -151,6 +147,16 @@ https://github.com/user-attachments/assets/cd3a627f-784b-4874-a1c2-cd3611f07d54
 - **[PulseSync Mod](https://github.com/PulseSync-LLC/PulseSync-mod/)**
 - **[PulseSync Client](https://github.com/PulseSync-LLC/PulseSync-client/)**
 - **[Spotifast](https://github.com/crmne/spotifast)**
+
+## Заказ сайта
+
+### **✨ Нужен сайт для бизнеса, личного проекта или портфолио? ✨**
+
+**Сделаю стильный, быстрый и удобный сайт по доступной цене!**
+
+_Подробнее тут:_
+- **[Avito](https://www.avito.ru/moskva/predlozheniya_uslug/sozdanie_saytov_adaptivnyy_dizayn_8133330653)**
+- **[Юла](https://youla.ru/moskva/uslugi/kompyuternye/sozdaniie-saitov-adaptivnyi-dizain-6ae4c7a3b489f1b6fc004e4c)**
 
 # Discord Server - Click on the image below
 
