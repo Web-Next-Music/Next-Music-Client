@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import { getAppIcon } from "../../config.js";
+import { getAppIcon, GTAVI_THEME } from "../../config.js";
 import { getConfig } from "../configManager.js";
 import { getBuiltinExperimentState } from "../experiments/builtinExperiments.js";
 import { loadRendererPage } from "../paths.js";
@@ -31,7 +31,10 @@ export function createLoaderWindow() {
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
-			additionalArguments: condemned ? ["--nmc-condemned"] : [],
+			additionalArguments: [
+				...(condemned ? ["--nmc-condemned"] : []),
+				...(GTAVI_THEME ? ["--nmc-gtavi"] : []),
+			],
 			preload: path.join(__dirname, "loaderWindow/preload.cjs"),
 		},
 	});

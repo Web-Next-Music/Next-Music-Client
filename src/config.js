@@ -16,7 +16,15 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const now = new Date();
+export const GTAVI_THEME =
+	now.getMonth() === 10 && now.getDate() >= 19 && now.getDate() <= 26;
+
 export function getAppIcon(userExperiments = {}) {
+	if (GTAVI_THEME) {
+		return path.join(__dirname, "assets/nm-icons/gtavi-logo.png");
+	}
+
 	return getBuiltinExperimentState("nm_condemned_mode", userExperiments) ===
 		"on"
 		? path.join(__dirname, "assets/nm-icons/icon-256-condemned.png")

@@ -2,8 +2,14 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-if (process.argv.includes("--nmc-condemned")) {
-	const applyClass = () => document.documentElement.classList.add("condemned");
+const themeClasses = [
+	...(process.argv.includes("--nmc-condemned") ? ["condemned"] : []),
+	...(process.argv.includes("--nmc-gtavi") ? ["gtavi"] : []),
+];
+
+if (themeClasses.length) {
+	const applyClass = () =>
+		document.documentElement.classList.add(...themeClasses);
 
 	if (document.documentElement) {
 		applyClass();

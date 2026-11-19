@@ -14,6 +14,15 @@ body {
 	margin: 0;
 	background-color: #000;
 	font-family: "Nunito", "Noto Sans", sans-serif;
+
+	.gtavi & {
+		background-image:
+			linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+			url("../../assets/nm-icons/gtavi-background.png");
+		background-position: center;
+		background-size: cover;
+		background-repeat: no-repeat;
+	}
 }
 
 .loader_wrap {
@@ -43,6 +52,12 @@ body {
 	.condemned & {
 		background-image: url("../../assets/nm-icons/icon-256-condemned.png");
 	}
+}
+
+html.gtavi .next_icon,
+html.gtavi .update_icon {
+	background-image: url("../../assets/nm-icons/nm-logo.png");
+	filter: brightness(0) invert(1);
 }
 
 @keyframes fadeIn {
@@ -162,7 +177,7 @@ body {
 	width: 100%;
 	height: 4px;
 	border-radius: 4px;
-	background: #2a2a2a;
+	background: #fff3;
 	overflow: hidden;
 	flex: none;
 	margin-bottom: 22px;
@@ -214,7 +229,7 @@ body {
 		position: relative;
 		overflow: hidden;
 		isolation: isolate;
-		background: #2a2a2a;
+		background: #fff3;
 		color: #fff;
 	}
 
@@ -238,7 +253,7 @@ body {
 }
 
 .update_btn--ghost {
-	background: #2a2a2a;
+	background: #fff3;
 	color: #fff;
 
 	&:hover {
