@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { getBuiltinExperimentState } from "./lib/experiments/builtinExperiments.js";
 import { parseLuaConfig } from "./lib/luaConfig.js";
+import { resolveTheme } from "./lib/themes.js";
 
 export const isDev = !app.isPackaged;
 export const devUrl = "http://localhost:6788";
@@ -16,9 +17,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const now = new Date();
-export const GTAVI_THEME =
-	now.getMonth() === 10 && now.getDate() >= 19 && now.getDate() <= 26;
+export const GTAVI_THEME = resolveTheme(process.argv) === "gtavi";
 
 export function getAppIcon(userExperiments = {}) {
 	if (GTAVI_THEME) {
